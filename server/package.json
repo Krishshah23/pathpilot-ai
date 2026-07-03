@@ -1,0 +1,38 @@
+{
+  "name": "pathpilot-server",
+  "version": "1.0.0",
+  "description": "PathPilot AI — Node.js / Express API",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [
+    "pathpilot",
+    "career",
+    "express",
+    "mongodb"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "mammoth": "^1.12.0",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0",
+    "multer": "^2.0.1",
+    "nodemailer": "^9.0.3",
+    "pdf-parse": "^2.4.5",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

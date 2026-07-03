@@ -1,0 +1,14 @@
+# ── Core service (Phase 1) ─────────────────────────────
+Django>=5.1,<5.3
+djangorestframework>=3.15
+django-cors-headers>=4.4
+python-dotenv>=1.0
+requests>=2.32
+
+# ── Machine Learning (added in Phase 8) ────────────────
+# Uncomment when building the ML models. On Python 3.14 you may need recent
+# wheels; if install fails, use Python 3.12 for this service.
+# pandas>=2.2
+# scikit-learn>=1.5
+# numpy>=2.0
+# joblib>=1.4

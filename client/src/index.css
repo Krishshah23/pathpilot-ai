@@ -1,0 +1,141 @@
+@import 'tailwindcss';
+
+/*
+  PathPilot AI — Design System
+  Dark-first, glassmorphic, premium SaaS aesthetic (Linear / Vercel / Stripe).
+  Theme tokens below generate Tailwind utilities (bg-surface, text-muted, etc.).
+*/
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Sora', 'Inter', system-ui, sans-serif;
+
+  /* Base canvas */
+  --color-canvas: #08090d;
+  --color-surface: #0f1117;
+  --color-surface-2: #151823;
+  --color-elevated: #1a1e2b;
+
+  /* Borders & lines */
+  --color-line: #232838;
+  --color-line-soft: #1b1f2b;
+
+  /* Text */
+  --color-ink: #f4f6fb;
+  --color-muted: #9aa3b6;
+  --color-faint: #626b80;
+
+  /* Brand — indigo → violet */
+  --color-brand: #6366f1;
+  --color-brand-soft: #818cf8;
+  --color-violet: #8b5cf6;
+
+  /* Semantic */
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #38bdf8;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /* Ambient gradient glow behind the app */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(60rem 40rem at 15% -10%, rgba(99, 102, 241, 0.14), transparent 60%),
+      radial-gradient(50rem 40rem at 100% 0%, rgba(139, 92, 246, 0.12), transparent 55%),
+      radial-gradient(40rem 30rem at 50% 120%, rgba(56, 189, 248, 0.08), transparent 60%);
+    pointer-events: none;
+  }
+
+  ::selection {
+    background: rgba(99, 102, 241, 0.35);
+  }
+
+  /* Slim, dark scrollbars */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-line);
+    border-radius: 9999px;
+    border: 2px solid var(--color-canvas);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: #2e3550; }
+}
+
+@layer components {
+  /* Glassmorphic card surface */
+  .glass {
+    background: color-mix(in srgb, var(--color-surface) 78%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--color-line);
+  }
+
+  .card {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-2xl);
+  }
+
+  /* Brand gradient text */
+  .text-gradient {
+    background: linear-gradient(120deg, var(--color-brand-soft), var(--color-violet));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .btn-brand {
+    background: linear-gradient(120deg, var(--color-brand), var(--color-violet));
+    box-shadow: 0 8px 24px -8px rgba(99, 102, 241, 0.6);
+  }
+  .btn-brand:hover { filter: brightness(1.08); }
+}
+
+@layer utilities {
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-up { animation: fade-up 0.4s ease both; }
+
+  @keyframes shimmer {
+    100% { transform: translateX(100%); }
+  }
+  .animate-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+    animation: shimmer 1.5s infinite;
+  }
+}
