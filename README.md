@@ -75,6 +75,23 @@ pip install -r requirements.txt
 python manage.py runserver 8000  # http://localhost:8000
 ```
 
+### 4. Seed Demo Users
+
+```bash
+cd server
+npm run seed
+```
+
+This creates three demo accounts:
+
+| Role    | Email                 | Password       | State                   |
+| ------- | --------------------- | -------------- | ----------------------- |
+| Admin   | admin@pathpilot.ai    | Admin@1234     | Verified, onboarded     |
+| Student | student@pathpilot.ai  | Student@1234   | Verified, onboarded     |
+| Student | new@pathpilot.ai      | NewUser@1234   | Verified, not onboarded |
+
+The script is idempotent — running it again skips already-existing users.
+
 ## Build Roadmap
 
 - [x] **Phase 1** — Foundation + Authentication
@@ -82,10 +99,12 @@ python manage.py runserver 8000  # http://localhost:8000
 - [x] **Phase 3** — Resume Intelligence
 - [x] **Phase 4** — Path Score + Gap Navigator
 - [x] **Phase 5** — Growth Path + Insights
-- [ ] Phase 6 — Opportunity Tracker + Career Report
-- [ ] Phase 7 — Admin Dashboard
-- [ ] Phase 8 — ML models (Random Forest / Decision Tree / Linear Regression)
+- [x] **Phase 6** — Opportunity Tracker
+- [x] **Phase 7** — Career Report
+- [x] **Phase 8** — Admin Dashboard
+- [ ] Phase 9 — ML models (Random Forest / Decision Tree / Linear Regression)
 
 ## User Roles
 
 `student` · `admin`
+
