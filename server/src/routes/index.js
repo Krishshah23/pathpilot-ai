@@ -3,6 +3,8 @@ import authRoutes from './auth.routes.js';
 import onboardingRoutes from './onboarding.routes.js';
 import profileRoutes from './profile.routes.js';
 import resumeRoutes from './resume.routes.js';
+import pathScoreRoutes from './pathScore.routes.js';
+import gapRoutes from './gap.routes.js';
 import { aiService } from '../services/ai.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -25,8 +27,9 @@ router.use('/auth', authRoutes);
 router.use('/onboarding', onboardingRoutes);
 router.use('/profile', profileRoutes);
 router.use('/resume', resumeRoutes);
+router.use('/path-score', pathScoreRoutes);
+router.use('/gap', gapRoutes);
 
-// Future modules mount here: /path-score, /gap, /growth,
-// /insights, /opportunities, /report, /admin
+// Future modules mount here: /growth, /insights, /opportunities, /report, /admin
 
 export default router;

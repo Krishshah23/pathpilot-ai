@@ -14,6 +14,10 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from ml.services.career_analysis import (
+    analyze_skill_gap as run_skill_gap,
+    predict_readiness as run_readiness_prediction,
+)
 from ml.services.resume_parser import parse_resume as run_resume_parser
 
 
@@ -71,20 +75,19 @@ def parse_resume(request):
 @require_internal_key
 def skill_gap(request):
     """Compare current skills vs. required skills for a target role."""
-    return stub(
-        'skill-gap',
-        echo={
-            'targetRole': request.data.get('targetRole'),
-            'currentSkills': request.data.get('currentSkills', []),
-        },
+    result = run_skill_gap(
+        request.data.get('targetRole'),
+        request.data.get('currentSkills', []) or [],
     )
+    return Response({'success': True, 'implemented': True, 'data': result})
 
 
 @api_view(['POST'])
 @require_internal_key
 def predict_readiness(request):
     """Random Forest → career-readiness score/class."""
-    return stub('career-readiness', echo=request.data)
+    result = run_readiness_prediction(request.data or {})
+    return Response({'success': True, 'implemented': True, 'data': result})
 
 
 @api_view(['POST'])

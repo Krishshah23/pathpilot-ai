@@ -14,6 +14,8 @@ import VerifyEmailPage from '@/pages/auth/VerifyEmailPage';
 const OnboardingPage = lazy(() => import('@/pages/OnboardingPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const ResumePage = lazy(() => import('@/pages/ResumePage'));
+const PathScorePage = lazy(() => import('@/pages/PathScorePage'));
+const GapNavigatorPage = lazy(() => import('@/pages/GapNavigatorPage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
@@ -42,6 +44,8 @@ export default function App() {
             <Route element={<RequireOnboarding />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/resume" element={<ResumePage />} />
+              <Route path="/path-score" element={<PathScorePage />} />
+              <Route path="/gap" element={<GapNavigatorPage />} />
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
           </Route>

@@ -7,8 +7,8 @@ import { Icon } from '@/components/ui/icons';
 export const NAV_ITEMS = [
   { label: 'Command Center', path: '/dashboard', icon: Icon.Compass, ready: true },
   { label: 'Resume Intelligence', path: '/resume', icon: Icon.FileText, ready: true },
-  { label: 'Path Score', path: '/path-score', icon: Icon.Gauge, ready: false },
-  { label: 'Gap Navigator', path: '/gap', icon: Icon.Target, ready: false },
+  { label: 'Path Score', path: '/path-score', icon: Icon.Gauge, ready: true },
+  { label: 'Gap Navigator', path: '/gap', icon: Icon.Target, ready: true },
   { label: 'Growth Path', path: '/growth', icon: Icon.Route, ready: false },
   { label: 'Insights', path: '/insights', icon: Icon.ChartBar, ready: false },
   { label: 'Opportunity Tracker', path: '/opportunities', icon: Icon.Briefcase, ready: false },
