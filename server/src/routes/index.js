@@ -10,6 +10,7 @@ import insightsRoutes from './insights.routes.js';
 import opportunityRoutes from './opportunity.routes.js';
 import reportRoutes from './report.routes.js';
 import adminRoutes from './admin.routes.js';
+import mlRoutes from './ml.routes.js';
 import { aiService } from '../services/ai.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -39,5 +40,6 @@ router.use('/insights', insightsRoutes);
 router.use('/opportunities', opportunityRoutes);
 router.use('/report', reportRoutes);
 router.use('/admin', adminRoutes);
+router.use('/ml', mlRoutes);
 
 export default router;

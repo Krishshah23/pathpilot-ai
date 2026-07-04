@@ -1,6 +1,7 @@
 import { Resume } from '../models/Resume.js';
 import { GrowthPlan } from '../models/GrowthPlan.js';
 import { buildPathScore, collectStudentSkills } from '../services/pathScore.service.js';
+import { aiService } from '../services/ai.service.js';
 import { withProgress } from '../services/growth.service.js';
 import { skillDistribution } from '../services/insights.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -21,9 +22,44 @@ export const getInsights = asyncHandler(async (req, res) => {
     GrowthPlan.findOne({ user: req.user._id }),
   ]);
 
-  const latestResume = resumes.length ? resumes[resumes.length - 1] : null;
+  const latestResumeHeader = resumes.length ? resumes[resumes.length - 1] : null;
+  const latestResume = latestResumeHeader ? await Resume.findById(latestResumeHeader._id) : null;
   const pathScore = buildPathScore(req.user, latestResume);
   const skills = collectStudentSkills(req.user, latestResume);
+
+  try {
+    if (latestResume) {
+      const payload = {
+        skills: latestResume.skills || [],
+        education: latestResume.education || [],
+        projects: latestResume.projects || [],
+        experience: latestResume.experience || [],
+        certifications: latestResume.certifications || [],
+        contact: latestResume.contact || {},
+        healthScore: latestResume.healthScore || 0,
+        wordCount: latestResume.wordCount || 0,
+        rawText: '',
+        profile: {
+          college: req.user.profile?.college || '',
+          branch: req.user.profile?.branch || '',
+          semester: req.user.profile?.semester || null,
+          dreamRole: req.user.profile?.dreamRole || '',
+          skills: req.user.profile?.skills || [],
+          resumeUrl: req.user.profile?.resumeUrl || '',
+        },
+        currentSkills: skills,
+        targetRole: req.user.profile?.dreamRole || '',
+      };
+      
+      const mlResponse = await aiService.predict(payload);
+      if (mlResponse?.data) {
+        pathScore.score = mlResponse.data.resumeScore;
+        pathScore.readiness = mlResponse.data.careerReadiness;
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching ML predictions for insights:', err);
+  }
 
   // Resume health trend (chronological)
   const resumeTrend = resumes.map((r, i) => ({

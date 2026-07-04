@@ -1,6 +1,6 @@
 import { Resume } from '../models/Resume.js';
 import { aiService } from '../services/ai.service.js';
-import { buildPathScore } from '../services/pathScore.service.js';
+import { buildPathScore, collectStudentSkills } from '../services/pathScore.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 
@@ -33,18 +33,45 @@ function resumePayload(resume) {
 export const getPathScore = asyncHandler(async (req, res) => {
   const resume = await Resume.findOne({ user: req.user._id }).sort({ createdAt: -1 });
   const pathScore = buildPathScore(req.user, resume);
+  const currentSkills = collectStudentSkills(req.user, resume);
 
   try {
-    const readiness = await aiService.predictReadiness({
-      profile: profilePayload(req.user),
-      resume: resumePayload(resume),
-      pathScore: pathScore.score,
-    });
-    if (readiness?.data) {
-      pathScore.readiness = readiness.data;
+    const payload = {
+      skills: resume?.skills || [],
+      education: resume?.education || [],
+      projects: resume?.projects || [],
+      experience: resume?.experience || [],
+      certifications: resume?.certifications || [],
+      contact: resume?.contact || {},
+      healthScore: resume?.healthScore || 0,
+      wordCount: resume?.wordCount || 0,
+      rawText: '',
+      profile: {
+        college: req.user.profile?.college || '',
+        branch: req.user.profile?.branch || '',
+        semester: req.user.profile?.semester || null,
+        dreamRole: req.user.profile?.dreamRole || '',
+        skills: req.user.profile?.skills || [],
+        resumeUrl: req.user.profile?.resumeUrl || '',
+      },
+      currentSkills,
+      targetRole: req.user.profile?.dreamRole || '',
+    };
+
+    const mlResponse = await aiService.predict(payload);
+    if (mlResponse?.data) {
+      const mlData = mlResponse.data;
+      pathScore.score = mlData.resumeScore;
+      pathScore.readiness = mlData.careerReadiness;
+      pathScore.predictions = mlData;
+      // Map SHAP explanations to recommendations or show directly
+      if (mlData.recommendations) {
+        pathScore.recommendations = mlData.recommendations;
+      }
     }
-  } catch {
-    // Keep Path Score available even if the AI service is not running locally.
+  } catch (err) {
+    console.error('Error fetching ML predictions:', err);
+    // Keep fallback pathScore available if Django AI service is down
   }
 
   return sendSuccess(res, { data: { pathScore } });

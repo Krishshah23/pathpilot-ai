@@ -3,6 +3,7 @@ import { Resume } from '../models/Resume.js';
 import { GrowthPlan } from '../models/GrowthPlan.js';
 import { Opportunity } from '../models/Opportunity.js';
 import { buildPathScore, collectStudentSkills } from '../services/pathScore.service.js';
+import { aiService } from '../services/ai.service.js';
 import { skillDistribution } from '../services/insights.service.js';
 import { withProgress } from '../services/growth.service.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
@@ -58,6 +59,7 @@ export const generate = asyncHandler(async (req, res) => {
       readiness: pathScore.readiness,
       factors: pathScore.factors,
       profileCompletion: pathScore.profileCompletion,
+      predictions: null,
     },
     resume: latestResume
       ? {
@@ -95,6 +97,41 @@ export const generate = asyncHandler(async (req, res) => {
       })),
     },
   };
+
+  try {
+    if (latestResume) {
+      const payload = {
+        skills: latestResume.skills || [],
+        education: latestResume.education || [],
+        projects: latestResume.projects || [],
+        experience: latestResume.experience || [],
+        certifications: latestResume.certifications || [],
+        contact: latestResume.contact || {},
+        healthScore: latestResume.healthScore || 0,
+        wordCount: latestResume.wordCount || 0,
+        rawText: '',
+        profile: {
+          college: user.profile?.college || '',
+          branch: user.profile?.branch || '',
+          semester: user.profile?.semester || null,
+          dreamRole: user.profile?.dreamRole || '',
+          skills: user.profile?.skills || [],
+          resumeUrl: user.profile?.resumeUrl || '',
+        },
+        currentSkills: skills,
+        targetRole: user.profile?.dreamRole || '',
+      };
+      
+      const mlResponse = await aiService.predict(payload);
+      if (mlResponse?.data) {
+        report.pathScore.score = mlResponse.data.resumeScore;
+        report.pathScore.readiness = mlResponse.data.careerReadiness;
+        report.pathScore.predictions = mlResponse.data;
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching ML predictions for report:', err);
+  }
 
   sendSuccess(res, { data: { report } });
 });

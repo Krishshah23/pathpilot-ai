@@ -33,4 +33,5 @@ export const aiService = {
   skillGap: (payload) => call('post', '/skills/gap/', payload),
   predictReadiness: (payload) => call('post', '/readiness/predict/', payload),
   recommendRoadmap: (payload) => call('post', '/roadmap/recommend/', payload),
+  predict: (payload) => call('post', '/predict/', payload),
 };

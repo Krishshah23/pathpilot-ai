@@ -92,17 +92,32 @@ This creates three demo accounts:
 
 The script is idempotent — running it again skips already-existing users.
 
-## Build Roadmap
+- [x] **Phase 9** — Machine Learning Integration (7 Data-Driven Models + SHAP Explainable AI)
 
-- [x] **Phase 1** — Foundation + Authentication
-- [x] **Phase 2** — Onboarding + Profile
-- [x] **Phase 3** — Resume Intelligence
-- [x] **Phase 4** — Path Score + Gap Navigator
-- [x] **Phase 5** — Growth Path + Insights
-- [x] **Phase 6** — Opportunity Tracker
-- [x] **Phase 7** — Career Report
-- [x] **Phase 8** — Admin Dashboard
-- [ ] Phase 9 — ML models (Random Forest / Decision Tree / Linear Regression)
+## Machine Learning Integration (Phase 9)
+
+PathPilot AI is now powered by **7 production-grade Machine Learning models** trained on 50,000+ synthetic student profiles. The ML service replaces all hardcoded, heuristic scoring functions with data-driven predictive diagnostics:
+
+1. **Resume Score Regressor** (CatBoost Regressor)
+2. **ATS Pass Predictor** (CatBoost Binary Classifier)
+3. **Career Readiness Classifier** (CatBoost Multi-class Classifier)
+4. **Role Recommendation Engine** (CatBoost Multi-class Classifier)
+5. **Interview Success Regressor** (Random Forest Regressor)
+6. **Salary Projector** (CatBoost Regressor)
+7. **Learning Path Roadmap Planner** (K-Nearest Neighbors / Cosine Similarity)
+
+### Explainable AI (XAI)
+Every prediction is accompanied by a **SHAP (Shapley Additive exPlanations)** explainer, calculated in real-time. This highlights the top positive and negative features that contributed to the student's score, displaying clear mathematical feature importances inside the user dashboard.
+
+### How to Run the ML Service
+To start the Django ML service inside the virtual environment:
+```bash
+cd ai-service
+# Activate the virtual environment
+venv\Scripts\activate
+# Start the Django service
+python manage.py runserver 8000
+```
 
 ## User Roles
 

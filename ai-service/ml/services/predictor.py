@@ -1,0 +1,314 @@
+"""
+ML Prediction Service — loads trained models and runs inference.
+
+Loaded ONCE at Django startup. All endpoints call these functions
+for real-time predictions. No retraining at runtime.
+"""
+
+import logging
+from pathlib import Path
+from typing import Any
+
+import joblib
+import numpy as np
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+MODELS_DIR = BASE_DIR / "models"
+
+# ── Model cache (loaded once) ────────────────────────────────────────
+
+_cache: dict[str, Any] = {}
+
+
+def _load(model_name: str, filename: str = "model.pkl") -> Any:
+    """Load and cache a model artifact."""
+    key = f"{model_name}/{filename}"
+    if key not in _cache:
+        path = MODELS_DIR / model_name / filename
+        if not path.exists():
+            logger.warning("Model artifact not found: %s", path)
+            return None
+        _cache[key] = joblib.load(path)
+        logger.info("Loaded %s", key)
+    return _cache[key]
+
+
+def _get_model(name: str):
+    return _load(name, "model.pkl")
+
+
+def _get_scaler(name: str):
+    return _load(name, "scaler.pkl")
+
+
+def _get_features(name: str):
+    return _load(name, "features.pkl")
+
+
+def models_loaded() -> bool:
+    """Check if core models are available."""
+    return (_get_model("resume_score") is not None
+            and _get_model("ats") is not None
+            and _get_model("career") is not None)
+
+
+# ── Feature extraction ────────────────────────────────────────────────
+
+def _build_feature_row(features: dict, feature_cols: list) -> np.ndarray:
+    """Build a single-row DataFrame from a feature dict, fill missing with 0."""
+    row = {col: features.get(col, 0) for col in feature_cols}
+    return pd.DataFrame([row])[feature_cols]
+
+
+# ── Individual model predictions ──────────────────────────────────────
+
+def predict_resume_score(features: dict) -> dict:
+    """Predict resume score (0-100)."""
+    model = _get_model("resume_score")
+    scaler = _get_scaler("resume_score")
+    cols = _get_features("resume_score")
+    if not model or not cols:
+        return {"score": 0, "error": "Resume score model not loaded"}
+
+    X = _build_feature_row(features, cols)
+    # CatBoost doesn't need scaling
+    try:
+        score = float(model.predict(X)[0])
+    except Exception:
+        X_s = scaler.transform(X) if scaler else X
+        score = float(model.predict(X_s)[0])
+    score = max(0, min(100, round(score, 1)))
+    return {"score": score}
+
+
+def predict_ats(features: dict) -> dict:
+    """Predict ATS pass/reject with probability."""
+    model = _get_model("ats")
+    scaler = _get_scaler("ats")
+    cols = _get_features("ats")
+    if not model or not scaler or not cols:
+        return {"pass": False, "probability": 0, "error": "ATS model not loaded"}
+
+    X = _build_feature_row(features, cols)
+    X_s = scaler.transform(X)
+    pred = int(model.predict(X_s)[0])
+    proba = float(model.predict_proba(X_s)[0][1])
+    return {"pass": bool(pred), "probability": round(proba * 100, 1)}
+
+
+def predict_career_readiness(features: dict) -> dict:
+    """Predict career readiness level."""
+    model = _get_model("career")
+    scaler = _get_scaler("career")
+    cols = _get_features("career")
+    labels = _load("career", "labels.pkl") or ["Beginner", "Intermediate", "Career Ready", "Advanced"]
+    if not model or not scaler or not cols:
+        return {"level": "Unknown", "error": "Career model not loaded"}
+
+    X = _build_feature_row(features, cols)
+    X_s = scaler.transform(X)
+    pred_idx = int(np.ravel(model.predict(X_s))[0])
+    proba = model.predict_proba(X_s)[0]
+    level = labels[pred_idx] if pred_idx < len(labels) else "Unknown"
+    confidence = round(float(proba[pred_idx]) * 100, 1)
+    return {"level": level, "levelIndex": pred_idx, "confidence": confidence}
+
+
+def predict_role(features: dict) -> dict:
+    """Recommend best role."""
+    model = _get_model("role")
+    scaler = _get_scaler("role")
+    cols = _get_features("role")
+    le = _load("role", "label_encoder.pkl")
+    if not model or not scaler or not cols or not le:
+        return {"role": "Software Engineer", "error": "Role model not loaded"}
+
+    X = _build_feature_row(features, cols)
+    X_s = scaler.transform(X)
+    pred_idx = int(np.ravel(model.predict(X_s))[0])
+    role = le.inverse_transform([pred_idx])[0]
+
+    proba = model.predict_proba(X_s)[0]
+    top3_idx = np.argsort(proba)[::-1][:3]
+    top3 = [
+        {"role": le.inverse_transform([i])[0], "probability": round(float(proba[i]) * 100, 1)}
+        for i in top3_idx
+    ]
+    return {"role": role, "confidence": round(float(proba[pred_idx]) * 100, 1), "top3": top3}
+
+
+def predict_interview(features: dict) -> dict:
+    """Predict interview success probability."""
+    model = _get_model("interview")
+    scaler = _get_scaler("interview")
+    cols = _get_features("interview")
+    if not model or not scaler or not cols:
+        return {"probability": 0, "error": "Interview model not loaded"}
+
+    X = _build_feature_row(features, cols)
+    X_s = scaler.transform(X)
+    prob = float(model.predict(X_s)[0])
+    prob = max(0, min(100, round(prob, 1)))
+    return {"probability": prob}
+
+
+def predict_salary(features: dict) -> dict:
+    """Predict expected salary (LPA)."""
+    model = _get_model("salary")
+    scaler = _get_scaler("salary")
+    cols = _get_features("salary")
+    role_enc = _load("salary", "role_encoder.pkl")
+    loc_enc = _load("salary", "location_encoder.pkl")
+    if not model or not scaler or not cols:
+        return {"salary": 0, "error": "Salary model not loaded"}
+
+    # Encode role and location
+    role = features.get("role", "Software Engineer")
+    location = features.get("location", "Bangalore")
+    try:
+        features["role_encoded"] = int(role_enc.transform([role])[0])
+    except (ValueError, KeyError):
+        features["role_encoded"] = 0
+    try:
+        features["location_encoded"] = int(loc_enc.transform([location])[0])
+    except (ValueError, KeyError):
+        features["location_encoded"] = 0
+
+    X = _build_feature_row(features, cols)
+    X_s = scaler.transform(X)
+    salary = float(model.predict(X_s)[0])
+    salary = max(2.5, round(salary, 2))
+    return {"salaryLPA": salary, "salaryCurrency": "INR"}
+
+
+def predict_learning_path(current_skills: list, target_role: str) -> dict:
+    """Recommend learning path using KNN similarity search."""
+    knn = _get_model("learning")
+    mlb = _load("learning", "skill_binarizer.pkl")
+    role_le = _load("learning", "role_encoder.pkl")
+    ref_path = MODELS_DIR / "learning" / "reference_data.csv"
+
+    if not knn or not mlb or not role_le or not ref_path.exists():
+        return {"skills": [], "error": "Learning model not loaded"}
+
+    ref_df = pd.read_csv(str(ref_path))
+
+    try:
+        role_encoded = int(role_le.transform([target_role])[0])
+    except (ValueError, KeyError):
+        role_encoded = 0
+
+    skill_vector = mlb.transform([current_skills])
+    query = np.column_stack([[role_encoded], skill_vector])
+
+    distances, indices = knn.kneighbors(query)
+
+    # Aggregate learning paths from neighbors
+    skill_votes: dict[str, int] = {}
+    for idx in indices[0]:
+        path_str = ref_df.iloc[idx]["learning_path"]
+        if isinstance(path_str, str):
+            for skill in path_str.split("|"):
+                skill = skill.strip()
+                if skill and skill not in current_skills:
+                    skill_votes[skill] = skill_votes.get(skill, 0) + 1
+
+    ordered = sorted(skill_votes.items(), key=lambda x: -x[1])
+    skills_to_learn = [s for s, _ in ordered[:10]]
+
+    return {"skills": skills_to_learn, "targetRole": target_role}
+
+
+# ── Feature importance (for explainability) ───────────────────────────
+
+def get_feature_importance(model_name: str = "resume_score") -> list[dict]:
+    """Return feature importance for a model."""
+    model = _get_model(model_name)
+    cols = _get_features(model_name)
+    if not model or not cols:
+        return []
+
+    try:
+        importances = model.feature_importances_
+    except AttributeError:
+        return []
+
+    pairs = sorted(zip(cols, importances), key=lambda x: -x[1])
+    return [{"feature": f, "importance": round(float(v), 4)} for f, v in pairs]
+
+
+# ── Full prediction pipeline ─────────────────────────────────────────
+
+def predict_all(features: dict, current_skills: list, target_role: str) -> dict:
+    """Run all models and return combined predictions."""
+    resume = predict_resume_score(features)
+    ats = predict_ats(features)
+    career = predict_career_readiness(features)
+    role = predict_role(features)
+    interview = predict_interview(features)
+
+    # For salary, need role recommendation
+    salary_features = {**features, "role": role.get("role", target_role or "Software Engineer")}
+    salary = predict_salary(salary_features)
+
+    learning = predict_learning_path(current_skills, target_role or role.get("role", "Software Engineer"))
+    importance = get_feature_importance("resume_score")
+
+    # Real SHAP explanations
+    from ml.services.explainer import explain_prediction
+    shap_res = explain_prediction(
+        "resume_score", features, _get_model("resume_score"),
+        _get_scaler("resume_score"), _get_features("resume_score")
+    )
+
+    if shap_res.get("success"):
+        positive = [{"feature": c["feature"], "impact": c["impact"]} for c in shap_res.get("top_positive", [])]
+        negative = [{"feature": c["feature"], "impact": c["impact"]} for c in shap_res.get("top_negative", [])]
+    else:
+        # Fallback to feature importance if SHAP fails
+        positive = [f for f in importance[:5] if features.get(f["feature"], 0) > 0]
+        negative = [f for f in importance if features.get(f["feature"], 0) == 0][:3]
+
+    return {
+        "resumeScore": resume["score"],
+        "atsProbability": ats["probability"],
+        "atsPass": ats["pass"],
+        "careerReadiness": career,
+        "recommendedRole": role,
+        "interviewProbability": interview["probability"],
+        "salaryPrediction": salary,
+        "learningRoadmap": learning["skills"],
+        "missingSkills": learning["skills"][:5],
+        "featureImportance": importance[:10],
+        "recommendations": _build_recommendations(features, career, role, learning),
+        "explanations": {
+            "topPositive": positive,
+            "topNegative": negative,
+            "shapRaw": shap_res.get("contributions", []) if shap_res.get("success") else [],
+        },
+    }
+
+
+def _build_recommendations(features: dict, career: dict, role: dict, learning: dict) -> list[str]:
+    """Generate actionable recommendations based on predictions."""
+    recs = []
+    if features.get("has_github", 0) == 0:
+        recs.append("Add a GitHub profile to showcase your projects and code.")
+    if features.get("has_linkedin", 0) == 0:
+        recs.append("Create a LinkedIn profile to improve professional visibility.")
+    if features.get("projects", 0) < 3:
+        recs.append("Build 2-3 role-aligned projects to strengthen your portfolio.")
+    if features.get("certifications", 0) == 0:
+        recs.append("Earn at least one relevant certification to validate your skills.")
+    if features.get("skills_count", 0) < 8:
+        recs.append("Expand your skill set to at least 8-10 role-relevant skills.")
+    if learning.get("skills"):
+        top_skills = ", ".join(learning["skills"][:3])
+        recs.append(f"Focus on learning: {top_skills}.")
+    level = career.get("level", "")
+    if level in ("Beginner", "Intermediate"):
+        recs.append("Gain internship or project experience to move toward career readiness.")
+    return recs[:6]

@@ -9,4 +9,5 @@ urlpatterns = [
     path('skills/gap/', views.skill_gap, name='skill-gap'),
     path('readiness/predict/', views.predict_readiness, name='predict-readiness'),
     path('roadmap/recommend/', views.recommend_roadmap, name='recommend-roadmap'),
+    path('predict/', views.predict_ml, name='predict-ml'),
 ]

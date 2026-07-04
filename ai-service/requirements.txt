@@ -5,10 +5,12 @@ django-cors-headers>=4.4
 python-dotenv>=1.0
 requests>=2.32
 
-# ── Machine Learning (added in Phase 8) ────────────────
-# Uncomment when building the ML models. On Python 3.14 you may need recent
-# wheels; if install fails, use Python 3.12 for this service.
-# pandas>=2.2
-# scikit-learn>=1.5
-# numpy>=2.0
-# joblib>=1.4
+# ── Machine Learning (Phase 8 & 9) ────────────────────
+pandas>=2.2
+numpy>=2.0
+scikit-learn>=1.5
+joblib>=1.4
+xgboost>=2.0
+lightgbm>=4.0
+catboost>=1.2
+shap>=0.45

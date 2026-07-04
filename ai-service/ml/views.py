@@ -1,10 +1,9 @@
 """
 ML service endpoints. Consumed exclusively by the Node backend.
 
-Phase 1 scaffolds the request/response contract so the Node integration layer
-can be built against a stable API. The ML internals (Random Forest, Decision
-Tree, Linear Regression) are implemented in a later phase; endpoints currently
-return clearly-marked stub responses.
+Provides resume parsing, skill-gap analysis, career-readiness prediction,
+roadmap recommendation, and the unified ML predict endpoint that runs all
+7 trained models.
 """
 
 from functools import wraps
@@ -100,3 +99,33 @@ def recommend_roadmap(request):
         request.data.get('currentSkills', []) or [],
     )
     return Response({'success': True, 'implemented': True, 'data': result})
+
+
+@api_view(['POST'])
+@require_internal_key
+def predict_ml(request):
+    """Unified ML prediction endpoint — runs all 7 trained models."""
+    from ml.services.predictor import predict_all, models_loaded
+    from ml.utils.feature_engineering import extract_resume_features
+
+    if not models_loaded():
+        return Response(
+            {'success': False, 'implemented': True,
+             'message': 'ML models not trained yet. Run train_all.py first.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    try:
+        payload = request.data or {}
+        features = extract_resume_features(payload)
+        current_skills = payload.get('currentSkills', []) or []
+        target_role = payload.get('targetRole', '') or ''
+
+        result = predict_all(features, current_skills, target_role)
+        return Response({'success': True, 'implemented': True, 'data': result})
+    except Exception as exc:
+        return Response(
+            {'success': False, 'implemented': True,
+             'message': f'Prediction failed: {exc}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
