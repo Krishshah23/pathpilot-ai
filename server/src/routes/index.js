@@ -9,6 +9,7 @@ import growthRoutes from './growth.routes.js';
 import insightsRoutes from './insights.routes.js';
 import opportunityRoutes from './opportunity.routes.js';
 import reportRoutes from './report.routes.js';
+import adminRoutes from './admin.routes.js';
 import { aiService } from '../services/ai.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -37,7 +38,6 @@ router.use('/growth', growthRoutes);
 router.use('/insights', insightsRoutes);
 router.use('/opportunities', opportunityRoutes);
 router.use('/report', reportRoutes);
-
-// Future modules mount here: /admin
+router.use('/admin', adminRoutes);
 
 export default router;

@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { ProtectedRoute, PublicOnlyRoute, RequireOnboarding } from '@/routes/guards';
+import { ProtectedRoute, PublicOnlyRoute, RequireOnboarding, RequireAdmin } from '@/routes/guards';
 import { FullScreenLoader } from '@/components/ui/Spinner';
 
 // Auth pages are small and needed immediately — import eagerly.
@@ -21,6 +21,7 @@ const InsightsPage = lazy(() => import('@/pages/InsightsPage'));
 const OpportunityPage = lazy(() => import('@/pages/OpportunityPage'));
 const ReportPage = lazy(() => import('@/pages/ReportPage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
+const AdminPage = lazy(() => import('@/pages/AdminPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 export default function App() {
@@ -55,6 +56,11 @@ export default function App() {
               <Route path="/opportunities" element={<OpportunityPage />} />
               <Route path="/report" element={<ReportPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+
+              {/* Admin-only routes */}
+              <Route element={<RequireAdmin />}>
+                <Route path="/admin" element={<AdminPage />} />
+              </Route>
             </Route>
           </Route>
 

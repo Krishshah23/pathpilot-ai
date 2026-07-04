@@ -35,3 +35,15 @@ export function RequireOnboarding() {
   }
   return <Outlet />;
 }
+
+/**
+ * Restricts a route to admin users. Redirects students to the dashboard.
+ * Use inside ProtectedRoute + RequireOnboarding.
+ */
+export function RequireAdmin() {
+  const { user } = useAuth();
+  if (user?.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Outlet />;
+}
