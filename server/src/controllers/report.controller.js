@@ -2,8 +2,9 @@ import { User } from '../models/User.js';
 import { Resume } from '../models/Resume.js';
 import { GrowthPlan } from '../models/GrowthPlan.js';
 import { Opportunity } from '../models/Opportunity.js';
-import { pathScoreService } from '../services/pathScore.service.js';
-import { insightsService } from '../services/insights.service.js';
+import { buildPathScore, collectStudentSkills } from '../services/pathScore.service.js';
+import { skillDistribution } from '../services/insights.service.js';
+import { withProgress } from '../services/growth.service.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -16,23 +17,24 @@ export const generate = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
   // Fetch all data in parallel for speed.
-  const [
-    user,
-    resume,
-    growthPlan,
-    pathScore,
-    insights,
-    opportunities,
-  ] = await Promise.all([
+  const [user, resumes, growthPlan, opportunities] = await Promise.all([
     User.findById(userId),
-    Resume.findOne({ user: userId }).sort({ createdAt: -1 }),
+    Resume.find({ user: userId }).sort({ createdAt: -1 }),
     GrowthPlan.findOne({ user: userId }),
-    pathScoreService.calculate(userId).catch(() => null),
-    insightsService.build(userId).catch(() => null),
     Opportunity.find({ user: userId }).sort({ updatedAt: -1 }).lean(),
   ]);
 
-  // Opportunity stage summary
+  const latestResume = resumes.length ? resumes[0] : null;
+
+  // Reuse the same scoring logic used across the app.
+  const pathScore = buildPathScore(user, latestResume);
+  const skills = collectStudentSkills(user, latestResume);
+  const distribution = skillDistribution(skills);
+
+  // Growth progress summary.
+  const planData = withProgress(growthPlan);
+
+  // Opportunity stage summary.
   const oppStats = {};
   for (const o of opportunities) {
     oppStats[o.stage] = (oppStats[o.stage] || 0) + 1;
@@ -47,35 +49,42 @@ export const generate = asyncHandler(async (req, res) => {
       branch: user.profile?.branch || '',
       semester: user.profile?.semester || null,
       dreamRole: user.profile?.dreamRole || '',
-      skills: user.profile?.skills || [],
+      skills,
     },
-    pathScore: pathScore || null,
-    resume: resume
+    pathScore: {
+      score: pathScore.score,
+      label: pathScore.label,
+      summary: pathScore.summary,
+      readiness: pathScore.readiness,
+      factors: pathScore.factors,
+      profileCompletion: pathScore.profileCompletion,
+    },
+    resume: latestResume
       ? {
-          healthScore: resume.healthScore,
-          skills: resume.skills,
-          education: resume.education,
-          projects: resume.projects,
-          experience: resume.experience,
-          certifications: resume.certifications,
-          healthBreakdown: resume.healthBreakdown,
-          suggestions: resume.suggestions,
+          healthScore: latestResume.healthScore,
+          skills: latestResume.skills,
+          education: latestResume.education,
+          projects: latestResume.projects,
+          experience: latestResume.experience,
+          certifications: latestResume.certifications,
+          healthBreakdown: latestResume.healthBreakdown,
+          suggestions: latestResume.suggestions,
+          versions: resumes.length,
         }
       : null,
-    growthPlan: growthPlan
+    growthPlan: planData
       ? {
-          targetRole: growthPlan.targetRole,
-          summary: growthPlan.summary,
-          totalWeeks: growthPlan.totalWeeks,
-          totalTasks: growthPlan.totalTasks,
-          totalHours: growthPlan.totalHours,
-          completedTasks: growthPlan.weeks
-            .flatMap((w) => w.tasks)
-            .filter((t) => t.completed).length,
-          strengths: growthPlan.strengths,
+          targetRole: planData.targetRole,
+          summary: planData.summary,
+          totalWeeks: planData.totalWeeks,
+          totalTasks: planData.progress.totalTasks,
+          completedTasks: planData.progress.completedTasks,
+          totalHours: planData.totalHours,
+          percent: planData.progress.percent,
+          strengths: planData.strengths,
         }
       : null,
-    insights: insights || null,
+    skillDistribution: distribution,
     opportunities: {
       total: opportunities.length,
       byStage: oppStats,
