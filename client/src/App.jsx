@@ -18,6 +18,7 @@ const PathScorePage = lazy(() => import('@/pages/PathScorePage'));
 const GapNavigatorPage = lazy(() => import('@/pages/GapNavigatorPage'));
 const GrowthPage = lazy(() => import('@/pages/GrowthPage'));
 const InsightsPage = lazy(() => import('@/pages/InsightsPage'));
+const OpportunityPage = lazy(() => import('@/pages/OpportunityPage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
@@ -50,6 +51,7 @@ export default function App() {
               <Route path="/gap" element={<GapNavigatorPage />} />
               <Route path="/growth" element={<GrowthPage />} />
               <Route path="/insights" element={<InsightsPage />} />
+              <Route path="/opportunities" element={<OpportunityPage />} />
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
           </Route>

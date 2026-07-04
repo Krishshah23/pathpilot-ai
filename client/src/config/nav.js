@@ -11,7 +11,7 @@ export const NAV_ITEMS = [
   { label: 'Gap Navigator', path: '/gap', icon: Icon.Target, ready: true },
   { label: 'Growth Path', path: '/growth', icon: Icon.Route, ready: true },
   { label: 'Insights', path: '/insights', icon: Icon.ChartBar, ready: true },
-  { label: 'Opportunity Tracker', path: '/opportunities', icon: Icon.Briefcase, ready: false },
+  { label: 'Opportunity Tracker', path: '/opportunities', icon: Icon.Briefcase, ready: true },
   { label: 'Career Report', path: '/report', icon: Icon.Document, ready: false },
   { label: 'Profile', path: '/profile', icon: Icon.User, ready: true },
   { label: 'Admin', path: '/admin', icon: Icon.Shield, ready: false, admin: true },

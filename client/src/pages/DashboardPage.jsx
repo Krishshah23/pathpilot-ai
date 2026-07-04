@@ -129,6 +129,11 @@ export default function DashboardPage() {
                 onClick={() => navigate('/insights')}
               />
               <ActionButton
+                icon={Icon.Briefcase}
+                label="Track opportunities"
+                onClick={() => navigate('/opportunities')}
+              />
+              <ActionButton
                 icon={Icon.User}
                 label="Update profile"
                 onClick={() => navigate('/profile')}
