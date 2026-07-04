@@ -18,6 +18,7 @@ from ml.services.career_analysis import (
     analyze_skill_gap as run_skill_gap,
     predict_readiness as run_readiness_prediction,
 )
+from ml.services.growth_planner import build_roadmap as run_roadmap_builder
 from ml.services.resume_parser import parse_resume as run_resume_parser
 
 
@@ -93,5 +94,9 @@ def predict_readiness(request):
 @api_view(['POST'])
 @require_internal_key
 def recommend_roadmap(request):
-    """Decision Tree → personalized week-wise learning roadmap."""
-    return stub('roadmap-recommend', echo={'targetRole': request.data.get('targetRole')})
+    """Deterministic → personalized week-wise learning roadmap."""
+    result = run_roadmap_builder(
+        request.data.get('targetRole'),
+        request.data.get('currentSkills', []) or [],
+    )
+    return Response({'success': True, 'implemented': True, 'data': result})

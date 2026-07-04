@@ -81,7 +81,7 @@ python manage.py runserver 8000  # http://localhost:8000
 - [x] **Phase 2** — Onboarding + Profile
 - [x] **Phase 3** — Resume Intelligence
 - [x] **Phase 4** — Path Score + Gap Navigator
-- [ ] Phase 5 — Growth Path + Insights
+- [x] **Phase 5** — Growth Path + Insights
 - [ ] Phase 6 — Opportunity Tracker + Career Report
 - [ ] Phase 7 — Admin Dashboard
 - [ ] Phase 8 — ML models (Random Forest / Decision Tree / Linear Regression)

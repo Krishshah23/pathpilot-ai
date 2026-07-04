@@ -16,6 +16,8 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const ResumePage = lazy(() => import('@/pages/ResumePage'));
 const PathScorePage = lazy(() => import('@/pages/PathScorePage'));
 const GapNavigatorPage = lazy(() => import('@/pages/GapNavigatorPage'));
+const GrowthPage = lazy(() => import('@/pages/GrowthPage'));
+const InsightsPage = lazy(() => import('@/pages/InsightsPage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
@@ -46,6 +48,8 @@ export default function App() {
               <Route path="/resume" element={<ResumePage />} />
               <Route path="/path-score" element={<PathScorePage />} />
               <Route path="/gap" element={<GapNavigatorPage />} />
+              <Route path="/growth" element={<GrowthPage />} />
+              <Route path="/insights" element={<InsightsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
           </Route>

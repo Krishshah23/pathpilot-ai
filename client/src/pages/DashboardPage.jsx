@@ -119,6 +119,16 @@ export default function DashboardPage() {
                 onClick={() => navigate('/gap')}
               />
               <ActionButton
+                icon={Icon.Route}
+                label="Build learning roadmap"
+                onClick={() => navigate('/growth')}
+              />
+              <ActionButton
+                icon={Icon.ChartBar}
+                label="View insights"
+                onClick={() => navigate('/insights')}
+              />
+              <ActionButton
                 icon={Icon.User}
                 label="Update profile"
                 onClick={() => navigate('/profile')}

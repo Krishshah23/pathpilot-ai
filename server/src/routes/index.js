@@ -5,6 +5,8 @@ import profileRoutes from './profile.routes.js';
 import resumeRoutes from './resume.routes.js';
 import pathScoreRoutes from './pathScore.routes.js';
 import gapRoutes from './gap.routes.js';
+import growthRoutes from './growth.routes.js';
+import insightsRoutes from './insights.routes.js';
 import { aiService } from '../services/ai.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -29,7 +31,9 @@ router.use('/profile', profileRoutes);
 router.use('/resume', resumeRoutes);
 router.use('/path-score', pathScoreRoutes);
 router.use('/gap', gapRoutes);
+router.use('/growth', growthRoutes);
+router.use('/insights', insightsRoutes);
 
-// Future modules mount here: /growth, /insights, /opportunities, /report, /admin
+// Future modules mount here: /opportunities, /report, /admin
 
 export default router;
