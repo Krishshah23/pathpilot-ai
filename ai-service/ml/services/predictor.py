@@ -207,7 +207,7 @@ def predict_career_readiness(features: dict) -> dict:
             "confidenceTag": confidence}
 
 
-def predict_role(features: dict) -> dict:
+def predict_role(features: dict, target_role: str = None) -> dict:
     """Recommend best role."""
     model = _get_model("role")
     scaler = _get_scaler("role")
@@ -228,10 +228,19 @@ def predict_role(features: dict) -> dict:
         for i in top3_idx
     ]
 
+    target_fit = 0.0
+    if target_role:
+        target_role_lower = target_role.lower().strip()
+        for idx, cls_name in enumerate(le.classes_):
+            cls_lower = cls_name.lower().strip()
+            if cls_lower == target_role_lower or cls_lower.replace(" ", "") == target_role_lower.replace(" ", ""):
+                target_fit = round(float(proba[idx]) * 100, 1)
+                break
+
     confidence = _classifier_confidence(proba)
 
     return {"role": role, "confidence": round(float(proba[pred_idx]) * 100, 1),
-            "confidenceTag": confidence, "top3": top3}
+            "confidenceTag": confidence, "top3": top3, "roleFitScore": target_fit}
 
 
 def predict_interview(features: dict) -> dict:
@@ -408,7 +417,7 @@ def predict_all(features: dict, current_skills: list, target_role: str) -> dict:
     resume = predict_resume_score(features)
     ats = predict_ats(features)
     career = predict_career_readiness(features)
-    role = predict_role(features)
+    role = predict_role(features, target_role)
     interview = predict_interview(features)
 
     # For salary, need role recommendation

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/icons';
 import { OpportunityModal } from '@/components/opportunity/OpportunityModal';
+import { ConfidenceTag } from '@/components/ui/ConfidenceTag';
 import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
@@ -361,6 +362,7 @@ function ListView({ opportunities, onEdit, onDelete, onStageChange }) {
    ═══════════════════════════════════════════════════════════════════════ */
 function OpportunityCard({ opp, onEdit, onDelete, onStageChange, compact = false }) {
   const [expanded, setExpanded] = useState(false);
+  const [showFitDetail, setShowFitDetail] = useState(false);
   const stage = stageMap[opp.stage] || stageMap.wishlist;
   const date = opp.updatedAt ? new Date(opp.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
 
@@ -404,16 +406,36 @@ function OpportunityCard({ opp, onEdit, onDelete, onStageChange, compact = false
           <p className="truncate text-xs text-muted">{opp.role}</p>
         </div>
 
-        {/* Stage badge */}
-        <span
-          className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-bold"
-          style={{
-            backgroundColor: `${stage.color}18`,
-            color: stage.color,
-          }}
-        >
-          {stage.label}
-        </span>
+        {/* Stage & Fit Badges */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {opp.fitScore && opp.fitScore.score > 0 && (
+            <span
+              className={cn(
+                "rounded-lg px-2 py-1 text-[11px] font-bold border",
+                opp.fitScore.score >= 70
+                  ? "bg-success/15 text-success border-success/35"
+                  : opp.fitScore.score >= 45
+                    ? "bg-warning/15 text-warning border-warning/35"
+                    : "bg-danger/15 text-danger border-danger/35"
+              )}
+              title={`Combined fit score: ${opp.fitScore.score}% match`}
+            >
+              {opp.fitScore.score}% match
+            </span>
+          )}
+
+          {!compact && (
+            <span
+              className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-bold"
+              style={{
+                backgroundColor: `${stage.color}18`,
+                color: stage.color,
+              }}
+            >
+              {stage.label}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Metadata row */}
@@ -437,23 +459,70 @@ function OpportunityCard({ opp, onEdit, onDelete, onStageChange, compact = false
         </div>
       )}
 
-      {/* Timeline expand toggle */}
-      {opp.timeline?.length > 0 && !compact && (
-        <button
-          type="button"
-          onClick={() => setExpanded((e) => !e)}
-          className="mt-3 flex items-center gap-1 text-[11px] font-medium text-faint transition hover:text-muted"
-        >
-          <Icon.ChevronDown
-            size={14}
-            className={cn('transition-transform', expanded && 'rotate-180')}
-          />
-          Timeline ({opp.timeline.length} events)
-        </button>
+      {/* Expand/Diagnostics toggles */}
+      {!compact && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          {opp.timeline?.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setExpanded((e) => !e)}
+              className="flex items-center gap-1 text-[11px] font-medium text-faint transition hover:text-muted"
+            >
+              <Icon.ChevronDown
+                size={14}
+                className={cn('transition-transform', expanded && 'rotate-180')}
+              />
+              Timeline ({opp.timeline.length} events)
+            </button>
+          )}
+
+          {opp.fitScore && opp.fitScore.score > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowFitDetail((d) => !d)}
+              className="flex items-center gap-1 text-[11px] font-medium text-faint transition hover:text-muted"
+            >
+              <Icon.ChevronDown
+                size={14}
+                className={cn('transition-transform', showFitDetail && 'rotate-180')}
+              />
+              AI Fit Diagnostics
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Fit Diagnostics details */}
+      {showFitDetail && opp.fitScore && !compact && (
+        <div className="mt-3 rounded-xl border border-line bg-surface-2/40 p-3 space-y-3">
+          <div className="flex items-center justify-between border-b border-line pb-2">
+            <span className="text-[11px] font-bold text-ink uppercase tracking-wider">AI Fit Diagnostics</span>
+            {opp.fitScore.confidence && (
+              <ConfidenceTag confidence={opp.fitScore.confidence} size="sm" />
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-surface px-2 py-1.5 border border-line/45">
+              <span className="text-[10px] text-faint block uppercase font-semibold">Role Fit</span>
+              <span className="font-display text-sm font-bold text-ink">{opp.fitScore.roleFit}%</span>
+            </div>
+            <div className="rounded-lg bg-surface px-2 py-1.5 border border-line/45">
+              <span className="text-[10px] text-faint block uppercase font-semibold">ATS Match</span>
+              <span className="font-display text-sm font-bold text-ink">{opp.fitScore.atsPass}%</span>
+            </div>
+            <div className="rounded-lg bg-surface px-2 py-1.5 border border-line/45">
+              <span className="text-[10px] text-faint block uppercase font-semibold">Interview</span>
+              <span className="font-display text-sm font-bold text-ink">{opp.fitScore.interviewSuccess}%</span>
+            </div>
+          </div>
+          <p className="text-[10px] text-faint leading-relaxed mt-1">
+            This score predicts your preparation alignment for a <strong>{opp.role}</strong> position at <strong>{opp.company}</strong>.
+          </p>
+        </div>
       )}
 
       {/* Timeline */}
-      {expanded && opp.timeline?.length > 0 && (
+      {expanded && opp.timeline?.length > 0 && !compact && (
         <div className="mt-3 ml-4 border-l border-line pl-4 space-y-2">
           {opp.timeline.map((entry, i) => {
             const s = stageMap[entry.stage] || stageMap.wishlist;

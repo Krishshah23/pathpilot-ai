@@ -55,6 +55,18 @@ const opportunitySchema = new Schema(
     appliedAt: { type: Date, default: null },
 
     timeline: { type: [timelineEntrySchema], default: [] },
+
+    fitScore: {
+      score: { type: Number, default: 0 },
+      roleFit: { type: Number, default: 0 },
+      atsPass: { type: Number, default: 0 },
+      interviewSuccess: { type: Number, default: 0 },
+      confidence: {
+        tier: { type: String, enum: ['high', 'moderate', 'low'], default: 'moderate' },
+        score: { type: Number, default: 50 },
+        reason: { type: String, default: '' },
+      },
+    },
   },
   { timestamps: true }
 );
