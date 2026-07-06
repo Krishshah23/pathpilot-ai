@@ -25,6 +25,7 @@ const TEXT_COLORS = {
 export default function PathScorePage() {
   const navigate = useNavigate();
   const [pathScore, setPathScore] = useState(null);
+  const [marketSalary, setMarketSalary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -34,6 +35,7 @@ export default function PathScorePage() {
     try {
       const { data } = await api.get('/path-score');
       setPathScore(data.data.pathScore);
+      setMarketSalary(data.data.marketSalary || null);
     } catch (err) {
       setError(errorMessage(err, 'Could not load Path Score'));
     } finally {
@@ -67,7 +69,7 @@ export default function PathScorePage() {
           </div>
         </Card>
       ) : (
-        <PathScoreContent pathScore={pathScore} onResume={() => navigate('/resume')} />
+        <PathScoreContent pathScore={pathScore} marketSalary={marketSalary} onResume={() => navigate('/resume')} />
       )}
     </AppShell>
   );
@@ -102,7 +104,7 @@ function formatFeatureName(name) {
   return mapping[name] || name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
-function PathScoreContent({ pathScore, onResume }) {
+function PathScoreContent({ pathScore, marketSalary, onResume }) {
   const readiness = pathScore.readiness || {};
   const readinessLabel = readiness.level || readiness.label || pathScore.label;
   const predictions = pathScore.predictions || null;
@@ -173,7 +175,20 @@ function PathScoreContent({ pathScore, onResume }) {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-success">Salary Projection</p>
                   <p className="mt-2 font-display text-3xl font-bold text-ink">₹{predictions.salaryPrediction?.salaryLPA} LPA</p>
-                  <p className="mt-2 text-xs text-muted">Expected Indian market rate</p>
+                  <p className="mt-2 text-xs text-muted">ML model projection</p>
+                  {marketSalary?.available && marketSalary.min != null && (
+                    <div className="mt-3 rounded-lg border border-success/20 bg-success/5 px-2.5 py-1.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-success/80">Live market range</p>
+                      <p className="mt-0.5 text-sm font-bold text-success">
+                        ₹{marketSalary.min} — ₹{marketSalary.max} LPA
+                      </p>
+                      {marketSalary.lastUpdated && (
+                        <p className="mt-0.5 text-[10px] text-faint">
+                          Updated {new Date(marketSalary.lastUpdated).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/10 text-success">
                   <Icon.DollarSign size={20} />

@@ -1,6 +1,7 @@
 import { Resume } from '../models/Resume.js';
 import { aiService } from '../services/ai.service.js';
 import { buildPathScore, collectStudentSkills } from '../services/pathScore.service.js';
+import { getMarketSalaryForRole } from '../services/jobMarket.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 
@@ -74,6 +75,17 @@ export const getPathScore = asyncHandler(async (req, res) => {
     // Keep fallback pathScore available if Django AI service is down
   }
 
-  return sendSuccess(res, { data: { pathScore } });
+  // Fetch live market salary range for the user's dream role.
+  let marketSalary = { available: false };
+  try {
+    const dreamRole = req.user.profile?.dreamRole;
+    if (dreamRole) {
+      marketSalary = await getMarketSalaryForRole(dreamRole);
+    }
+  } catch (err) {
+    console.error('Error fetching market salary:', err);
+  }
+
+  return sendSuccess(res, { data: { pathScore, marketSalary } });
 });
 

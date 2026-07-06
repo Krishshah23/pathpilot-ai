@@ -1,6 +1,7 @@
 import { createApp } from './app.js';
 import { connectDB } from './config/db.js';
 import { env } from './config/env.js';
+import { startJobMarketCron } from './services/jobMarketCron.js';
 
 async function bootstrap() {
   await connectDB();
@@ -11,6 +12,9 @@ async function bootstrap() {
     // eslint-disable-next-line no-console
     console.log(`🚀 PathPilot API running on http://localhost:${env.port} [${env.nodeEnv}]`);
   });
+
+  // Start the weekly job-market data scheduler.
+  startJobMarketCron();
 
   // Graceful shutdown
   const shutdown = (signal) => {

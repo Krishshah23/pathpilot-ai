@@ -43,4 +43,11 @@ export const env = {
     pass: process.env.SMTP_PASS,
     from: process.env.EMAIL_FROM || 'PathPilot AI <no-reply@pathpilot.ai>',
   },
+
+  // Adzuna job-listings API (Phase 1 — market grounding).
+  // Free registration at https://developer.adzuna.com
+  adzuna: {
+    appId: process.env.ADZUNA_APP_ID || '',
+    appKey: process.env.ADZUNA_APP_KEY || '',
+  },
 };

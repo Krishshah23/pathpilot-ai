@@ -26,6 +26,7 @@ export default function GapNavigatorPage() {
   const [targetRole, setTargetRole] = useState(initialRole);
   const [gap, setGap] = useState(null);
   const [sources, setSources] = useState(null);
+  const [marketData, setMarketData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState('');
@@ -37,6 +38,7 @@ export default function GapNavigatorPage() {
       const { data } = await api.post('/gap/analyze', { targetRole: role });
       setGap(data.data.gap);
       setSources(data.data.sources);
+      setMarketData(data.data.marketData || null);
       if (!quiet) toast.success('Gap analysis updated');
     } catch (err) {
       const message = errorMessage(err, 'Could not analyze skill gap');
@@ -59,6 +61,7 @@ export default function GapNavigatorPage() {
         if (!mounted) return;
         setGap(data.data.gap);
         setSources(data.data.sources);
+        setMarketData(data.data.marketData || null);
       } catch (err) {
         if (!mounted) return;
         setError(errorMessage(err, 'Could not analyze skill gap'));
@@ -114,7 +117,7 @@ export default function GapNavigatorPage() {
               <p className="text-sm text-danger">{error}</p>
             </Card>
           ) : gap ? (
-            <GapContent gap={gap} sources={sources} />
+            <GapContent gap={gap} sources={sources} marketData={marketData} />
           ) : (
             <EmptyState
               icon={<Icon.Target />}
@@ -128,7 +131,7 @@ export default function GapNavigatorPage() {
   );
 }
 
-function GapContent({ gap, sources }) {
+function GapContent({ gap, sources, marketData }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
@@ -160,6 +163,11 @@ function GapContent({ gap, sources }) {
         </Card>
       </div>
 
+      {/* Market data banner */}
+      {marketData && (
+        <MarketDataBanner marketData={marketData} />
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         <SkillPanel
           title="Matched skills"
@@ -167,7 +175,7 @@ function GapContent({ gap, sources }) {
           skills={gap.matchedSkills}
           empty="No role skills matched yet"
         />
-        <MissingSkills skills={gap.missingSkills} />
+        <MissingSkills skills={gap.missingSkills} marketAvailable={marketData?.available} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -205,6 +213,49 @@ function GapContent({ gap, sources }) {
   );
 }
 
+function MarketDataBanner({ marketData }) {
+  if (!marketData?.available) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-2/30 px-4 py-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-warning/10 text-warning">
+          <Icon.AlertTriangle size={16} />
+        </span>
+        <div>
+          <p className="text-sm font-medium text-muted">Market data unavailable this week</p>
+          <p className="text-xs text-faint">
+            Skill priorities are based on static role requirements. Live job-market data will appear once available.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const lastUpdated = new Date(marketData.lastUpdated);
+  const formattedDate = lastUpdated.toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  });
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-success/30 bg-success/5 px-4 py-3">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+        <Icon.Sparkles size={16} />
+      </span>
+      <div className="flex-1">
+        <p className="text-sm font-medium text-ink">
+          Live market data active
+        </p>
+        <p className="text-xs text-faint">
+          {marketData.skillsTracked} skills tracked from {marketData.sampleSize} job postings — last updated {formattedDate}
+        </p>
+      </div>
+      <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
+        <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+        Live
+      </span>
+    </div>
+  );
+}
+
 function SkillPanel({ title, icon: Ico, skills, empty }) {
   return (
     <Card>
@@ -214,7 +265,17 @@ function SkillPanel({ title, icon: Ico, skills, empty }) {
       {skills.length ? (
         <div className="mt-4 flex flex-wrap gap-2">
           {skills.map((item) => (
-            <SkillBadge key={item.skill}>{item.skill}</SkillBadge>
+            <span
+              key={item.skill}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface-2 px-2.5 py-1 text-xs text-muted"
+            >
+              {item.skill}
+              {item.marketBacked && item.marketFrequency != null && (
+                <span className="rounded bg-success/10 px-1 py-0.5 text-[10px] font-semibold text-success">
+                  {item.marketFrequency}%
+                </span>
+              )}
+            </span>
           ))}
         </div>
       ) : (
@@ -224,7 +285,7 @@ function SkillPanel({ title, icon: Ico, skills, empty }) {
   );
 }
 
-function MissingSkills({ skills }) {
+function MissingSkills({ skills, marketAvailable }) {
   return (
     <Card>
       <h2 className="flex items-center gap-2 font-display text-base font-semibold text-ink">
@@ -238,7 +299,15 @@ function MissingSkills({ skills }) {
               className="flex flex-col gap-3 rounded-xl border border-line bg-surface-2/40 p-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div>
-                <p className="text-sm font-medium text-ink">{item.skill}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-ink">{item.skill}</p>
+                  {item.marketBacked && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand">
+                      <Icon.Sparkles size={9} />
+                      {item.marketFrequency}% demand
+                    </span>
+                  )}
+                </div>
                 <p className="mt-0.5 text-xs text-faint">{item.estimatedHours} estimated hours</p>
               </div>
               <PriorityBadge priority={item.priority} />

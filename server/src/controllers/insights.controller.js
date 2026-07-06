@@ -4,6 +4,7 @@ import { buildPathScore, collectStudentSkills } from '../services/pathScore.serv
 import { aiService } from '../services/ai.service.js';
 import { withProgress } from '../services/growth.service.js';
 import { skillDistribution } from '../services/insights.service.js';
+import { getMarketSalaryForRole } from '../services/jobMarket.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 
@@ -86,6 +87,17 @@ export const getInsights = asyncHandler(async (req, res) => {
       }
     : { hasPlan: false };
 
+  // Fetch live market salary range for the user's target role.
+  let marketSalary = { available: false };
+  try {
+    const dreamRole = req.user.profile?.dreamRole;
+    if (dreamRole) {
+      marketSalary = await getMarketSalaryForRole(dreamRole);
+    }
+  } catch (err) {
+    console.error('Error fetching market salary for insights:', err);
+  }
+
   return sendSuccess(res, {
     data: {
       pathScore: {
@@ -108,6 +120,8 @@ export const getInsights = asyncHandler(async (req, res) => {
         resumeVersions: resumes.length,
         latestResumeHealth: latestResume?.healthScore ?? null,
       },
+      marketSalary,
     },
   });
 });
+
