@@ -41,9 +41,13 @@ def main():
 
     from ml.training.train_learning import train as train_learning
     train_learning()
+    print()
+
+    from ml.utils.build_peer_benchmarks import generate_benchmarks
+    generate_benchmarks()
 
     print("\n" + "=" * 60)
-    print("  All 7 models trained and saved successfully!")
+    print("  All models and benchmarks generated successfully!")
     print("=" * 60 + "\n")
 
 

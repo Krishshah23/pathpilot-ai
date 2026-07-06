@@ -27,6 +27,7 @@ export default function PathScorePage() {
   const navigate = useNavigate();
   const [pathScore, setPathScore] = useState(null);
   const [marketSalary, setMarketSalary] = useState(null);
+  const [blendedBenchmark, setBlendedBenchmark] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -37,6 +38,7 @@ export default function PathScorePage() {
       const { data } = await api.get('/path-score');
       setPathScore(data.data.pathScore);
       setMarketSalary(data.data.marketSalary || null);
+      setBlendedBenchmark(data.data.blendedBenchmark || null);
     } catch (err) {
       setError(errorMessage(err, 'Could not load Path Score'));
     } finally {
@@ -70,7 +72,12 @@ export default function PathScorePage() {
           </div>
         </Card>
       ) : (
-        <PathScoreContent pathScore={pathScore} marketSalary={marketSalary} onResume={() => navigate('/resume')} />
+        <PathScoreContent
+          pathScore={pathScore}
+          marketSalary={marketSalary}
+          blendedBenchmark={blendedBenchmark}
+          onResume={() => navigate('/resume')}
+        />
       )}
     </AppShell>
   );
@@ -105,10 +112,11 @@ function formatFeatureName(name) {
   return mapping[name] || name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
-function PathScoreContent({ pathScore, marketSalary, onResume }) {
+function PathScoreContent({ pathScore, marketSalary, blendedBenchmark, onResume }) {
   const readiness = pathScore.readiness || {};
   const readinessLabel = readiness.level || readiness.label || pathScore.label;
   const predictions = pathScore.predictions || null;
+  const peerBenchmark = pathScore.peerBenchmark || null;
 
   return (
     <div className="space-y-6">
@@ -142,6 +150,171 @@ function PathScoreContent({ pathScore, marketSalary, onResume }) {
             {pathScore.factors.map((factor) => (
               <FactorBar key={factor.key} factor={factor} />
             ))}
+          </div>
+        </Card>
+      </div>
+
+      {/* Peer Benchmarking & Market Alignment */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Peer Benchmarking Card */}
+        <Card className="flex flex-col justify-between border-line/60 bg-gradient-to-br from-surface to-brand/5 shadow-md">
+          <div>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-display text-base font-semibold text-ink flex items-center gap-1.5">
+                  <Icon.Users size={18} className="text-brand" />
+                  Peer Benchmarking
+                </h3>
+                <p className="mt-1 text-xs text-muted">
+                  Your Path Score compared against other students targeting same role.
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full bg-brand/10 px-2 py-0.5 text-[10px] font-bold text-brand uppercase tracking-wider">
+                Synthetic Dataset
+              </span>
+            </div>
+
+            {peerBenchmark && (
+              <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:justify-around">
+                {/* Radial Percentile Indicator */}
+                <div className="relative flex h-28 w-28 shrink-0 items-center justify-center rounded-full bg-brand/5 border border-brand/20">
+                  <svg className="absolute inset-0 h-full w-full -rotate-90">
+                    <circle
+                      cx="56"
+                      cy="56"
+                      r="48"
+                      className="stroke-line/20"
+                      strokeWidth="8"
+                      fill="none"
+                    />
+                    <circle
+                      cx="56"
+                      cy="56"
+                      r="48"
+                      className="stroke-brand transition-all duration-500 ease-out"
+                      strokeWidth="8"
+                      strokeDasharray={2 * Math.PI * 48}
+                      strokeDashoffset={2 * Math.PI * 48 * (1 - peerBenchmark.percentile / 100)}
+                      strokeLinecap="round"
+                      fill="none"
+                    />
+                  </svg>
+                  <div className="text-center z-10">
+                    <span className="font-display text-2xl font-bold text-ink">
+                      {Math.round(peerBenchmark.percentile)}th
+                    </span>
+                    <p className="text-[10px] font-medium text-muted">Percentile</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-center sm:text-left">
+                  <p className="text-sm font-medium text-ink">
+                    Target Role: <span className="font-bold text-brand">{peerBenchmark.role}</span>
+                  </p>
+                  <p className="text-xs text-muted leading-relaxed">
+                    You score higher than <span className="font-semibold text-brand">{Math.round(peerBenchmark.percentile)}%</span> of peers targetting this role.
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 rounded-xl bg-surface-2/40 border border-line p-2 text-center text-xs">
+                    <div>
+                      <p className="text-[10px] text-faint uppercase font-semibold">Min</p>
+                      <p className="font-bold text-ink">{peerBenchmark.min}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-faint uppercase font-semibold">Average</p>
+                      <p className="font-bold text-ink">{peerBenchmark.mean}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-faint uppercase font-semibold">Max</p>
+                      <p className="font-bold text-ink">{peerBenchmark.max}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="mt-4 border-t border-line/40 pt-3 text-[10px] text-faint flex items-center gap-1">
+            <Icon.Info size={11} />
+            Honest Notice: Benchmarks calculated against 50,000 synthetic student profiles.
+          </div>
+        </Card>
+
+        {/* Live Market Skill Demand Alignment Card */}
+        <Card className="flex flex-col justify-between border-line/60 bg-gradient-to-br from-surface to-success/5 shadow-md">
+          <div>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-display text-base font-semibold text-ink flex items-center gap-1.5">
+                  <Icon.Target size={18} className="text-success" />
+                  Live Skill Demand Alignment
+                </h3>
+                <p className="mt-1 text-xs text-muted">
+                  Your skill profile vs. current market requirements in India.
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success uppercase tracking-wider">
+                Live Market Data
+              </span>
+            </div>
+
+            {blendedBenchmark && blendedBenchmark.available ? (
+              <div className="mt-5 space-y-4">
+                {/* Stats Bar */}
+                <div className="flex items-center justify-between rounded-xl border border-success/10 bg-success/5 p-3 text-sm">
+                  <div className="text-center sm:text-left">
+                    <p className="text-xs text-muted">Skill Match Rate</p>
+                    <p className="mt-1 font-display text-xl font-bold text-success">{blendedBenchmark.matchRate}%</p>
+                  </div>
+                  <div className="h-8 w-px bg-success/20"></div>
+                  <div className="text-center sm:text-left">
+                    <p className="text-xs text-muted">Avg. Skill Demand</p>
+                    <p className="mt-1 font-display text-xl font-bold text-ink">{blendedBenchmark.avgMarketDemand}%</p>
+                  </div>
+                  <div className="h-8 w-px bg-success/20"></div>
+                  <div className="text-center sm:text-left">
+                    <p className="text-xs text-muted">Analyzed Listings</p>
+                    <p className="mt-1 font-display text-xl font-bold text-ink">{blendedBenchmark.sampleSize}</p>
+                  </div>
+                </div>
+
+                {/* Top 3 Demand Skills Grid */}
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold text-muted uppercase tracking-wider">Top Market Skills & Your Coverage</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {blendedBenchmark.skills.slice(0, 4).map((item) => (
+                      <div key={item.skill} className="flex items-center justify-between rounded-lg border border-line bg-surface-2/30 px-2.5 py-1.5 text-xs">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-ink">{item.skill}</p>
+                          <p className="text-[10px] text-faint">Demand: {item.demand}%</p>
+                        </div>
+                        <span className={cn(
+                          'rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shrink-0',
+                          item.matched ? 'bg-success/15 text-success' : 'bg-line text-muted'
+                        )}>
+                          {item.matched ? 'Matched' : 'Missing'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-10 flex flex-col items-center justify-center text-center p-4">
+                <Icon.FileText className="text-faint h-8 w-8 mb-2" />
+                <p className="text-xs text-muted">No market data available for target role.</p>
+                <p className="text-[10px] text-faint mt-1">Set a Dream Role in your profile to enable live market alignment.</p>
+              </div>
+            )}
+          </div>
+          <div className="mt-4 border-t border-line/40 pt-3 text-[10px] text-faint flex items-center justify-between">
+            <span className="flex items-center gap-1">
+              <Icon.Info size={11} />
+              Source: Live job market signals from Adzuna (India).
+            </span>
+            {blendedBenchmark?.lastUpdated && (
+              <span>
+                Updated {new Date(blendedBenchmark.lastUpdated).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+              </span>
+            )}
           </div>
         </Card>
       </div>

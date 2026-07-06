@@ -151,6 +151,14 @@ export function buildPathScore(user, resume) {
       total: profileChecks.length,
       checks: profileChecks,
     },
+    peerBenchmark: {
+      percentile: 50.0,
+      role: user.profile?.dreamRole || 'Software Engineer',
+      mean: 70.0,
+      min: 40.0,
+      max: 100.0,
+      isFallback: true
+    },
     resume: resume
       ? {
           id: resume._id,

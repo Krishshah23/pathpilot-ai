@@ -1,7 +1,7 @@
 import { Resume } from '../models/Resume.js';
 import { aiService } from '../services/ai.service.js';
 import { buildPathScore, collectStudentSkills } from '../services/pathScore.service.js';
-import { getMarketSalaryForRole } from '../services/jobMarket.service.js';
+import { getMarketSalaryForRole, getMarketDataForRole } from '../services/jobMarket.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 
@@ -61,10 +61,12 @@ export const getPathScore = asyncHandler(async (req, res) => {
 
     const mlResponse = await aiService.predict(payload);
     if (mlResponse?.data) {
-      const mlData = mlResponse.data;
       pathScore.score = mlData.resumeScore;
       pathScore.readiness = mlData.careerReadiness;
       pathScore.predictions = mlData;
+      if (mlData.peerBenchmark) {
+        pathScore.peerBenchmark = mlData.peerBenchmark;
+      }
       // Map SHAP explanations to recommendations or show directly
       if (mlData.recommendations) {
         pathScore.recommendations = mlData.recommendations;
@@ -77,15 +79,43 @@ export const getPathScore = asyncHandler(async (req, res) => {
 
   // Fetch live market salary range for the user's dream role.
   let marketSalary = { available: false };
+  let blendedBenchmark = { available: false };
   try {
     const dreamRole = req.user.profile?.dreamRole;
     if (dreamRole) {
       marketSalary = await getMarketSalaryForRole(dreamRole);
+      
+      const marketData = await getMarketDataForRole(dreamRole);
+      if (marketData && marketData.available && marketData.skills?.length > 0) {
+        const topMarketSkills = marketData.skills.slice(0, 10);
+        const studentSkillsLower = new Set(currentSkills.map(s => String(s).toLowerCase()));
+        
+        const skillMatches = topMarketSkills.map(s => ({
+          skill: s.skill,
+          demand: s.frequency,
+          matched: studentSkillsLower.has(s.skill.toLowerCase())
+        }));
+        
+        const matchedCount = skillMatches.filter(s => s.matched).length;
+        const matchRate = Math.round((matchedCount / Math.max(1, topMarketSkills.length)) * 100);
+        const avgMarketDemand = Math.round(
+          topMarketSkills.reduce((sum, s) => sum + s.frequency, 0) / Math.max(1, topMarketSkills.length)
+        );
+
+        blendedBenchmark = {
+          available: true,
+          matchRate,
+          avgMarketDemand,
+          skills: skillMatches,
+          sampleSize: marketData.sampleSize,
+          lastUpdated: marketData.lastUpdated
+        };
+      }
     }
   } catch (err) {
-    console.error('Error fetching market salary:', err);
+    console.error('Error fetching market salary/data:', err);
   }
 
-  return sendSuccess(res, { data: { pathScore, marketSalary } });
+  return sendSuccess(res, { data: { pathScore, marketSalary, blendedBenchmark } });
 });
 

@@ -347,6 +347,60 @@ def get_feature_importance(model_name: str = "resume_score") -> list[dict]:
     return [{"feature": f, "importance": round(float(v), 4)} for f, v in pairs]
 
 
+def _get_peer_benchmark_data(role_name: str, score: float) -> dict:
+    import json
+    path = BASE_DIR / "models" / "peer_benchmarks.json"
+    benchmarks = None
+    if path.exists():
+        try:
+            with open(path) as f:
+                benchmarks = json.load(f)
+        except Exception:
+            pass
+
+    if not benchmarks:
+        return {
+            "percentile": 50.0,
+            "role": role_name,
+            "mean": 70.0,
+            "min": 40.0,
+            "max": 100.0,
+            "isFallback": True
+        }
+
+    if role_name not in benchmarks:
+        # fallback to Software Engineer
+        role_name = "Software Engineer" if "Software Engineer" in benchmarks else list(benchmarks.keys())[0]
+
+    data = benchmarks[role_name]
+    percentiles = data["percentiles"]
+
+    # Calculate percentile with interpolation
+    if score <= percentiles[0]:
+        pct = 0.0
+    elif score >= percentiles[100]:
+        pct = 100.0
+    else:
+        pct = 50.0
+        for i in range(100):
+            if percentiles[i] <= score <= percentiles[i+1]:
+                span = percentiles[i+1] - percentiles[i]
+                if span == 0:
+                    pct = float(i)
+                else:
+                    pct = i + (score - percentiles[i]) / span
+                break
+
+    return {
+        "percentile": round(float(pct), 1),
+        "role": role_name,
+        "mean": round(data["mean"], 1),
+        "min": round(data["min"], 1),
+        "max": round(data["max"], 1),
+        "isFallback": False
+    }
+
+
 # ── Full prediction pipeline ─────────────────────────────────────────
 
 def predict_all(features: dict, current_skills: list, target_role: str) -> dict:
@@ -379,9 +433,13 @@ def predict_all(features: dict, current_skills: list, target_role: str) -> dict:
         positive = [f for f in importance[:5] if features.get(f["feature"], 0) > 0]
         negative = [f for f in importance if features.get(f["feature"], 0) == 0][:3]
 
+    role_for_benchmark = target_role or role.get("role", "Software Engineer")
+    peer_benchmark = _get_peer_benchmark_data(role_for_benchmark, resume["score"])
+
     return {
         "resumeScore": resume["score"],
         "resumeScoreConfidence": resume.get("confidence"),
+        "peerBenchmark": peer_benchmark,
         "atsProbability": ats["probability"],
         "atsPass": ats["pass"],
         "atsConfidence": ats.get("confidence"),
