@@ -6,6 +6,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { publicUrl } from '../middleware/upload.middleware.js';
 import { extractResumeText } from '../services/resumeText.service.js';
 import { aiService } from '../services/ai.service.js';
+import { detectRedFlags } from '../services/resumeRedFlags.js';
 
 /**
  * Resume Intelligence pipeline:
@@ -40,6 +41,8 @@ export const analyzeResume = asyncHandler(async (req, res) => {
   }
 
   // 4. persist
+  const redFlags = detectRedFlags(text, parsed);
+
   const resume = await Resume.create({
     user: req.user._id,
     fileUrl,
@@ -53,6 +56,7 @@ export const analyzeResume = asyncHandler(async (req, res) => {
     healthScore: parsed.health?.score ?? 0,
     healthBreakdown: parsed.health?.breakdown ?? [],
     suggestions: parsed.suggestions,
+    redFlags,
     wordCount: parsed.wordCount,
     lowText: parsed.lowText,
   });

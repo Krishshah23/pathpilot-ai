@@ -11,6 +11,7 @@ import { HealthBreakdown } from '@/components/resume/HealthBreakdown';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
+import { cn } from '@/lib/cn';
 
 export default function ResumePage() {
   const { refreshUser } = useAuth();
@@ -163,6 +164,80 @@ function ResumeResults({ resume }) {
           </ul>
         </Card>
       )}
+
+      {/* Recruiter Red Flags Panel */}
+      <Card className={cn(
+        "border shadow-sm",
+        resume.redFlags && resume.redFlags.length > 0 
+          ? "border-danger/25 bg-gradient-to-br from-surface via-danger/[0.02] to-surface" 
+          : "border-success/25 bg-gradient-to-br from-surface via-success/[0.02] to-surface"
+      )}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-line pb-4">
+          <div>
+            <h2 className="flex items-center gap-2 font-display text-base font-semibold text-ink">
+              {resume.redFlags && resume.redFlags.length > 0 ? (
+                <>
+                  <Icon.AlertTriangle size={18} className="text-danger" />
+                  Recruiter Red Flags ({resume.redFlags.length})
+                </>
+              ) : (
+                <>
+                  <Icon.Shield size={18} className="text-success" />
+                  Recruiter Red Flags
+                </>
+              )}
+            </h2>
+            <p className="mt-1 text-xs text-muted">
+              {resume.redFlags && resume.redFlags.length > 0 
+                ? "Heuristics-based check for formatting or layout gaps that may filter out your profile." 
+                : "Automatic layout and content checks parsed successfully."}
+            </p>
+          </div>
+          <span className={cn(
+            "rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider shrink-0 self-start sm:self-center",
+            resume.redFlags && resume.redFlags.length > 0 
+              ? "bg-danger/10 text-danger" 
+              : "bg-success/10 text-success"
+          )}>
+            {resume.redFlags && resume.redFlags.length > 0 ? 'Action Required' : 'Passed'}
+          </span>
+        </div>
+
+        {resume.redFlags && resume.redFlags.length > 0 ? (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {resume.redFlags.map((flag) => (
+              <div key={flag.key} className="flex flex-col justify-between rounded-xl border border-line bg-surface/50 p-4 shadow-sm">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                      flag.severity === 'critical' ? 'bg-danger/20 text-danger' : 'bg-warning/20 text-warning'
+                    )}>
+                      {flag.severity}
+                    </span>
+                    <h3 className="font-display text-sm font-semibold text-ink">{flag.label}</h3>
+                  </div>
+                  <p className="mt-2 text-xs text-muted leading-relaxed">{flag.description}</p>
+                </div>
+                <div className="mt-3.5 rounded-lg bg-surface-2/60 border border-line/40 px-3 py-2 text-xs text-muted flex items-start gap-1.5">
+                  <span className="text-brand font-semibold select-none text-[11px]">💡 Fix:</span>
+                  <span className="text-[11px]">{flag.fix}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-col items-center justify-center py-6 text-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10 text-success">
+              <Icon.Check size={24} />
+            </span>
+            <h3 className="mt-3 font-display text-sm font-bold text-ink">No Red Flags Found</h3>
+            <p className="mt-1 max-w-md text-xs text-muted">
+              Great job! Your resume successfully passed our checks for date consistency, metrics density, introduction relevance, and contact links.
+            </p>
+          </div>
+        )}
+      </Card>
 
       {/* Extracted sections */}
       <div className="grid gap-6 lg:grid-cols-2">

@@ -47,6 +47,19 @@ const resumeSchema = new Schema(
     healthScore: { type: Number, default: 0 },
     healthBreakdown: { type: [healthFactorSchema], default: [] },
     suggestions: { type: [String], default: [] },
+    
+    redFlags: {
+      type: [
+        {
+          key: String,
+          label: String,
+          description: String,
+          fix: String,
+          severity: { type: String, enum: ['critical', 'warning'] },
+        },
+      ],
+      default: [],
+    },
 
     wordCount: { type: Number, default: 0 },
     lowText: { type: Boolean, default: false },
