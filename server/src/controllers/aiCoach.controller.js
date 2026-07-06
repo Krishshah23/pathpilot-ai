@@ -44,8 +44,8 @@ export const explainScore = asyncHandler(async (req, res) => {
     if (flags.length > 0) {
       narrative += `#### 🔍 Recruiter Red Flags Identified:\n`;
       flags.forEach((f) => {
-        const severityEmoji = f.severity === 'high' ? '🔴' : f.severity === 'medium' ? '🟡' : '🔵';
-        narrative += `- ${severityEmoji} **${f.type}** (${f.severity} impact): ${f.message}. *Fix: ${f.fix}*\n`;
+        const severityEmoji = f.severity === 'critical' ? '🔴' : '🟡';
+        narrative += `- ${severityEmoji} **${f.label}** (${f.severity} impact): ${f.description || f.message}. *Fix: ${f.fix}*\n`;
       });
       narrative += `\n`;
     } else {
@@ -60,9 +60,9 @@ export const explainScore = asyncHandler(async (req, res) => {
     }
 
     const metrics = [
-      { name: 'Metrics Density', value: flags.some((f) => f.type === 'No Metrics Density') ? 40 : 90, impact: 'high' },
-      { name: 'Contact Links', value: flags.some((f) => f.type === 'Missing Contact Links') ? 30 : 100, impact: 'medium' },
-      { name: 'Formatting Consistency', value: flags.some((f) => f.type === 'Inconsistent Formatting') ? 50 : 95, impact: 'medium' },
+      { name: 'Metrics Density', value: flags.some((f) => f.key === 'no_metrics') ? 40 : 90, impact: 'high' },
+      { name: 'Contact Links', value: flags.some((f) => f.key === 'missing_links' || f.key === 'missing_contact') ? 30 : 100, impact: 'medium' },
+      { name: 'Formatting Consistency', value: flags.some((f) => f.key === 'inconsistent_dates') ? 50 : 95, impact: 'medium' },
     ];
 
     return sendSuccess(res, { data: { explanation: narrative, metrics } });
