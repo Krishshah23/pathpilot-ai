@@ -129,6 +129,16 @@ function PathScoreContent({ pathScore, marketSalary, blendedBenchmark, onResume 
             <ConfidenceTag confidence={predictions.resumeScoreConfidence} size="sm" className="mt-2" />
           )}
           <p className="mt-3 max-w-xs text-sm text-muted">{readiness.summary || pathScore.summary}</p>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="mt-3 text-brand-soft hover:bg-brand/10 hover:text-brand"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('open-ai-coach', { detail: { type: 'pathScore' } }));
+            }}
+          >
+            <Icon.Sparkles size={14} className="mr-1.5" /> Ask Why
+          </Button>
         </Card>
 
         <Card>

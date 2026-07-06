@@ -139,6 +139,16 @@ function ResumeResults({ resume }) {
           <h2 className="mb-2 font-display text-base font-semibold text-ink">Resume Health</h2>
           <ScoreGauge score={resume.healthScore} />
           <p className="mt-2 text-xs text-faint">{resume.wordCount} words analyzed</p>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="mt-3 text-brand-soft hover:bg-brand/10 hover:text-brand"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('open-ai-coach', { detail: { type: 'resumeHealth' } }));
+            }}
+          >
+            <Icon.Sparkles size={14} className="mr-1.5" /> Ask Why
+          </Button>
         </Card>
 
         <Card className="lg:col-span-2">

@@ -13,6 +13,7 @@ import adminRoutes from './admin.routes.js';
 import mlRoutes from './ml.routes.js';
 import jobMarketRoutes from './jobMarket.routes.js';
 import notificationRoutes from './notification.routes.js';
+import aiCoachRoutes from './aiCoach.routes.js';
 import { aiService } from '../services/ai.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -41,6 +42,7 @@ router.use('/growth', growthRoutes);
 router.use('/insights', insightsRoutes);
 router.use('/opportunities', opportunityRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/ai-coach', aiCoachRoutes);
 router.use('/report', reportRoutes);
 router.use('/admin', adminRoutes);
 router.use('/ml', mlRoutes);
