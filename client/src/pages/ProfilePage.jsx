@@ -23,6 +23,7 @@ export default function ProfilePage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <PersonalInfoCard user={user} refreshUser={refreshUser} toast={toast} />
           <div className="space-y-6">
+            <PublicCardSettingsCard user={user} setUser={setUser} toast={toast} />
             <SkillsCard user={user} refreshUser={refreshUser} toast={toast} />
             <ResumeCard user={user} setUser={setUser} toast={toast} />
           </div>
@@ -317,6 +318,83 @@ function SecurityCard({ toast }) {
           </Button>
         </div>
       </form>
+    </Card>
+  );
+}
+
+/* ── Public Career Card settings ─────────────────────────────────────── */
+function PublicCardSettingsCard({ user, setUser, toast }) {
+  const [enabled, setEnabled] = useState(user?.isPublicCardEnabled || false);
+  const [toggling, setToggling] = useState(false);
+
+  const toggle = async () => {
+    setToggling(true);
+    try {
+      const nextValue = !enabled;
+      const { data } = await api.patch('/profile/public-card', { isPublicCardEnabled: nextValue });
+      setEnabled(data.data.isPublicCardEnabled);
+      setUser({
+        ...user,
+        isPublicCardEnabled: data.data.isPublicCardEnabled,
+        publicCardId: data.data.publicCardId,
+      });
+      toast.success(`Public career card ${nextValue ? 'enabled' : 'disabled'}`);
+    } catch (err) {
+      toast.error(errorMessage(err, 'Failed to update setting'));
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  const shareUrl = `${window.location.origin}/profile/${user?.publicCardId}`;
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(shareUrl);
+    toast.success('Shareable link copied!');
+  };
+
+  return (
+    <Card>
+      <SectionTitle>Public Career Card</SectionTitle>
+      <p className="mt-1 text-xs text-faint">
+        Generate a secure, read-only public version of your career readiness card that you can share with employers or put in your portfolio.
+      </p>
+
+      <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-line bg-surface-2/40 p-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-brand-soft">
+            <Icon.Globe size={18} />
+          </span>
+          <div>
+            <p className="text-sm font-medium text-ink">
+              {enabled ? 'Card is public' : 'Card is private'}
+            </p>
+            <p className="text-xs text-muted">
+              {enabled ? 'Anyone with the link can view your metrics.' : 'Only you can view your metrics.'}
+            </p>
+          </div>
+        </div>
+        <Button size="sm" variant={enabled ? 'danger' : 'outline'} loading={toggling} onClick={toggle}>
+          {enabled ? 'Make Private' : 'Make Public'}
+        </Button>
+      </div>
+
+      {enabled && (
+        <div className="mt-4 space-y-2">
+          <label className="text-xs font-semibold text-faint block">Your Shareable Link</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              readOnly
+              value={shareUrl}
+              className="input !h-9 !text-xs !bg-surface-2/30 flex-1"
+            />
+            <Button size="sm" onClick={copyLink}>
+              <Icon.Copy size={14} className="mr-1.5" /> Copy
+            </Button>
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

@@ -21,6 +21,7 @@ const InsightsPage = lazy(() => import('@/pages/InsightsPage'));
 const OpportunityPage = lazy(() => import('@/pages/OpportunityPage'));
 const ReportPage = lazy(() => import('@/pages/ReportPage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
+const PublicProfilePage = lazy(() => import('@/pages/PublicProfilePage'));
 const AdminPage = lazy(() => import('@/pages/AdminPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
@@ -39,6 +40,7 @@ export default function App() {
           {/* Reachable regardless of auth state */}
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/profile/:publicCardId" element={<PublicProfilePage />} />
 
           {/* Protected app routes */}
           <Route element={<ProtectedRoute />}>

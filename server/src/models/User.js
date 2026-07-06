@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import crypto from 'node:crypto';
 
 const { Schema } = mongoose;
 
@@ -39,6 +40,13 @@ const userSchema = new Schema(
 
     profile: { type: profileSchema, default: () => ({}) },
 
+    publicCardId: {
+      type: String,
+      unique: true,
+      default: () => crypto.randomBytes(12).toString('hex'),
+    },
+    isPublicCardEnabled: { type: Boolean, default: false },
+
     lastLoginAt: { type: Date, default: null },
   },
   { timestamps: true }
@@ -46,6 +54,9 @@ const userSchema = new Schema(
 
 // Hash password whenever it is set/changed.
 userSchema.pre('save', async function hashPassword(next) {
+  if (!this.publicCardId) {
+    this.publicCardId = crypto.randomBytes(12).toString('hex');
+  }
   if (!this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);
   return next();

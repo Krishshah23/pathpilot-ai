@@ -4,6 +4,9 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { publicUrl } from '../middleware/upload.middleware.js';
+import { User } from '../models/User.js';
+import { Resume } from '../models/Resume.js';
+import { buildPathScore, collectStudentSkills } from '../services/pathScore.service.js';
 
 /** Deletes a previously-uploaded local file (best effort, ignores misses). */
 function removeLocalFile(publicPath) {
@@ -79,4 +82,54 @@ export const changePassword = asyncHandler(async (req, res) => {
   await user.save();
 
   return sendSuccess(res, { message: 'Password changed successfully' });
+});
+
+// GET /api/profile/public/:publicCardId
+export const getPublicCard = asyncHandler(async (req, res) => {
+  const { publicCardId } = req.params;
+
+  const user = await User.findOne({ publicCardId, isPublicCardEnabled: true });
+  if (!user) {
+    throw ApiError.notFound('Public career profile not found or is set to private');
+  }
+
+  const resume = await Resume.findOne({ user: user._id }).sort({ createdAt: -1 });
+  const pathScore = buildPathScore(user, resume);
+  const skills = collectStudentSkills(user, resume);
+
+  return sendSuccess(res, {
+    data: {
+      name: user.name,
+      college: user.profile.college,
+      branch: user.profile.branch,
+      semester: user.profile.semester,
+      dreamRole: user.profile.dreamRole,
+      skills,
+      pathScore: pathScore.score,
+      readinessLabel: pathScore.readiness?.label || pathScore.label || 'Exploring',
+      readinessSummary: pathScore.readiness?.summary || pathScore.summary || '',
+      avatarUrl: user.profile.avatarUrl,
+    },
+  });
+});
+
+// PATCH /api/profile/public-card
+export const togglePublicCard = asyncHandler(async (req, res) => {
+  const { isPublicCardEnabled } = req.body;
+
+  if (isPublicCardEnabled === undefined) {
+    throw ApiError.badRequest('isPublicCardEnabled value is required');
+  }
+
+  const user = req.user;
+  user.isPublicCardEnabled = !!isPublicCardEnabled;
+  await user.save();
+
+  return sendSuccess(res, {
+    message: `Public career card is now ${user.isPublicCardEnabled ? 'enabled' : 'disabled'}`,
+    data: {
+      isPublicCardEnabled: user.isPublicCardEnabled,
+      publicCardId: user.publicCardId,
+    },
+  });
 });
