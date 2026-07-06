@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/icons';
+import { ConfidenceDot } from '@/components/ui/ConfidenceTag';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 
@@ -32,16 +33,19 @@ export default function DashboardPage() {
   const readiness = pathScore?.readiness;
   const readinessLabel = readiness?.level || readiness?.label || 'Pending';
 
+  const predictions = pathScore?.predictions;
   const stats = [
     {
       label: 'Path Score',
       value: pathScore ? pathScore.score : '--',
       hint: pathScore ? pathScore.label : 'Complete profile signals',
+      confidence: predictions?.resumeScoreConfidence,
     },
     {
       label: 'Career Readiness',
       value: readinessLabel,
       hint: readiness?.summary || 'Generated from your score signals',
+      confidence: predictions?.careerReadiness?.confidenceTag,
     },
     { label: 'Resume Status', value: p.resumeUrl ? 'Uploaded' : 'Not uploaded' },
     { label: 'Skills Tracked', value: pathScore?.skills?.length ?? p.skills?.length ?? 0 },
@@ -56,6 +60,7 @@ export default function DashboardPage() {
               <p className="text-sm text-muted">{s.label}</p>
               <p className="mt-2 truncate font-display text-2xl font-bold text-ink">{s.value}</p>
               {s.hint && <p className="mt-1 line-clamp-2 text-xs text-faint">{s.hint}</p>}
+              {s.confidence && <ConfidenceDot confidence={s.confidence} className="mt-1.5" />}
             </Card>
           ))}
         </div>

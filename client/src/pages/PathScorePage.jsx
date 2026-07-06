@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Spinner } from '@/components/ui/Spinner';
 import { Icon } from '@/components/ui/icons';
+import { ConfidenceTag } from '@/components/ui/ConfidenceTag';
 import { ScoreGauge } from '@/components/charts/ScoreGauge';
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
@@ -116,6 +117,9 @@ function PathScoreContent({ pathScore, marketSalary, onResume }) {
         <Card className="flex flex-col items-center justify-center text-center">
           <p className="text-sm font-medium text-muted">Overall score</p>
           <ScoreGauge score={pathScore.score} size={220} label={readinessLabel} />
+          {predictions?.resumeScoreConfidence && (
+            <ConfidenceTag confidence={predictions.resumeScoreConfidence} size="sm" className="mt-2" />
+          )}
           <p className="mt-3 max-w-xs text-sm text-muted">{readiness.summary || pathScore.summary}</p>
         </Card>
 
@@ -163,6 +167,9 @@ function PathScoreContent({ pathScore, marketSalary, onResume }) {
                     <Icon.Shield size={12} />
                     {predictions.atsPass ? 'Likely Pass' : 'At Risk'}
                   </span>
+                  {predictions.atsConfidence && (
+                    <ConfidenceTag confidence={predictions.atsConfidence} className="mt-2" />
+                  )}
                 </div>
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
                   <Icon.Shield size={20} />
@@ -176,6 +183,13 @@ function PathScoreContent({ pathScore, marketSalary, onResume }) {
                   <p className="text-xs font-semibold uppercase tracking-wider text-success">Salary Projection</p>
                   <p className="mt-2 font-display text-3xl font-bold text-ink">₹{predictions.salaryPrediction?.salaryLPA} LPA</p>
                   <p className="mt-2 text-xs text-muted">ML model projection</p>
+                  {predictions.salaryPrediction?.confidence && (
+                    <ConfidenceTag
+                      confidence={predictions.salaryPrediction.confidence}
+                      marketBacked={marketSalary?.available}
+                      className="mt-2"
+                    />
+                  )}
                   {marketSalary?.available && marketSalary.min != null && (
                     <div className="mt-3 rounded-lg border border-success/20 bg-success/5 px-2.5 py-1.5">
                       <p className="text-[10px] font-semibold uppercase tracking-wider text-success/80">Live market range</p>
@@ -202,6 +216,9 @@ function PathScoreContent({ pathScore, marketSalary, onResume }) {
                   <p className="text-xs font-semibold uppercase tracking-wider text-warning">Interview Success Probability</p>
                   <p className="mt-2 font-display text-3xl font-bold text-ink">{predictions.interviewProbability}%</p>
                   <p className="mt-2 text-xs text-muted">Probability of clearing round 1</p>
+                  {predictions.interviewConfidence && (
+                    <ConfidenceTag confidence={predictions.interviewConfidence} className="mt-2" />
+                  )}
                 </div>
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10 text-warning">
                   <Icon.Users size={20} />
@@ -215,6 +232,9 @@ function PathScoreContent({ pathScore, marketSalary, onResume }) {
                   <p className="text-xs font-semibold uppercase tracking-wider text-purple-500">AI Recommended Role</p>
                   <p className="mt-2 font-display text-lg font-bold text-ink leading-tight">{predictions.recommendedRole?.role}</p>
                   <p className="mt-2 text-xs text-muted">Confidence: {predictions.recommendedRole?.confidence}%</p>
+                  {predictions.recommendedRole?.confidenceTag && (
+                    <ConfidenceTag confidence={predictions.recommendedRole.confidenceTag} className="mt-2" />
+                  )}
                 </div>
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
                   <Icon.Sparkles size={20} />

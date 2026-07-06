@@ -63,6 +63,82 @@ def _build_feature_row(features: dict, feature_cols: list) -> np.ndarray:
     return pd.DataFrame([row])[feature_cols]
 
 
+# ── Confidence computation helpers ────────────────────────────────────
+
+def _classifier_confidence(proba: np.ndarray) -> dict:
+    """Compute confidence from a classifier's predict_proba output.
+    
+    Uses the spread between the top-1 and top-2 probabilities.
+    A wide spread means the model is decisive → high confidence.
+    """
+    sorted_probs = sorted(proba, reverse=True)
+    max_prob = sorted_probs[0]
+    second_prob = sorted_probs[1] if len(sorted_probs) > 1 else 0
+    spread = max_prob - second_prob  # 0..1
+
+    # Map spread to a 0-100 confidence score.
+    score = round(min(100, spread * 100 + max_prob * 30), 1)
+
+    if score >= 70:
+        tier = "high"
+        reason = f"based on decisive probability distribution ({max_prob:.0%} top class)"
+    elif score >= 40:
+        tier = "moderate"
+        reason = f"moderate separation between classes ({spread:.0%} spread)"
+    else:
+        tier = "low"
+        reason = f"uncertain — classes are closely separated ({spread:.0%} spread)"
+
+    return {"tier": tier, "score": score, "reason": reason}
+
+
+def _regressor_confidence(features: dict, key_features: list) -> dict:
+    """Estimate confidence for regressors based on feature-space density.
+    
+    Heuristic: the more key features are non-zero (i.e. the more data we have
+    about this student), the more confident the prediction.
+    """
+    filled = sum(1 for f in key_features if features.get(f, 0) != 0)
+    total = max(len(key_features), 1)
+    density = filled / total
+    score = round(density * 100, 1)
+
+    if score >= 70:
+        tier = "high"
+        reason = f"based on {filled}/{total} profile signals available"
+    elif score >= 40:
+        tier = "moderate"
+        reason = f"limited data — {filled}/{total} profile signals available"
+    else:
+        tier = "low"
+        reason = f"sparse profile data — only {filled}/{total} signals available"
+
+    return {"tier": tier, "score": score, "reason": reason}
+
+
+def _knn_confidence(distances: np.ndarray) -> dict:
+    """Compute confidence for KNN-based predictions using neighbor distance.
+    
+    Closer neighbors → higher confidence.
+    """
+    avg_dist = float(np.mean(distances[0])) if distances.size > 0 else 999
+    # Normalize: distances typically range 0-10+. Lower = better.
+    # Use an inverse sigmoid-style mapping.
+    score = round(max(0, min(100, 100 / (1 + avg_dist * 0.5))), 1)
+
+    if score >= 60:
+        tier = "high"
+        reason = f"close match to {len(distances[0])} similar profiles (avg distance: {avg_dist:.1f})"
+    elif score >= 35:
+        tier = "moderate"
+        reason = f"moderate match to reference profiles (avg distance: {avg_dist:.1f})"
+    else:
+        tier = "low"
+        reason = f"limited similar profiles found (avg distance: {avg_dist:.1f})"
+
+    return {"tier": tier, "score": score, "reason": reason}
+
+
 # ── Individual model predictions ──────────────────────────────────────
 
 def predict_resume_score(features: dict) -> dict:
@@ -81,7 +157,13 @@ def predict_resume_score(features: dict) -> dict:
         X_s = scaler.transform(X) if scaler else X
         score = float(model.predict(X_s)[0])
     score = max(0, min(100, round(score, 1)))
-    return {"score": score}
+
+    # Confidence: based on how many key features are present
+    key_feats = ["skills_count", "projects", "experience", "education",
+                 "has_github", "has_linkedin", "certifications", "resume_length"]
+    confidence = _regressor_confidence(features, key_feats)
+
+    return {"score": score, "confidence": confidence}
 
 
 def predict_ats(features: dict) -> dict:
@@ -95,8 +177,12 @@ def predict_ats(features: dict) -> dict:
     X = _build_feature_row(features, cols)
     X_s = scaler.transform(X)
     pred = int(model.predict(X_s)[0])
-    proba = float(model.predict_proba(X_s)[0][1])
-    return {"pass": bool(pred), "probability": round(proba * 100, 1)}
+    proba = model.predict_proba(X_s)[0]
+    pass_prob = float(proba[1])
+
+    confidence = _classifier_confidence(proba)
+
+    return {"pass": bool(pred), "probability": round(pass_prob * 100, 1), "confidence": confidence}
 
 
 def predict_career_readiness(features: dict) -> dict:
@@ -113,8 +199,12 @@ def predict_career_readiness(features: dict) -> dict:
     pred_idx = int(np.ravel(model.predict(X_s))[0])
     proba = model.predict_proba(X_s)[0]
     level = labels[pred_idx] if pred_idx < len(labels) else "Unknown"
-    confidence = round(float(proba[pred_idx]) * 100, 1)
-    return {"level": level, "levelIndex": pred_idx, "confidence": confidence}
+    pred_confidence = round(float(proba[pred_idx]) * 100, 1)
+
+    confidence = _classifier_confidence(proba)
+
+    return {"level": level, "levelIndex": pred_idx, "confidence": pred_confidence,
+            "confidenceTag": confidence}
 
 
 def predict_role(features: dict) -> dict:
@@ -137,7 +227,11 @@ def predict_role(features: dict) -> dict:
         {"role": le.inverse_transform([i])[0], "probability": round(float(proba[i]) * 100, 1)}
         for i in top3_idx
     ]
-    return {"role": role, "confidence": round(float(proba[pred_idx]) * 100, 1), "top3": top3}
+
+    confidence = _classifier_confidence(proba)
+
+    return {"role": role, "confidence": round(float(proba[pred_idx]) * 100, 1),
+            "confidenceTag": confidence, "top3": top3}
 
 
 def predict_interview(features: dict) -> dict:
@@ -152,7 +246,12 @@ def predict_interview(features: dict) -> dict:
     X_s = scaler.transform(X)
     prob = float(model.predict(X_s)[0])
     prob = max(0, min(100, round(prob, 1)))
-    return {"probability": prob}
+
+    key_feats = ["skills_count", "projects", "internships", "experience",
+                 "certifications", "cgpa"]
+    confidence = _regressor_confidence(features, key_feats)
+
+    return {"probability": prob, "confidence": confidence}
 
 
 def predict_salary(features: dict) -> dict:
@@ -181,7 +280,12 @@ def predict_salary(features: dict) -> dict:
     X_s = scaler.transform(X)
     salary = float(model.predict(X_s)[0])
     salary = max(2.5, round(salary, 2))
-    return {"salaryLPA": salary, "salaryCurrency": "INR"}
+
+    key_feats = ["skills_count", "projects", "experience", "education",
+                 "certifications", "internships"]
+    confidence = _regressor_confidence(features, key_feats)
+
+    return {"salaryLPA": salary, "salaryCurrency": "INR", "confidence": confidence}
 
 
 def predict_learning_path(current_skills: list, target_role: str) -> dict:
@@ -206,6 +310,9 @@ def predict_learning_path(current_skills: list, target_role: str) -> dict:
 
     distances, indices = knn.kneighbors(query)
 
+    # Compute KNN confidence from neighbor distances
+    confidence = _knn_confidence(distances)
+
     # Aggregate learning paths from neighbors
     skill_votes: dict[str, int] = {}
     for idx in indices[0]:
@@ -219,7 +326,7 @@ def predict_learning_path(current_skills: list, target_role: str) -> dict:
     ordered = sorted(skill_votes.items(), key=lambda x: -x[1])
     skills_to_learn = [s for s, _ in ordered[:10]]
 
-    return {"skills": skills_to_learn, "targetRole": target_role}
+    return {"skills": skills_to_learn, "targetRole": target_role, "confidence": confidence}
 
 
 # ── Feature importance (for explainability) ───────────────────────────
@@ -274,13 +381,17 @@ def predict_all(features: dict, current_skills: list, target_role: str) -> dict:
 
     return {
         "resumeScore": resume["score"],
+        "resumeScoreConfidence": resume.get("confidence"),
         "atsProbability": ats["probability"],
         "atsPass": ats["pass"],
+        "atsConfidence": ats.get("confidence"),
         "careerReadiness": career,
         "recommendedRole": role,
         "interviewProbability": interview["probability"],
+        "interviewConfidence": interview.get("confidence"),
         "salaryPrediction": salary,
         "learningRoadmap": learning["skills"],
+        "learningConfidence": learning.get("confidence"),
         "missingSkills": learning["skills"][:5],
         "featureImportance": importance[:10],
         "recommendations": _build_recommendations(features, career, role, learning),
@@ -312,3 +423,4 @@ def _build_recommendations(features: dict, career: dict, role: dict, learning: d
     if level in ("Beginner", "Intermediate"):
         recs.append("Gain internship or project experience to move toward career readiness.")
     return recs[:6]
+
