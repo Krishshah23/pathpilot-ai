@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { Logo } from '@/components/ui/Logo';
@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui/icons';
 import { NAV_ITEMS } from '@/config/nav';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { api } from '@/lib/api';
 
 function NavItem({ item, onNavigate }) {
   const Ico = item.icon;
@@ -122,6 +123,8 @@ export function AppShell({ title, subtitle, actions, children }) {
 
             {actions}
 
+            <NotificationBell />
+
             {/* User menu */}
             <div className="relative">
               <button
@@ -163,6 +166,131 @@ export function AppShell({ title, subtitle, actions, children }) {
           <div className="mx-auto max-w-6xl animate-fade-up">{children}</div>
         </main>
       </div>
+    </div>
+  );
+}
+
+function NotificationBell() {
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [open, setOpen] = useState(false);
+
+  const fetchNotifications = async () => {
+    try {
+      const { data } = await api.get('/notifications');
+      setNotifications(data.data.notifications || []);
+      setUnreadCount(data.data.unreadCount || 0);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    // Poll notifications every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const markAllAsRead = async () => {
+    try {
+      await api.patch('/notifications/mark-all');
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+    }
+  };
+
+  const markAsRead = async (id) => {
+    try {
+      await api.patch(`/notifications/${id}`);
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        onBlur={() => setTimeout(() => setOpen(false), 200)}
+        className="relative rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink transition"
+        aria-label="Notifications"
+      >
+        <Icon.Bell size={20} />
+        {unreadCount > 0 && (
+          <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[9px] font-bold text-white ring-2 ring-surface">
+            {unreadCount}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="glass absolute right-0 mt-2 w-80 overflow-hidden rounded-xl border border-line shadow-2xl animate-fade-up z-50">
+          <div className="flex items-center justify-between border-b border-line px-4 py-3">
+            <span className="text-xs font-bold text-ink uppercase tracking-wider">Notifications</span>
+            {unreadCount > 0 && (
+              <button
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  markAllAsRead();
+                }}
+                className="text-[10px] font-bold text-brand-soft hover:underline"
+              >
+                Mark all as read
+              </button>
+            )}
+          </div>
+
+          <div className="max-h-72 overflow-y-auto divide-y divide-line">
+            {notifications.length === 0 ? (
+              <div className="py-8 text-center text-xs text-faint">
+                All caught up! No notifications.
+              </div>
+            ) : (
+              notifications.map((n) => (
+                <div
+                  key={n._id}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (!n.read) markAsRead(n._id);
+                  }}
+                  className={cn(
+                    "flex items-start gap-2.5 px-4 py-3 cursor-pointer transition hover:bg-surface-2/60",
+                    !n.read && "bg-brand/5"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
+                      !n.read ? "bg-brand" : "bg-transparent"
+                    )}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className={cn("text-xs font-semibold text-ink", !n.read && "font-bold")}>
+                      {n.title}
+                    </p>
+                    <p className="text-[11px] text-muted leading-relaxed mt-0.5">
+                      {n.message}
+                    </p>
+                    <p className="text-[9px] text-faint mt-1">
+                      {new Date(n.createdAt).toLocaleDateString('en-IN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

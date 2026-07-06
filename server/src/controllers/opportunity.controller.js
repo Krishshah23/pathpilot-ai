@@ -5,6 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { aiService } from '../services/ai.service.js';
 import { collectStudentSkills } from '../services/pathScore.service.js';
 import { Resume } from '../models/Resume.js';
+import { Notification } from '../models/Notification.js';
 
 function getProfilePayload(user, latestResume) {
   const profile = user.profile || {};
@@ -148,6 +149,15 @@ export const create = asyncHandler(async (req, res) => {
     timeline: [{ stage: initialStage, date: new Date() }],
     fitScore,
   });
+
+  if (initialStage === 'wishlist') {
+    await Notification.create({
+      user: req.user._id,
+      title: 'Wishlist Item Added',
+      message: `Great addition! Let's get that application in for ${company} (${role}).`,
+      type: 'info',
+    });
+  }
 
   sendSuccess(res, { statusCode: 201, message: 'Opportunity created', data: { opportunity: opp } });
 });

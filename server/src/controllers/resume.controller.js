@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { Resume } from '../models/Resume.js';
+import { Notification } from '../models/Notification.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -64,6 +65,14 @@ export const analyzeResume = asyncHandler(async (req, res) => {
   // Keep the user's active resume pointer in sync.
   req.user.profile.resumeUrl = fileUrl;
   await req.user.save();
+
+  // Create notification
+  await Notification.create({
+    user: req.user._id,
+    title: 'Resume Processed',
+    message: `Your resume analysis is ready with score ${resume.healthScore}.`,
+    type: 'success',
+  });
 
   return sendSuccess(res, {
     statusCode: 201,
