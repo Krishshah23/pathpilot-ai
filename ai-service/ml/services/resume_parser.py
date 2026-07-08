@@ -116,13 +116,70 @@ def _extract_education(sections):
 
 
 def _extract_projects(sections):
+    # More robust segmentation: detect a title line followed by a tech-stack
+    # line (contains separators like '·' or '|') and then bullets. This avoids
+    # splitting wrapped description lines into separate project entries.
+    raw = sections.get('projects', '') or ''
+    raw_lines = [l.strip() for l in raw.split('\n') if l.strip()]
+    if not raw_lines:
+        return []
+
+    BULLET_RE = re.compile(r'^[•\-\*]\s+')
+    TECH_STACK_RE = re.compile(r'.+[·|,].+')
+
+    projects = []
+    current = None
+    i = 0
+    while i < len(raw_lines):
+        line = raw_lines[i]
+        next_line = raw_lines[i + 1] if i + 1 < len(raw_lines) else ''
+
+        is_title_candidate = (
+            not BULLET_RE.match(line)
+            and not TECH_STACK_RE.match(line)
+            and TECH_STACK_RE.match(next_line)
+        )
+
+        if is_title_candidate:
+            if current:
+                projects.append(current)
+            current = {'title': line[:80], 'tech_stack': next_line, 'bullets': []}
+            i += 2
+            continue
+
+        if BULLET_RE.match(line) and current:
+            current['bullets'].append(BULLET_RE.sub('', line))
+        elif current and current['bullets']:
+            # continuation of previous bullet (wrapped line)
+            current['bullets'][-1] += ' ' + line
+        else:
+            # Fallback: treat an isolated non-bullet as a short description/title
+            if current is None:
+                current = {'title': line[:80], 'tech_stack': '', 'bullets': []}
+            else:
+                # attach to last bullet or as a loose description
+                if current['bullets']:
+                    current['bullets'][-1] += ' ' + line
+                else:
+                    # keep as a short description in bullets
+                    current['bullets'].append(line)
+        i += 1
+
+    if current:
+        projects.append(current)
+
+    # Normalize into the previous simple shape: title + description
     items = []
-    for line in _bullet_items(sections.get('projects', ''), limit=8):
-        # Title = text before first separator; description = remainder
-        m = re.split(r'[:\-–|]', line, maxsplit=1)
-        title = m[0].strip()[:80]
-        desc = m[1].strip()[:200] if len(m) > 1 else ''
-        items.append({'title': title, 'description': desc})
+    for p in projects[:8]:
+        desc = ''
+        if p.get('tech_stack'):
+            desc = p['tech_stack']
+        if p.get('bullets'):
+            if desc:
+                desc += ' — ' + ' '.join(p['bullets'])
+            else:
+                desc = ' '.join(p['bullets'])
+        items.append({'title': p.get('title', '')[:80], 'description': desc[:400]})
     return items
 
 
