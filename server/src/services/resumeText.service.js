@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { PDFParse } from 'pdf-parse';
-import pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
+import pdfjsLib from 'pdfjs-dist/build/pdf.js';
 import mammoth from 'mammoth';
 import { ApiError } from '../utils/ApiError.js';
 
