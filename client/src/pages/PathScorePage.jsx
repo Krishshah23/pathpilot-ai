@@ -36,7 +36,7 @@ export default function PathScorePage() {
     setError('');
     try {
       const { data } = await api.get('/path-score');
-      setPathScore(data.data.pathScore);
+      setPathScore(data.data.pathScore || {});
       setMarketSalary(data.data.marketSalary || null);
       setBlendedBenchmark(data.data.blendedBenchmark || null);
     } catch (err) {
@@ -112,11 +112,11 @@ function formatFeatureName(name) {
   return mapping[name] || name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
-function PathScoreContent({ pathScore, marketSalary, blendedBenchmark, onResume }) {
-  const readiness = pathScore.readiness || {};
-  const readinessLabel = readiness.level || readiness.label || pathScore.label;
-  const predictions = pathScore.predictions || null;
-  const peerBenchmark = pathScore.peerBenchmark || null;
+function PathScoreContent({ pathScore = {}, marketSalary, blendedBenchmark, onResume }) {
+  const readiness = (pathScore && pathScore.readiness) || {};
+  const readinessLabel = readiness.level || readiness.label || pathScore.label || '';
+  const predictions = (pathScore && pathScore.predictions) || null;
+  const peerBenchmark = (pathScore && pathScore.peerBenchmark) || null;
 
   return (
     <div className="space-y-6">
@@ -157,7 +157,7 @@ function PathScoreContent({ pathScore, marketSalary, blendedBenchmark, onResume 
           </div>
 
           <div className="mt-6 space-y-5">
-            {pathScore.factors.map((factor) => (
+            {(pathScore.factors || []).map((factor) => (
               <FactorBar key={factor.key} factor={factor} />
             ))}
           </div>
