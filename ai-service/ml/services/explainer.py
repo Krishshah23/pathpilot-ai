@@ -11,7 +11,6 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-import shap
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,18 @@ def _get_explainer(model_name: str, model: Any, X_train_s: np.ndarray = None) ->
     """Get or initialize a SHAP explainer for a given model."""
     if model_name not in _explainers:
         try:
+            # Import SHAP lazily so the service can run without the optional lib.
+            try:
+                import shap
+            except Exception as _exc:
+                shap = None
+                logger.warning("SHAP library not available: %s", _exc)
+                return None
+
             # Tree-based models (CatBoost, XGBoost, Random Forest)
+            if shap is None:
+                logger.warning("SHAP is not installed; cannot initialize explainer for %s", model_name)
+                return None
             if hasattr(model, "tree_method") or hasattr(model, "estimators_") or "CatBoost" in str(type(model)):
                 _explainers[model_name] = shap.TreeExplainer(model)
             else:
@@ -62,7 +72,7 @@ def explain_prediction(model_name: str, features: dict, model: Any, scaler: Any,
         explainer = _get_explainer(model_name, model, X_train_s=None)
 
         if not explainer:
-            return {"error": f"SHAP explainer unavailable for {model_name}"}
+            return {"success": False, "error": f"SHAP explainer unavailable for {model_name}"}
 
         # Calculate SHAP values
         if isinstance(explainer, shap.KernelExplainer):
