@@ -1,0 +1,49 @@
+{
+  "model_name": "role_recommendation",
+  "algorithm": "Random Forest",
+  "type": "multiclass",
+  "features": [
+    "education",
+    "experience",
+    "projects",
+    "skills_count",
+    "frontend_skills",
+    "backend_skills",
+    "database_skills",
+    "cloud_skills",
+    "ml_skills"
+  ],
+  "labels": [
+    "AI Engineer",
+    "Backend Developer",
+    "Cloud Engineer",
+    "Cybersecurity Analyst",
+    "Data Analyst",
+    "DevOps Engineer",
+    "Frontend Developer",
+    "Full Stack Developer",
+    "ML Engineer",
+    "Software Engineer"
+  ],
+  "best_metrics": {
+    "f1": 0.7782,
+    "cv_f1_mean": 0.7751
+  },
+  "results": [
+    {
+      "name": "Random Forest",
+      "accuracy": 0.7831,
+      "f1": 0.7782
+    },
+    {
+      "name": "XGBoost",
+      "accuracy": 0.779,
+      "f1": 0.7766
+    },
+    {
+      "name": "LightGBM",
+      "accuracy": 0.7804,
+      "f1": 0.7778
+    }
+  ]
+}

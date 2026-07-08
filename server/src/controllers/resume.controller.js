@@ -24,11 +24,13 @@ export const analyzeResume = asyncHandler(async (req, res) => {
   const fileUrl = publicUrl('resume', req.file.filename);
   const absPath = path.join(process.cwd(), 'uploads', 'resumes', req.file.filename);
 
-  // 2. extract text
-  const text = await extractResumeText(absPath, req.file.originalname);
+  // 2. extract text + any embedded link annotations
+  const extracted = await extractResumeText(absPath, req.file.originalname);
+  const text = extracted.text || '';
+  const links = extracted.links || [];
 
-  // 3. call Django ML service
-  const aiResponse = await aiService.parseResume({ text });
+  // 3. call Django ML service (include links so Django can detect anchor-style URLs)
+  const aiResponse = await aiService.parseResume({ text, links });
   const parsed = aiResponse?.data;
   if (!parsed) {
     // A response without `data` means Django is running outdated code (the old

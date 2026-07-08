@@ -61,8 +61,9 @@ def health(_request):
 def parse_resume(request):
     """Extract skills, education, projects, experience, certifications + health."""
     text = request.data.get('text', '') or ''
+    links = request.data.get('links', []) or []
     try:
-        result = run_resume_parser(text)
+        result = run_resume_parser(text, links)
     except Exception as exc:  # noqa: BLE001 — never let a parse edge-case 500
         return Response(
             {'success': False, 'implemented': True, 'message': f'Resume parsing failed: {exc}'},

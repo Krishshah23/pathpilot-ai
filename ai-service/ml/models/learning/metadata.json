@@ -1,0 +1,8 @@
+{
+  "model_name": "learning_path",
+  "algorithm": "KNN + Cosine Similarity",
+  "type": "similarity_search",
+  "n_neighbors": 10,
+  "n_skills": 57,
+  "n_samples": 50000
+}

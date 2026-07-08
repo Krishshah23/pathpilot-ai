@@ -61,6 +61,7 @@ export const getPathScore = asyncHandler(async (req, res) => {
 
     const mlResponse = await aiService.predict(payload);
     if (mlResponse?.data) {
+      const mlData = mlResponse.data;
       pathScore.score = mlData.resumeScore;
       pathScore.readiness = mlData.careerReadiness;
       pathScore.predictions = mlData;

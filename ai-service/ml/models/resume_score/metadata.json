@@ -1,0 +1,57 @@
+{
+  "model_name": "resume_score",
+  "algorithm": "CatBoost",
+  "type": "regression",
+  "features": [
+    "education",
+    "cgpa",
+    "projects",
+    "internships",
+    "experience",
+    "skills_count",
+    "frontend_skills",
+    "backend_skills",
+    "database_skills",
+    "cloud_skills",
+    "ml_skills",
+    "has_github",
+    "has_linkedin",
+    "resume_length",
+    "certifications",
+    "achievements",
+    "ats_keywords",
+    "action_verbs",
+    "leadership",
+    "open_source"
+  ],
+  "target": "resume_score",
+  "metrics": {
+    "mae": 1.5851,
+    "rmse": 2.2806,
+    "r2": 0.9293
+  },
+  "best_metrics": {
+    "r2": 0.9293,
+    "cv_r2_mean": 0.9274
+  },
+  "results": [
+    {
+      "name": "Random Forest",
+      "mae": 2.0925,
+      "rmse": 3.2511,
+      "r2": 0.8562
+    },
+    {
+      "name": "XGBoost",
+      "mae": 1.6725,
+      "rmse": 2.514,
+      "r2": 0.914
+    },
+    {
+      "name": "CatBoost",
+      "mae": 1.5851,
+      "rmse": 2.2806,
+      "r2": 0.9293
+    }
+  ]
+}

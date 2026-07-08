@@ -139,12 +139,14 @@ def _extract_certifications(sections):
     return items
 
 
-def _contact(text):
+def _contact(text, links=None):
+    links = links or []
+    combined = text + '\n' + '\n'.join(links)
     return {
         'email': bool(EMAIL_RE.search(text)),
         'phone': bool(PHONE_RE.search(text)),
-        'linkedin': bool(LINKEDIN_RE.search(text)),
-        'github': bool(GITHUB_RE.search(text)),
+        'linkedin': bool(LINKEDIN_RE.search(text) or any('linkedin.com' in (l or '').lower() for l in links)),
+        'github': bool(GITHUB_RE.search(text) or any('github.com' in (l or '').lower() for l in links)),
     }
 
 
@@ -233,7 +235,7 @@ def _suggestions(factors, skills, contact):
     return out[:6]
 
 
-def parse_resume(text):
+def parse_resume(text, links=None):
     """Main entry point. Returns the full structured analysis payload."""
     text = text or ''
     clean = text.strip()
@@ -249,7 +251,7 @@ def parse_resume(text):
             'projects': [],
             'experience': [],
             'certifications': [],
-            'contact': _contact(clean),
+            'contact': _contact(clean, links),
             'health': {'score': 0, 'breakdown': []},
             'suggestions': ['Upload a text-based PDF or DOCX so we can analyze it.'],
             'wordCount': len(clean.split()),
@@ -261,7 +263,7 @@ def parse_resume(text):
     projects = _extract_projects(sections)
     experience = _extract_experience(sections)
     certifications = _extract_certifications(sections)
-    contact = _contact(clean)
+    contact = _contact(clean, links)
 
     score, breakdown, word_count = _score_health(
         clean, skills, education, projects, experience, certifications, contact

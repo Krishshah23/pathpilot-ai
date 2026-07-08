@@ -1,0 +1,50 @@
+{
+  "model_name": "ats_pass",
+  "algorithm": "Logistic Regression",
+  "type": "binary_classification",
+  "features": [
+    "skills_count",
+    "experience",
+    "projects",
+    "education",
+    "ats_keywords",
+    "action_verbs",
+    "resume_length",
+    "has_contact",
+    "has_sections",
+    "formatting_score",
+    "frontend_skills",
+    "backend_skills",
+    "database_skills",
+    "cloud_skills",
+    "ml_skills"
+  ],
+  "target": "ats_pass",
+  "best_metrics": {
+    "roc_auc": 0.681,
+    "cv_auc_mean": 0.6797
+  },
+  "results": [
+    {
+      "name": "Logistic Regression",
+      "accuracy": 0.6445,
+      "precision": 0.6616,
+      "recall": 0.7887,
+      "roc_auc": 0.681
+    },
+    {
+      "name": "Random Forest",
+      "accuracy": 0.6362,
+      "precision": 0.6504,
+      "recall": 0.8022,
+      "roc_auc": 0.6739
+    },
+    {
+      "name": "XGBoost",
+      "accuracy": 0.6314,
+      "precision": 0.6554,
+      "recall": 0.7645,
+      "roc_auc": 0.6639
+    }
+  ]
+}

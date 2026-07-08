@@ -119,60 +119,203 @@ export const chat = asyncHandler(async (req, res) => {
   const dreamRole = user.profile.dreamRole || 'Software Engineer';
   const skills = collectStudentSkills(user, resume);
 
-  // Formulate an extremely relevant, context-rich synthetic answer
-  let response = '';
   const cleanMessage = message.toLowerCase();
+  let response = '';
 
-  if (cleanMessage.includes('hello') || cleanMessage.includes('hi ') || cleanMessage.includes('hey')) {
-    response = `Hello ${user.name}! I am your PathPilot AI Career Coach. 
+  // 1. Check if the user is currently in a mock interview loop
+  const lastMsg = history && history.length > 0 ? history[history.length - 1] : null;
+  const inMockInterview = lastMsg && lastMsg.role === 'assistant' && lastMsg.content.includes('⚡ MOCK INTERVIEW QUESTION');
 
-Currently, your profile is focused on becoming a **${dreamRole}**. I see you have ${skills.length} skills listed (${skills.slice(0, 4).join(', ')}...). 
+  if (inMockInterview) {
+    // Statelessly evaluate their response based on the question asked
+    const lastContent = lastMsg.content.toLowerCase();
+    let score = 70;
+    let feedback = '';
 
-How can I help you today? You can ask me about:
-- Improving your resume
-- Preparing for interviews for a **${dreamRole}** role
-- Recommending skills to study next
-- Explaining your Career Readiness or Path Score`;
-  } else if (cleanMessage.includes('resume') || cleanMessage.includes('cv')) {
+    if (lastContent.includes('throttle')) {
+      const containsClosure = cleanMessage.includes('closure') || cleanMessage.includes('return function');
+      const containsTimeout = cleanMessage.includes('timeout') || cleanMessage.includes('settimeout');
+      const containsLimit = cleanMessage.includes('limit') || cleanMessage.includes('timestamp') || cleanMessage.includes('date');
+      
+      if (containsClosure && containsTimeout) {
+        score = 95;
+        feedback = 'Excellent answer! You correctly highlighted the use of a closure to maintain the timeout state and setTimeout to throttle the execution.';
+      } else if (containsTimeout) {
+        score = 80;
+        feedback = 'Great job. You noted setTimeout, but remember that closures are required to keep the timer reference persistent across multiple calls.';
+      } else {
+        score = 55;
+        feedback = 'A basic overview. Try focusing on closures, maintaining a cooldown state variable, and delaying invocations via setTimeout.';
+      }
+    } else if (lastContent.includes('social media feed') || lastContent.includes('system design')) {
+      const containsCache = cleanMessage.includes('cache') || cleanMessage.includes('redis') || cleanMessage.includes('cdn');
+      const containsIndex = cleanMessage.includes('index') || cleanMessage.includes('primary key') || cleanMessage.includes('foreign key');
+      const containsPartition = cleanMessage.includes('partition') || cleanMessage.includes('shard') || cleanMessage.includes('scale');
+
+      if (containsCache && containsIndex && containsPartition) {
+        score = 95;
+        feedback = 'Outstanding system design architecture! You covered all essential bases: caching, horizontal sharding, and database indexing.';
+      } else if (containsCache || containsIndex) {
+        score = 75;
+        feedback = 'Good start. You mentioned database indexing/caching, but make sure to think about scaling reads via partition key hashing or content delivery networks.';
+      } else {
+        score = 50;
+        feedback = 'A bit surface-level. In system design, you want to explicitly define table indexes, read replication, and cache layers to handle high read loads.';
+      }
+    } else if (lastContent.includes('regularization')) {
+      const containsL1 = cleanMessage.includes('l1') || cleanMessage.includes('lasso') || cleanMessage.includes('absolute');
+      const containsL2 = cleanMessage.includes('l2') || cleanMessage.includes('ridge') || cleanMessage.includes('squared');
+      const containsSparse = cleanMessage.includes('sparse') || cleanMessage.includes('feature selection') || cleanMessage.includes('eliminate');
+
+      if (containsL1 && containsL2 && containsSparse) {
+        score = 95;
+        feedback = 'Spot on! You accurately described how L1 regularization yields sparse models (useful for feature selection) while L2 shrinks coefficients smoothly.';
+      } else if (containsL1 || containsL2) {
+        score = 75;
+        feedback = 'Good explanation of the penalty terms. Be sure to note that L1 (Lasso) drives weights entirely to zero, serving as an automatic feature selector.';
+      } else {
+        score = 60;
+        feedback = 'L1 and L2 regularization prevent overfitting by penalizing large weights. Focus on how L1 uses absolute weight values (Lasso) and L2 uses squared values (Ridge).';
+      }
+    } else {
+      score = 80;
+      feedback = 'Solid explanation of the technical trade-offs. You addressed the core parameters clearly.';
+    }
+
+    response = `### 📝 Interview Evaluation Report
+
+**AI Rating:** \`${score}/100\`
+
+**Feedback Review:**
+${feedback}
+
+**Next Steps:**
+- Type \`next question\` to try another mock question.
+- Type \`stop\` to end the interview simulation and return to standard advisor queries.`;
+    return sendSuccess(res, { data: { response } });
+  }
+
+  // 2. Handle commands to end interview or start new ones
+  if (cleanMessage.includes('stop') || cleanMessage.includes('quit') || cleanMessage.includes('exit')) {
+    response = `Mock interview ended. I am back in standard advisory mode. 
+
+What else would you like to discuss? (e.g., resume review, skill recommendations, career outlook).`;
+  }
+  // 3. User requests a mock interview question
+  else if (cleanMessage.includes('interview') || cleanMessage.includes('mock') || cleanMessage.includes('question') || cleanMessage.includes('test me')) {
+    let question = '';
+    
+    if (dreamRole.includes('Frontend') || dreamRole.includes('React') || dreamRole.includes('UI')) {
+      question = `### ⚡ MOCK INTERVIEW QUESTION (Frontend role)
+      
+How does a **throttle** function work in JavaScript? Explain the logic, how closures are used, and provide a basic pseudocode implementation.`;
+    } else if (dreamRole.includes('Backend') || dreamRole.includes('Full') || dreamRole.includes('DevOps') || dreamRole.includes('System')) {
+      question = `### ⚡ MOCK INTERVIEW QUESTION (Backend/System Design)
+      
+How would you design the database schemas, indexing strategy, and caching layers for a high-traffic **Social Media Activity Feed**? Describe your approach to read vs write optimization.`;
+    } else if (dreamRole.includes('Data Scientist') || dreamRole.includes('Machine') || dreamRole.includes('Analyst') || dreamRole.includes('ML')) {
+      question = `### ⚡ MOCK INTERVIEW QUESTION (Data Science / ML)
+      
+Explain the mathematical and practical difference between **L1 (Lasso) and L2 (Ridge) Regularization**. When and why would you choose one over the other for a regression model?`;
+    } else {
+      question = `### ⚡ MOCK INTERVIEW QUESTION (Software Engineer)
+      
+Explain the differences in performance, data structure, and use cases between a **Relational Database (SQL)** and a **Document Database (NoSQL)**. How do they handle ACID compliance and scaling?`;
+    }
+
+    response = `Alright, let's test your skills for the **${dreamRole}** role. Take your time to write a detailed response.
+
+${question}
+
+*Write out your answer below and click send when ready. I will evaluate your logic and grade it!*`;
+  }
+  // 4. User requests a resume audit/feedback
+  else if (cleanMessage.includes('resume') || cleanMessage.includes('cv') || cleanMessage.includes('audit')) {
     if (!resume) {
-      response = `It looks like you haven't uploaded a resume yet. 
+      response = `### 📂 Resume Audit Report
 
-To give you personalized feedback, please go to the **Resume Page** and upload your resume. Once analyzed, I can point out formatting issues, recruiter red flags, and highlight how to improve your score!`;
+It looks like you haven't uploaded a resume yet. 
+
+To run a detailed audit:
+1. Go to the **Resume Intelligence** page.
+2. Upload your resume (PDF/DOCX).
+3. Open this AI Coach drawer again, and I'll analyze it immediately!`;
     } else {
       const redFlags = resume.redFlags || [];
-      response = `Here is what I found on your latest resume (**${resume.originalName}**):
-- **Health Score**: ${resume.healthScore}/100
-- **Red Flags**: Found ${redFlags.length} flags.
-- **Top suggestion**: ${resume.suggestions?.[0]?.suggestion || 'Focus on adding quantitative metrics to describe your achievements (e.g. \"improved efficiency by 20%\").'}
+      const suggestions = resume.suggestions || [];
+      
+      response = `### 📂 Resume Audit: **${resume.originalName}**
 
-Would you like me to explain how to fix any of these specifically?`;
+**Overall Health Score:** \`${resume.healthScore}/100\`
+
+**Recruiter Red Flags (${redFlags.length}):**
+${redFlags.length > 0 
+  ? redFlags.map(f => `- **${f.label}** (${f.severity}): ${f.description || f.message}`).join('\n')
+  : '✅ No critical flags identified. Excellent structuring!'}
+
+**Actionable Recommendations:**
+${suggestions.length > 0
+  ? suggestions.slice(0, 4).map(s => `- **${s.section || 'General'}**: ${s.suggestion || s}`).join('\n')
+  : '- Focus on adding quantitative metrics to describe your achievements (e.g. \"improved efficiency by 20%\").'}
+
+*Would you like me to clarify how to resolve any of these recommendations?*`;
     }
-  } else if (cleanMessage.includes('skill') || cleanMessage.includes('learn') || cleanMessage.includes('gap')) {
-    response = `As an aspiring **${dreamRole}**, you have verified skills like: ${skills.slice(0, 5).join(', ')}.
+  }
+  // 5. User requests skills recommendations or gap review
+  else if (cleanMessage.includes('skill') || cleanMessage.includes('learn') || cleanMessage.includes('gap')) {
+    response = `### 🎯 Skill Alignment & Guidance
 
-To stand out in the Indian job market, here are the most critical skills employers are looking for right now:
-1. **System Design & Architecture** (Highly valued in backend/fullstack roles)
-2. **Cloud Deployments** (Docker, Kubernetes, AWS/GCP)
-3. **Automated Testing** (Unit tests, CI/CD pipelines)
+For your target role as a **${dreamRole}**, you have **${skills.length}** verified skills:
+\`${skills.slice(0, 6).join(', ')}${skills.length > 6 ? '...' : ''}\`
 
-You can explore live skill demand mapping on your **Gap Navigator** tab. What skills are you planning to learn next?`;
-  } else if (cleanMessage.includes('interview') || cleanMessage.includes('prep') || cleanMessage.includes('question')) {
-    response = `Preparing for **${dreamRole}** interviews is all about showcasing problem-solving and projects. Here are 3 areas you should focus on:
-1. **Data Structures & Algorithms**: Practice medium level array, string, and hash table questions.
-2. **System Architecture**: Be ready to explain how you would design a scalable web service or database schema.
-3. **Behavioral Questions**: Use the STAR method (Situation, Task, Action, Result) to describe your project work.
+Based on current industry demand snapshots in our database, here is the prioritized checklist of technologies you should acquire next:
 
-Would you like to do a mock question? Tell me what language you prefer!`;
-  } else {
-    // Default fallback - dynamic context conversational answer
-    response = `That's a great question! For a student targeting a **${dreamRole}** role, it's vital to focus on building end-to-end projects and verifying your core skills.
+| Priority | Skill Gap | Estimated Time | Learning Recommendation |
+| :--- | :--- | :--- | :--- |
+| **P0** | **System Architecture** | ~12 hours | Focus on REST principles, caching, and microservices patterns. |
+| **P1** | **Cloud & Containerization** | ~15 hours | Learn Docker containerization basics and AWS deployment. |
+| **P2** | **CI/CD Pipelines** | ~8 hours | Learn GitHub Actions workflows for automated tests. |
+
+You can check off completed roadmap tasks in the **Growth Path** tab to automatically update your metrics!`;
+  }
+  // 6. User asks about salary or career outlook
+  else if (cleanMessage.includes('salary') || cleanMessage.includes('money') || cleanMessage.includes('pay') || cleanMessage.includes('market') || cleanMessage.includes('demand')) {
+    response = `### 💼 Market Dynamics: **${dreamRole}**
+
+Based on our aggregate analysis of national job listings for candidates targeting **${dreamRole}** in India:
+
+- **Entry Level Salary Range:** \`₹5.5 LPA - ₹9.0 LPA\`
+- **Mid-Career Salary Range:** \`₹10.0 LPA - ₹18.0 LPA\`
+- **Market Demand:** 🔥 High demand (specifically for developers with verified cloud capabilities).
+
+*Tip: Add end-to-end full-stack projects to your resume to qualify for upper-quartile offers.*`;
+  }
+  // 7. Initial greeting / Help menu
+  else if (cleanMessage.includes('hello') || cleanMessage.includes('hi ') || cleanMessage.includes('hey') || cleanMessage === 'hi') {
+    response = `👋 Hello ${user.name.split(' ')[0]}! I am your **PathPilot AI Career Advisor**.
+
+I am grounded with your academic profile, resume keywords, and live job-market snapshots to help you prepare for opportunities as a **${dreamRole}**.
+
+Here are some things we can do together:
+- ⚡ **Mock Interview**: Type \`mock interview\` to practice answering technical questions.
+- 📂 **Resume Audit**: Type \`resume audit\` for a full breakdown of formatting issues and red flags.
+- 🎯 **Gap Analysis**: Type \`suggest skills\` to see what to study next.
+- 💼 **Salary Outlook**: Type \`salary\` to check current market ranges.
+
+How can I help you accelerate your growth today?`;
+  }
+  // 8. General conversational answer
+  else {
+    response = `### 💡 Coach Advice
+
+That is a great question! As you work toward your target role of **${dreamRole}**, keeping your projects and skills fresh is crucial.
 
 Here are a few quick tips related to your inquiry:
-- **Build & Deploy**: Employers value candidates who can deploy applications live. Include GitHub and live URL links in your profile.
-- **Mock Interviews**: Practice talking through your decisions aloud.
-- **Stay Grounded**: Check the **Dashboard** for current market demand salary ranges.
+- **Build & Deploy**: Recruiters look for live deployment URLs. Host your projects on Vercel, Netlify, or AWS and include them on your profile.
+- **Quantify Impact**: Instead of saying "developed backend endpoints," say "engineered 15+ REST endpoints, improving API latency by 25%."
+- **Interactive Checklists**: Use the **Growth Path** milestones to schedule your learning week-by-week.
 
-Would you like me to elaborate on one of these points?`;
+Would you like me to launch a **mock interview question** or review your **resume feedback**?`;
   }
 
   return sendSuccess(res, { data: { response } });

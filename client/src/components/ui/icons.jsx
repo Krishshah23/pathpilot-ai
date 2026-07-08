@@ -237,4 +237,24 @@ export const Icon = {
       <polygon points="22 2 15 22 11 13 2 9 22 2" />
     </Svg>
   ),
+  Globe: (p) => (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20" />
+    </Svg>
+  ),
+  Info: (p) => (
+    <Svg {...p}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4" />
+      <path d="M12 8h.01" />
+    </Svg>
+  ),
+  Copy: (p) => (
+    <Svg {...p}>
+      <rect x="8" y="8" width="14" height="14" rx="2" ry="2" />
+      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+    </Svg>
+  ),
 };
+

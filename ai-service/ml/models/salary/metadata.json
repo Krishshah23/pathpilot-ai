@@ -1,0 +1,37 @@
+{
+  "model_name": "salary_prediction",
+  "algorithm": "CatBoost",
+  "type": "regression",
+  "features": [
+    "education",
+    "experience",
+    "skills_count",
+    "projects",
+    "role_encoded",
+    "location_encoded"
+  ],
+  "target": "salary_lpa",
+  "best_metrics": {
+    "r2": 0.9075
+  },
+  "results": [
+    {
+      "name": "CatBoost",
+      "mae": 1.7876,
+      "rmse": 2.4212,
+      "r2": 0.9075
+    },
+    {
+      "name": "Random Forest",
+      "mae": 1.9299,
+      "rmse": 2.6018,
+      "r2": 0.8931
+    },
+    {
+      "name": "XGBoost",
+      "mae": 1.8406,
+      "rmse": 2.5097,
+      "r2": 0.9006
+    }
+  ]
+}

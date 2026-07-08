@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
   if (sent) {
     return (
       <AuthLayout title="Check your inbox" subtitle="We've sent you a password reset link.">
-        <div className="rounded-2xl border border-line bg-surface-2/50 p-6 text-center">
+        <div className="rounded-2xl border border-line bg-surface-2/50 p-6 text-center animate-fade-up">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full btn-brand text-xl text-white">
             ✉
           </div>

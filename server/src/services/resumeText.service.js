@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { PDFParse } from 'pdf-parse';
+import pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
 import mammoth from 'mammoth';
 import { ApiError } from '../utils/ApiError.js';
 
@@ -17,7 +18,10 @@ async function fromPdf(buffer) {
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
     const { text } = await parser.getText();
-    return (text || '').replace(PAGE_MARKER, '\n');
+    const cleaned = (text || '').replace(PAGE_MARKER, '\n');
+    // Also extract any URI link annotations from the PDF
+    const links = await extractPdfLinks(buffer);
+    return { text: cleaned, links };
   } finally {
     await parser.destroy?.();
   }
@@ -38,8 +42,11 @@ export async function extractResumeText(absPath, originalName = '') {
   const buffer = await fs.readFile(absPath);
 
   try {
-    if (ext === '.pdf') return normalize(await fromPdf(buffer));
-    if (ext === '.docx') return normalize(await fromDocx(buffer));
+    if (ext === '.pdf') {
+      const res = await fromPdf(buffer);
+      return { text: normalize(res.text), links: res.links || [] };
+    }
+    if (ext === '.docx') return { text: normalize(await fromDocx(buffer)), links: [] };
     if (ext === '.doc') {
       // Legacy .doc isn't reliably parseable without extra tooling.
       throw ApiError.badRequest('Please upload a PDF or DOCX resume (.doc is not supported).');
@@ -58,4 +65,27 @@ function normalize(text) {
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+async function extractPdfLinks(buffer) {
+  const uris = [];
+  try {
+    const loadingTask = pdfjsLib.getDocument({ data: buffer });
+    const pdf = await loadingTask.promise;
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const ann = await page.getAnnotations();
+      for (const a of ann) {
+        if (a.subtype === 'Link') {
+          // pdf.js uses 'url' for external URI actions
+          if (a.url) uris.push(a.url);
+          // sometimes the action is nested in dest / action fields
+          if (a.action && typeof a.action === 'string') uris.push(a.action);
+        }
+      }
+    }
+  } catch (err) {
+    // Don't fail the extraction for link errors — links are a best-effort
+  }
+  return Array.from(new Set(uris));
 }

@@ -1,0 +1,55 @@
+{
+  "model_name": "career_readiness",
+  "algorithm": "CatBoost",
+  "type": "multiclass",
+  "features": [
+    "education",
+    "cgpa",
+    "experience",
+    "projects",
+    "internships",
+    "skills_count",
+    "frontend_skills",
+    "backend_skills",
+    "database_skills",
+    "cloud_skills",
+    "ml_skills",
+    "certifications",
+    "has_github",
+    "has_linkedin",
+    "resume_score"
+  ],
+  "labels": [
+    "Beginner",
+    "Intermediate",
+    "Career Ready",
+    "Advanced"
+  ],
+  "best_metrics": {
+    "f1": 0.7034,
+    "cv_f1_mean": 0.7029
+  },
+  "results": [
+    {
+      "name": "Random Forest",
+      "accuracy": 0.7056,
+      "precision": 0.7072,
+      "recall": 0.7056,
+      "f1": 0.6906
+    },
+    {
+      "name": "LightGBM",
+      "accuracy": 0.7056,
+      "precision": 0.7037,
+      "recall": 0.7056,
+      "f1": 0.6994
+    },
+    {
+      "name": "CatBoost",
+      "accuracy": 0.7101,
+      "precision": 0.7115,
+      "recall": 0.7101,
+      "f1": 0.7034
+    }
+  ]
+}

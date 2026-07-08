@@ -1,0 +1,46 @@
+{
+  "model_name": "interview_probability",
+  "algorithm": "XGBoost",
+  "type": "regression",
+  "features": [
+    "education",
+    "cgpa",
+    "experience",
+    "projects",
+    "internships",
+    "skills_count",
+    "frontend_skills",
+    "backend_skills",
+    "database_skills",
+    "cloud_skills",
+    "ml_skills",
+    "resume_score",
+    "certifications",
+    "has_github",
+    "mock_interviews"
+  ],
+  "target": "interview_probability",
+  "best_metrics": {
+    "r2": 0.844
+  },
+  "results": [
+    {
+      "name": "Random Forest",
+      "mae": 3.9933,
+      "rmse": 5.1872,
+      "r2": 0.8166
+    },
+    {
+      "name": "Gradient Boosting",
+      "mae": 3.6875,
+      "rmse": 4.8144,
+      "r2": 0.842
+    },
+    {
+      "name": "XGBoost",
+      "mae": 3.6676,
+      "rmse": 4.7836,
+      "r2": 0.844
+    }
+  ]
+}
