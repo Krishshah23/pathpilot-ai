@@ -13,6 +13,16 @@ from pathlib import Path
 SEED = 42
 np.random.seed(SEED)
 
+# Explicit feature direction spec (used by tests and docs)
+FEATURE_DIRECTIONS = {
+    "cgpa": "positive",
+    "certifications": "positive",
+    "achievements": "positive",
+    "action_verbs": "positive",
+    "projects": "positive",
+    "experience": "positive",
+}
+
 DATASETS_DIR = Path(__file__).resolve().parent.parent / "datasets"
 DATASETS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -107,11 +117,13 @@ def generate_resume_dataset(n: int = 50000) -> pd.DataFrame:
         open_source = int(np.random.random() < 0.15 + has_github * 0.15)
 
         # Score formula: weighted combination with noise
+        # Positive-signed linear combination + small Gaussian noise to keep
+        # directions stable for SHAP explanations.
         score = (
-            cgpa * 3.0
+            cgpa * 3.5
             + projects * 4.0
-            + internships * 3.5
-            + experience * 4.0
+            + internships * 3.0
+            + experience * 3.5
             + skills_count * 1.2
             + sc["frontend"] * 0.5
             + sc["backend"] * 0.6
@@ -122,14 +134,15 @@ def generate_resume_dataset(n: int = 50000) -> pd.DataFrame:
             + has_linkedin * 2.0
             + (resume_length - 300) * 0.01
             + certifications * 2.5
-            + achievements * 2.0
-            + ats_keywords * 0.3
-            + action_verbs * 0.8
+            + achievements * 2.5
+            + ats_keywords * 0.25
+            + action_verbs * 1.0
             + leadership * 4.0
             + open_source * 3.0
             + education * 2.0
         )
-        score = _clamp(score + np.random.normal(0, 3), 8, 98)
+        # Keep noise relatively small compared to signal to avoid sign flips
+        score = _clamp(score + np.random.normal(0, 2.0), 8, 98)
         score = round(score, 1)
 
         rows.append({
