@@ -29,7 +29,7 @@ function uniqueSkills(...groups) {
 }
 
 function factor({ key, label, score, max, tip, detail }) {
-  const rounded = clamp(Math.round(score), 0, max);
+  const rounded = clamp(Math.round(score * 10) / 10, 0, max);
   return {
     key,
     label,

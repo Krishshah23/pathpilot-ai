@@ -164,7 +164,7 @@ def predict_readiness(payload):
     profile_score = sum(1 for field in profile_fields if field) / len(profile_fields) * 15
     gap_score = float(gap.get('coverage') or 0) / 100 * 10
 
-    score = round(skill_score + resume_score + project_score + profile_score + gap_score)
+    score = round(skill_score + resume_score + project_score + profile_score + gap_score, 1)
 
     if score >= 85:
         level = 'Career-ready'
@@ -187,10 +187,10 @@ def predict_readiness(payload):
         'level': level,
         'summary': summary,
         'signals': [
-            {'label': 'Skills', 'score': round(skill_score), 'max': 30},
-            {'label': 'Resume health', 'score': round(resume_score), 'max': 30},
-            {'label': 'Projects', 'score': round(project_score), 'max': 15},
-            {'label': 'Profile', 'score': round(profile_score), 'max': 15},
-            {'label': 'Role fit', 'score': round(gap_score), 'max': 10},
+            {'label': 'Skills', 'score': round(skill_score, 1), 'max': 30},
+            {'label': 'Resume health', 'score': round(resume_score, 1), 'max': 30},
+            {'label': 'Projects', 'score': round(project_score, 1), 'max': 15},
+            {'label': 'Profile', 'score': round(profile_score, 1), 'max': 15},
+            {'label': 'Role fit', 'score': round(gap_score, 1), 'max': 10},
         ],
     }
