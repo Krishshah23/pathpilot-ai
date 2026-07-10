@@ -74,8 +74,14 @@ def explain_prediction(model_name: str, features: dict, model: Any, scaler: Any,
         if not explainer:
             return {"success": False, "error": f"SHAP explainer unavailable for {model_name}"}
 
-        # Calculate SHAP values
-        if isinstance(explainer, shap.KernelExplainer):
+        # Import shap in this scope if available (guard against optional dependency)
+        try:
+            import shap as _shap
+        except Exception:
+            _shap = None
+
+        # Calculate SHAP values (handle KernelExplainer specifically when shap is present)
+        if _shap is not None and isinstance(explainer, _shap.KernelExplainer):
             shap_values = explainer.shap_values(X_input)
         else:
             shap_values = explainer(X_input)

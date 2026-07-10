@@ -201,9 +201,9 @@ def predict_career_readiness(features: dict) -> dict:
     level = labels[pred_idx] if pred_idx < len(labels) else "Unknown"
     pred_confidence = int(round(float(proba[pred_idx]) * 100))
 
-        confidence = _classifier_confidence(proba)
+    confidence = _classifier_confidence(proba)
 
-        return {"level": level, "levelIndex": pred_idx, "confidence": pred_confidence,
+    return {"level": level, "levelIndex": pred_idx, "confidence": pred_confidence,
             "confidenceTag": confidence}
 
 

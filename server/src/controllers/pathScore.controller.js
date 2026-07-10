@@ -78,6 +78,16 @@ export const getPathScore = asyncHandler(async (req, res) => {
     // Keep fallback pathScore available if Django AI service is down
   }
 
+  // Defensive: ensure `predictions.explanations` exists so the frontend
+  // can render the SHAP/XAI section even when the ML service fails or
+  // returns incomplete data.
+  pathScore.predictions = pathScore.predictions || {};
+  pathScore.predictions.explanations = pathScore.predictions.explanations || {
+    topPositive: [],
+    topNegative: [],
+    shapRaw: [],
+  };
+
   // Fetch live market salary range for the user's dream role.
   let marketSalary = { available: false };
   let blendedBenchmark = { available: false };
