@@ -229,12 +229,44 @@ def _extract_certifications(sections):
 
 def _contact(text, links=None):
     links = links or []
-    combined = text + '\n' + '\n'.join(links)
+    # Prefer explicit embedded URIs from the PDF extraction, then fall back
+    # to regex matches in text, and finally to label-detection if nothing
+    # else is present.
+    linkedin_url = None
+    github_url = None
+    for l in links:
+        if not l:
+            continue
+        low = l.lower()
+        if 'linkedin.com' in low and linkedin_url is None:
+            linkedin_url = l
+        if 'github.com' in low and github_url is None:
+            github_url = l
+
+    if linkedin_url is None:
+        m = LINKEDIN_RE.search(text)
+        if m:
+            linkedin_url = m.group(0)
+
+    if github_url is None:
+        m = GITHUB_RE.search(text)
+        if m:
+            github_url = m.group(0)
+
+    # Label fallback: the words "LinkedIn" or "GitHub" appear but no URL
+    if linkedin_url is None and re.search(r'\bLinkedIn\b', text, re.I):
+        linkedin_url = 'present (label detected, no URL extracted)'
+    if github_url is None and re.search(r'\bGitHub\b', text, re.I):
+        github_url = 'present (label detected, no URL extracted)'
+
+    email_match = EMAIL_RE.search(text)
+    phone_match = PHONE_RE.search(text)
+
     return {
-        'email': bool(EMAIL_RE.search(text)),
-        'phone': bool(PHONE_RE.search(text)),
-        'linkedin': bool(LINKEDIN_RE.search(text) or any('linkedin.com' in (l or '').lower() for l in links)),
-        'github': bool(GITHUB_RE.search(text) or any('github.com' in (l or '').lower() for l in links)),
+        'email': email_match.group(0) if email_match else None,
+        'phone': phone_match.group(0) if phone_match else None,
+        'linkedin': linkedin_url,
+        'github': github_url,
     }
 
 
