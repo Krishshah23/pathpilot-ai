@@ -118,7 +118,7 @@ export default function ReportPage() {
             </div>
             <div className="text-center sm:text-right">
               <div className="font-display text-4xl font-black text-gradient">
-                {r.pathScore.score}
+                {r.pathScore.displayScore ?? Math.round(r.pathScore.score || 0)}
               </div>
               <p className="text-xs font-semibold text-muted">Path Score</p>
               <p className="mt-0.5 text-xs text-faint">{r.pathScore.label}</p>

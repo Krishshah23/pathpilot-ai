@@ -138,10 +138,14 @@ export function buildPathScore(user, resume) {
     100
   );
 
+  const roundedScore = Math.round(score);
+
   return {
     score,
     label: readinessFromScore(score).label,
     summary: readinessFromScore(score).summary,
+    // Provide a rounded score for display consistency
+    displayScore: roundedScore,
     factors,
     readiness: readinessFromScore(score),
     skills,
@@ -152,7 +156,7 @@ export function buildPathScore(user, resume) {
       checks: profileChecks,
     },
     peerBenchmark: {
-      percentile: 50.0,
+      percentile: 50,
       role: user.profile?.dreamRole || 'Software Engineer',
       mean: 70.0,
       min: 40.0,

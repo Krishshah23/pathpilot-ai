@@ -77,7 +77,7 @@ def _classifier_confidence(proba: np.ndarray) -> dict:
     spread = max_prob - second_prob  # 0..1
 
     # Map spread to a 0-100 confidence score.
-    score = round(min(100, spread * 100 + max_prob * 30), 1)
+    score = int(round(min(100, spread * 100 + max_prob * 30)))
 
     if score >= 70:
         tier = "high"
@@ -101,7 +101,7 @@ def _regressor_confidence(features: dict, key_features: list) -> dict:
     filled = sum(1 for f in key_features if features.get(f, 0) != 0)
     total = max(len(key_features), 1)
     density = filled / total
-    score = round(density * 100, 1)
+    score = int(round(density * 100))
 
     if score >= 70:
         tier = "high"
@@ -124,7 +124,7 @@ def _knn_confidence(distances: np.ndarray) -> dict:
     avg_dist = float(np.mean(distances[0])) if distances.size > 0 else 999
     # Normalize: distances typically range 0-10+. Lower = better.
     # Use an inverse sigmoid-style mapping.
-    score = round(max(0, min(100, 100 / (1 + avg_dist * 0.5))), 1)
+    score = int(round(max(0, min(100, 100 / (1 + avg_dist * 0.5)))))
 
     if score >= 60:
         tier = "high"
@@ -156,7 +156,7 @@ def predict_resume_score(features: dict) -> dict:
     except Exception:
         X_s = scaler.transform(X) if scaler else X
         score = float(model.predict(X_s)[0])
-    score = max(0, min(100, round(score, 1)))
+    score = max(0, min(100, int(round(score))))
 
     # Confidence: based on how many key features are present
     key_feats = ["skills_count", "projects", "experience", "education",
@@ -182,7 +182,7 @@ def predict_ats(features: dict) -> dict:
 
     confidence = _classifier_confidence(proba)
 
-    return {"pass": bool(pred), "probability": round(pass_prob * 100, 1), "confidence": confidence}
+    return {"pass": bool(pred), "probability": int(round(pass_prob * 100)), "confidence": confidence}
 
 
 def predict_career_readiness(features: dict) -> dict:
@@ -199,11 +199,11 @@ def predict_career_readiness(features: dict) -> dict:
     pred_idx = int(np.ravel(model.predict(X_s))[0])
     proba = model.predict_proba(X_s)[0]
     level = labels[pred_idx] if pred_idx < len(labels) else "Unknown"
-    pred_confidence = round(float(proba[pred_idx]) * 100, 1)
+    pred_confidence = int(round(float(proba[pred_idx]) * 100))
 
-    confidence = _classifier_confidence(proba)
+        confidence = _classifier_confidence(proba)
 
-    return {"level": level, "levelIndex": pred_idx, "confidence": pred_confidence,
+        return {"level": level, "levelIndex": pred_idx, "confidence": pred_confidence,
             "confidenceTag": confidence}
 
 
@@ -224,7 +224,7 @@ def predict_role(features: dict, target_role: str = None) -> dict:
     proba = model.predict_proba(X_s)[0]
     top3_idx = np.argsort(proba)[::-1][:3]
     top3 = [
-        {"role": le.inverse_transform([i])[0], "probability": round(float(proba[i]) * 100, 1)}
+        {"role": le.inverse_transform([i])[0], "probability": int(round(float(proba[i]) * 100))}
         for i in top3_idx
     ]
 
@@ -234,12 +234,12 @@ def predict_role(features: dict, target_role: str = None) -> dict:
         for idx, cls_name in enumerate(le.classes_):
             cls_lower = cls_name.lower().strip()
             if cls_lower == target_role_lower or cls_lower.replace(" ", "") == target_role_lower.replace(" ", ""):
-                target_fit = round(float(proba[idx]) * 100, 1)
+                target_fit = int(round(float(proba[idx]) * 100))
                 break
 
-    confidence = _classifier_confidence(proba)
+        confidence = _classifier_confidence(proba)
 
-    return {"role": role, "confidence": round(float(proba[pred_idx]) * 100, 1),
+        return {"role": role, "confidence": int(round(float(proba[pred_idx]) * 100)),
             "confidenceTag": confidence, "top3": top3, "roleFitScore": target_fit}
 
 
@@ -254,7 +254,7 @@ def predict_interview(features: dict) -> dict:
     X = _build_feature_row(features, cols)
     X_s = scaler.transform(X)
     prob = float(model.predict(X_s)[0])
-    prob = max(0, min(100, round(prob, 1)))
+    prob = max(0, min(100, int(round(prob))))
 
     key_feats = ["skills_count", "projects", "internships", "experience",
                  "certifications", "cgpa"]
@@ -401,7 +401,7 @@ def _get_peer_benchmark_data(role_name: str, score: float) -> dict:
                 break
 
     return {
-        "percentile": round(float(pct), 1),
+        "percentile": int(round(float(pct))),
         "role": role_name,
         "mean": round(data["mean"], 1),
         "min": round(data["min"], 1),

@@ -124,7 +124,7 @@ function PathScoreContent({ pathScore = {}, marketSalary, blendedBenchmark, onRe
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
         <Card className="flex flex-col items-center justify-center text-center">
           <p className="text-sm font-medium text-muted">Overall score</p>
-          <ScoreGauge score={pathScore.score} size={220} label={readinessLabel} />
+          <ScoreGauge score={pathScore.displayScore ?? Math.round(pathScore.score || 0)} size={220} label={readinessLabel} />
           {predictions?.resumeScoreConfidence && (
             <ConfidenceTag confidence={predictions.resumeScoreConfidence} size="sm" className="mt-2" />
           )}
@@ -211,7 +211,7 @@ function PathScoreContent({ pathScore = {}, marketSalary, blendedBenchmark, onRe
                   </svg>
                   <div className="text-center z-10">
                     <span className="font-display text-2xl font-bold text-ink">
-                      {Math.round(peerBenchmark.percentile)}th
+                      {peerBenchmark.percentile}th
                     </span>
                     <p className="text-[10px] font-medium text-muted">Percentile</p>
                   </div>
@@ -222,7 +222,7 @@ function PathScoreContent({ pathScore = {}, marketSalary, blendedBenchmark, onRe
                     Target Role: <span className="font-bold text-brand">{peerBenchmark.role}</span>
                   </p>
                   <p className="text-xs text-muted leading-relaxed">
-                    You score higher than <span className="font-semibold text-brand">{Math.round(peerBenchmark.percentile)}%</span> of peers targetting this role.
+                    You score higher than <span className="font-semibold text-brand">{peerBenchmark.percentile}%</span> of peers targetting this role.
                   </p>
                   <div className="grid grid-cols-3 gap-2 rounded-xl bg-surface-2/40 border border-line p-2 text-center text-xs">
                     <div>

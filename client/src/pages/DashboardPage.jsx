@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const stats = [
     {
       label: 'Path Score',
-      value: pathScore ? pathScore.score : '--',
+      value: pathScore ? (pathScore.displayScore ?? Math.round(pathScore.score || 0)) : '--',
       hint: pathScore ? pathScore.label : 'Complete profile signals',
       confidence: predictions?.resumeScoreConfidence,
     },
