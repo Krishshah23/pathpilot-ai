@@ -16,6 +16,7 @@ SEED = 42
 
 FEATURE_COLS_RESUME = [
     "education", "cgpa", "projects", "internships", "experience",
+    "projects_with_impact", "project_tech_count",
     "skills_count", "frontend_skills", "backend_skills", "database_skills",
     "cloud_skills", "ml_skills", "has_github", "has_linkedin",
     "resume_length", "certifications", "achievements", "ats_keywords",
@@ -24,6 +25,7 @@ FEATURE_COLS_RESUME = [
 
 FEATURE_COLS_ATS = [
     "skills_count", "experience", "projects", "education", "ats_keywords",
+    "projects_with_impact",
     "action_verbs", "resume_length", "has_contact", "has_sections",
     "formatting_score", "frontend_skills", "backend_skills",
     "database_skills", "cloud_skills", "ml_skills",
@@ -31,6 +33,7 @@ FEATURE_COLS_ATS = [
 
 FEATURE_COLS_CAREER = [
     "education", "cgpa", "experience", "projects", "internships",
+    "projects_with_impact",
     "skills_count", "frontend_skills", "backend_skills", "database_skills",
     "cloud_skills", "ml_skills", "certifications", "has_github",
     "has_linkedin", "resume_score",
@@ -38,12 +41,14 @@ FEATURE_COLS_CAREER = [
 
 FEATURE_COLS_ROLE = [
     "education", "experience", "projects", "skills_count",
+    "projects_with_impact",
     "frontend_skills", "backend_skills", "database_skills",
     "cloud_skills", "ml_skills",
 ]
 
 FEATURE_COLS_INTERVIEW = [
     "education", "cgpa", "experience", "projects", "internships",
+    "projects_with_impact",
     "skills_count", "frontend_skills", "backend_skills", "database_skills",
     "cloud_skills", "ml_skills", "resume_score", "certifications",
     "has_github", "mock_interviews",
@@ -61,6 +66,11 @@ ROLES = [
 def load_and_clean(path: str, feature_cols: list[str], target_col: str) -> tuple[pd.DataFrame, pd.Series]:
     """Load CSV, drop NaN rows, return features and target."""
     df = pd.read_csv(path)
+    # Ensure all expected feature columns exist (backwards compatibility
+    # when datasets were generated before new features were added).
+    for c in feature_cols:
+        if c not in df.columns:
+            df[c] = 0
     df = df.dropna(subset=feature_cols + [target_col])
     X = df[feature_cols].copy()
     y = df[target_col].copy()
@@ -170,10 +180,46 @@ def extract_resume_features(resume_data: dict[str, Any]) -> dict[str, float]:
     # ATS keywords approximation
     ats_kw = len(all_skills) + action_count
 
+    # Project-derived metrics
+    # Count how many projects contain action verbs (impact statements)
+    projects_with_impact = 0
+    project_techs = set()
+    # Prepare canonical skill tokens from SKILL_ALIASES for precise matching
+    try:
+        from ml.data.skills import SKILL_ALIASES as _SK
+    except Exception:
+        _SK = {}
+
+    skill_phrases = set()
+    for canon, aliases in _SK.items():
+        skill_phrases.add(canon.lower())
+        for a in aliases:
+            skill_phrases.add(a.lower().lstrip('\\b'))
+
+    for p in projects:
+        desc = ''
+        if isinstance(p, dict):
+            desc = (p.get('title', '') + ' ' + p.get('description', '')).lower()
+        else:
+            desc = str(p).lower()
+        if any(v in desc for v in action_verbs_list):
+            projects_with_impact += 1
+        # Match known skill phrases conservatively
+        for phrase in skill_phrases:
+            if not phrase:
+                continue
+            # word-boundary check
+            if re.search(rf'(?<![a-z0-9.]){re.escape(phrase)}(?![a-z0-9+#.])', desc):
+                project_techs.add(phrase)
+
+    project_tech_count = len(project_techs)
+
     return {
         "education": edu_level,
         "cgpa": round(cgpa, 2),
         "projects": len(projects),
+        "projects_with_impact": projects_with_impact,
+        "project_tech_count": project_tech_count,
         "internships": len([e for e in experience_entries if "intern" in e.lower()]) if experience_entries else 0,
         "experience": len(experience_entries),
         "skills_count": len(all_skills),

@@ -8,6 +8,7 @@
     "experience",
     "projects",
     "internships",
+    "projects_with_impact",
     "skills_count",
     "frontend_skills",
     "backend_skills",
@@ -32,10 +33,10 @@
   "results": [
     {
       "name": "Random Forest",
-      "accuracy": 0.7056,
-      "precision": 0.7072,
-      "recall": 0.7056,
-      "f1": 0.6906
+      "accuracy": 0.7062,
+      "precision": 0.7068,
+      "recall": 0.7062,
+      "f1": 0.6932
     },
     {
       "name": "LightGBM",

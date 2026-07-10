@@ -7,6 +7,7 @@
     "experience",
     "projects",
     "skills_count",
+    "projects_with_impact",
     "frontend_skills",
     "backend_skills",
     "database_skills",
@@ -26,14 +27,14 @@
     "Software Engineer"
   ],
   "best_metrics": {
-    "f1": 0.7782,
-    "cv_f1_mean": 0.7751
+    "f1": 0.7816,
+    "cv_f1_mean": 0.7743
   },
   "results": [
     {
       "name": "Random Forest",
-      "accuracy": 0.7831,
-      "f1": 0.7782
+      "accuracy": 0.7864,
+      "f1": 0.7816
     },
     {
       "name": "XGBoost",

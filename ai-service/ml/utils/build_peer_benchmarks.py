@@ -40,6 +40,10 @@ def generate_benchmarks():
     scaler = joblib.load(scaler_path)
     le = joblib.load(le_path)
     
+    # Ensure required feature columns exist (backwards compatibility)
+    for c in FEATURE_COLS_ROLE:
+        if c not in df.columns:
+            df[c] = 0
     # Extract role features from resume dataset
     X_role = df[FEATURE_COLS_ROLE].copy()
     X_role_scaled = scaler.transform(X_role)

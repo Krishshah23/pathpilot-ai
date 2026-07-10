@@ -8,6 +8,8 @@
     "projects",
     "internships",
     "experience",
+    "projects_with_impact",
+    "project_tech_count",
     "skills_count",
     "frontend_skills",
     "backend_skills",
@@ -37,9 +39,9 @@
   "results": [
     {
       "name": "Random Forest",
-      "mae": 2.0925,
-      "rmse": 3.2511,
-      "r2": 0.8562
+      "mae": 2.0923,
+      "rmse": 3.2507,
+      "r2": 0.8563
     },
     {
       "name": "XGBoost",

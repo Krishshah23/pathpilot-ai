@@ -120,7 +120,38 @@ def _extract_projects(sections):
     # line (contains separators like '·' or '|') and then bullets. This avoids
     # splitting wrapped description lines into separate project entries.
     raw = sections.get('projects', '') or ''
-    raw_lines = [l.strip() for l in raw.split('\n') if l.strip()]
+    # Tokenize non-empty lines first
+    raw_lines = [l.rstrip() for l in raw.split('\n') if l.strip()]
+
+    # Merge wrapped lines conservatively: when a line does not end with a
+    # sentence terminator and the next line starts lowercase (likely a
+    # continuation), stitch them together. This reduces fragmented project
+    # entries caused by PDF line-wrapping.
+    merged_lines = []
+    i = 0
+    SENT_END_RE = re.compile(r'[\.|:|;|!|\?|—|–]$')
+    while i < len(raw_lines):
+        cur = raw_lines[i].strip()
+        # Lookahead merge loop
+        while i + 1 < len(raw_lines):
+            nxt = raw_lines[i + 1].lstrip()
+            # Do not merge if next line starts like a bullet or a numbered list
+            if re.match(r'^[\-\*•\d\.)]', nxt):
+                break
+            # Do not merge if next line looks like a tech-stack separator (e.g. contains '·' or '|')
+            if re.search(r'[·|,]', nxt) and len(nxt.split()) <= 8:
+                break
+            # Merge when current line does not end with sentence terminator
+            # and next line starts with a lowercase letter (wrapped continuation)
+            if not SENT_END_RE.search(cur) and nxt and nxt[0].islower():
+                cur = cur + ' ' + nxt
+                i += 1
+                continue
+            break
+        merged_lines.append(cur)
+        i += 1
+
+    raw_lines = merged_lines
     if not raw_lines:
         return []
 
@@ -131,8 +162,8 @@ def _extract_projects(sections):
     current = None
     i = 0
     while i < len(raw_lines):
-        line = raw_lines[i]
-        next_line = raw_lines[i + 1] if i + 1 < len(raw_lines) else ''
+        line = raw_lines[i].strip()
+        next_line = raw_lines[i + 1].strip() if i + 1 < len(raw_lines) else ''
 
         is_title_candidate = (
             not BULLET_RE.match(line)
@@ -150,7 +181,7 @@ def _extract_projects(sections):
         if BULLET_RE.match(line) and current:
             current['bullets'].append(BULLET_RE.sub('', line))
         elif current and current['bullets']:
-            # continuation of previous bullet (wrapped line)
+            # continuation of previous bullet (wrapped line already merged earlier)
             current['bullets'][-1] += ' ' + line
         else:
             # Fallback: treat an isolated non-bullet as a short description/title

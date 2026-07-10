@@ -14,18 +14,7 @@ import { ApiError } from '../utils/ApiError.js';
 // pdf-parse inserts page separators like "-- 1 of 3 --"; strip them.
 const PAGE_MARKER = /\n?-- \d+ of \d+ --\n?/g;
 
-async function fromPdf(buffer) {
-  const parser = new PDFParse({ data: new Uint8Array(buffer) });
-  try {
-    const { text } = await parser.getText();
-    const cleaned = (text || '').replace(PAGE_MARKER, '\n');
-    // Also extract any URI link annotations from the PDF
-    const links = await extractPdfLinks(buffer);
-    return { text: cleaned, links };
-  } finally {
-    await parser.destroy?.();
-  }
-}
+/* fromPdf is defined later (extended version that also scans text) */
 
 async function fromDocx(buffer) {
   const { value } = await mammoth.extractRawText({ buffer });
@@ -89,3 +78,75 @@ async function extractPdfLinks(buffer) {
   }
   return Array.from(new Set(uris));
 }
+
+/**
+ * Also scan extracted plain text for URL-like tokens that may have been
+ * soft-wrapped by PDF layout (line breaks inside URLs). We conservatively
+ * re-join newline breaks that occur between URL-safe characters and then
+ * run a URL/domain regex to pull candidates.
+ */
+function extractUrlsFromText(text) {
+  if (!text) return [];
+  const seeds = ['http://', 'https://', 'www.'];
+  const urlChars = /[A-Za-z0-9\-._~:\/?#\[\]@!$&'()*+,;=%]/;
+  const found = new Set();
+  const lower = text.toLowerCase();
+
+  for (const seed of seeds) {
+    let idx = lower.indexOf(seed);
+    while (idx !== -1) {
+      // Work on a local window to avoid accidentally swallowing unrelated text
+      const maxWindow = Math.min(text.length, idx + 300);
+      const window = text.slice(idx, maxWindow);
+      const collapsed = window.replace(/[\s\n\r]+/g, '');
+
+      let m = null;
+      if (seed.startsWith('http') || seed === 'www.') {
+        // Look for full http(s) or www URL in the collapsed window
+        m = collapsed.match(/https?:\/\/[A-Za-z0-9\-._~:\/?#\[\]@!$&'()*+,;=%]+/i) || collapsed.match(/www\.[A-Za-z0-9\-._~:\/?#\[\]@!$&'()*+,;=%]+/i);
+      } else if (seed.includes('linkedin')) {
+        m = collapsed.match(/linkedin\.com\/[A-Za-z0-9\-._~:\/?#@!$&'()*+,;=%]+/i);
+      } else if (seed.includes('github')) {
+        m = collapsed.match(/github\.com\/[A-Za-z0-9\-._~:\/?#@!$&'()*+,;=%]+/i);
+      }
+
+      if (m && m[0]) {
+        let final = m[0];
+        if (!final.startsWith('http')) {
+          if (final.startsWith('www.')) final = 'http://' + final;
+          else final = 'https://' + final;
+        }
+        // Trim trailing punctuation
+        final = final.replace(/[.,;]+$/g, '');
+        // If the collapsed window accidentally joined an adjacent sentence
+        // like '...Portfolio: www.example.com/port\nfolio', remove any
+        // uppercase-word + ':' suffix that slipped in during collapse.
+        const cut = final.search(/[A-Z][a-z]+:/);
+        if (cut > 0) final = final.slice(0, cut);
+        found.add(final);
+      }
+
+      idx = lower.indexOf(seed, idx + seed.length);
+    }
+  }
+
+  return Array.from(found);
+}
+
+// Extend fromPdf to also include text-scanned URLs when annotation links are absent
+async function fromPdf(buffer) {
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  try {
+    const { text } = await parser.getText();
+    const cleaned = (text || '').replace(PAGE_MARKER, '\n');
+    // Also extract any URI link annotations from the PDF
+    const annLinks = await extractPdfLinks(buffer);
+    const textLinks = extractUrlsFromText(cleaned);
+    const all = Array.from(new Set([...(annLinks || []), ...(textLinks || [])]));
+    return { text: cleaned, links: all };
+  } finally {
+    await parser.destroy?.();
+  }
+}
+
+export { extractUrlsFromText };
