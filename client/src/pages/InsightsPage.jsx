@@ -55,7 +55,7 @@ function InsightsContent({ insights, navigate }) {
     <div className="space-y-6">
       {/* Summary metrics */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="Path Score" value={pathScore.score} hint={pathScore.label} icon={Icon.Gauge} />
+      <Metric label="Path Score" value={pathScore.displayScore ?? Math.round(pathScore.score || 0)} hint={pathScore.label} icon={Icon.Gauge} />
         <Metric label="Skills tracked" value={totals.skills} hint="Profile + resume" icon={Icon.Target} />
         <Metric label="Projects" value={totals.projects} hint="From resume" icon={Icon.Route} />
         <Metric
