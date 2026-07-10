@@ -72,6 +72,12 @@ export const analyzeGap = asyncHandler(async (req, res) => {
     });
   }
 
+  // Ensure recommendations exist and mark their source.
+  // Prefer AI-provided recommendations, but gracefully fall back to
+  // deterministic local suggestions (based on missing skills) if absent.
+  // Delegate to helper for testability.
+  ensureGapRecommendations(gap);
+
   return sendSuccess(res, {
     data: {
       gap,
@@ -79,6 +85,7 @@ export const analyzeGap = asyncHandler(async (req, res) => {
         profileSkills: req.user.profile?.skills?.length || 0,
         resumeSkills: resume?.skills?.length || 0,
         resumeUsed: Boolean(resume),
+        recommendationsFrom: gap.recommendationSource,
       },
       marketData: {
         available: marketData.available,
@@ -89,4 +96,22 @@ export const analyzeGap = asyncHandler(async (req, res) => {
     },
   });
 });
+
+/**
+ * Ensure a gap object has `recommendations` and `recommendationSource`.
+ * This is exported for lightweight unit testing.
+ */
+export function ensureGapRecommendations(gap) {
+  if (!gap) return;
+  if (!gap.recommendations || !Array.isArray(gap.recommendations) || gap.recommendations.length === 0) {
+    gap.recommendations = gap.missingSkills?.slice(0, 6).map((s) => {
+      const hours = s.estimatedHours ?? null;
+      return hours ? `Learn ${s.skill} — ~${hours}h` : `Learn ${s.skill}`;
+    }) || [];
+    gap.recommendationSource = 'fallback';
+  } else {
+    gap.recommendationSource = 'ai';
+  }
+  return gap;
+}
 

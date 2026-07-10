@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "seed": "node src/scripts/seed.js"
+    "seed": "node src/scripts/seed.js",
+    "test:gap": "node src/scripts/test_gap_recommendations.js"
   },
   "keywords": [
     "pathpilot",
