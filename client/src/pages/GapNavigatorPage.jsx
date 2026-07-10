@@ -199,7 +199,7 @@ function GapContent({ gap, sources, marketData }) {
 
         <Card>
           <h2 className="font-display text-base font-semibold text-ink">Recommendations</h2>
-          <p className="text-xs text-faint mt-2">Source: {sources?.recommendationsFrom || 'server'}</p>
+          {/* Source label removed: was a small debug leak into UI */}
           <ul className="mt-4 space-y-3">
             {gap.recommendations.map((item) => (
               <li key={item} className="flex gap-2 text-sm text-muted">
