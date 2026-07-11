@@ -50,4 +50,11 @@ export const env = {
     appId: process.env.ADZUNA_APP_ID || '',
     appKey: process.env.ADZUNA_APP_KEY || '',
   },
+
+  // TheirStack live job search API (Phase 2 — live openings).
+  // Free tier: 200 credits/month · 1 credit = 1 job returned.
+  // Register at https://theirstack.com to get a key.
+  theirstack: {
+    apiKey: process.env.THEIRSTACK_API_KEY || '',
+  },
 };

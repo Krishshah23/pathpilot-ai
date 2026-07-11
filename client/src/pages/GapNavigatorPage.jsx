@@ -27,6 +27,8 @@ export default function GapNavigatorPage() {
   const [gap, setGap] = useState(null);
   const [sources, setSources] = useState(null);
   const [marketData, setMarketData] = useState(null);
+  const [liveJobs, setLiveJobs] = useState(null);
+  const [liveJobsError, setLiveJobsError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState('');
@@ -34,16 +36,29 @@ export default function GapNavigatorPage() {
   const analyze = async (role = targetRole, quiet = false) => {
     setAnalyzing(true);
     setError('');
+    setLiveJobsError(null);
     try {
-      const { data } = await api.post('/gap/analyze', { targetRole: role });
-      setGap(data.data.gap);
-      setSources(data.data.sources);
-      setMarketData(data.data.marketData || null);
-      if (!quiet) toast.success('Gap analysis updated');
-    } catch (err) {
-      const message = errorMessage(err, 'Could not analyze skill gap');
-      setError(message);
-      if (!quiet) toast.error(message);
+      const [gapRes, liveRes] = await Promise.allSettled([
+        api.post('/gap/analyze', { targetRole: role }),
+        api.get('/live-jobs', { params: { role } }),
+      ]);
+
+      if (gapRes.status === 'fulfilled') {
+        setGap(gapRes.value.data.data.gap);
+        setSources(gapRes.value.data.data.sources);
+        setMarketData(gapRes.value.data.data.marketData || null);
+        if (!quiet) toast.success('Gap analysis updated');
+      } else {
+        const message = errorMessage(gapRes.reason, 'Could not analyze skill gap');
+        setError(message);
+        if (!quiet) toast.error(message);
+      }
+
+      if (liveRes.status === 'fulfilled') {
+        setLiveJobs(liveRes.value.data.data);
+      } else {
+        setLiveJobsError('Could not load live job openings right now.');
+      }
     } finally {
       setAnalyzing(false);
       setLoading(false);
@@ -56,15 +71,28 @@ export default function GapNavigatorPage() {
     const loadInitialGap = async () => {
       setAnalyzing(true);
       setError('');
+      setLiveJobsError(null);
       try {
-        const { data } = await api.post('/gap/analyze', { targetRole: initialRole });
+        const [gapRes, liveRes] = await Promise.allSettled([
+          api.post('/gap/analyze', { targetRole: initialRole }),
+          api.get('/live-jobs', { params: { role: initialRole } }),
+        ]);
+
         if (!mounted) return;
-        setGap(data.data.gap);
-        setSources(data.data.sources);
-        setMarketData(data.data.marketData || null);
-      } catch (err) {
-        if (!mounted) return;
-        setError(errorMessage(err, 'Could not analyze skill gap'));
+
+        if (gapRes.status === 'fulfilled') {
+          setGap(gapRes.value.data.data.gap);
+          setSources(gapRes.value.data.data.sources);
+          setMarketData(gapRes.value.data.data.marketData || null);
+        } else {
+          setError(errorMessage(gapRes.reason, 'Could not analyze skill gap'));
+        }
+
+        if (liveRes.status === 'fulfilled') {
+          setLiveJobs(liveRes.value.data.data);
+        } else {
+          setLiveJobsError('Could not load live job openings right now.');
+        }
       } finally {
         if (mounted) {
           setAnalyzing(false);
@@ -117,7 +145,14 @@ export default function GapNavigatorPage() {
               <p className="text-sm text-danger">{error}</p>
             </Card>
           ) : gap ? (
-            <GapContent gap={gap} sources={sources} marketData={marketData} />
+            <GapContent
+              gap={gap}
+              sources={sources}
+              marketData={marketData}
+              liveJobs={liveJobs}
+              liveJobsError={liveJobsError}
+              targetRole={targetRole}
+            />
           ) : (
             <EmptyState
               icon={<Icon.Target />}
@@ -131,7 +166,7 @@ export default function GapNavigatorPage() {
   );
 }
 
-function GapContent({ gap, sources, marketData }) {
+function GapContent({ gap, sources, marketData, liveJobs, liveJobsError, targetRole }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
@@ -210,6 +245,9 @@ function GapContent({ gap, sources, marketData }) {
           </ul>
         </Card>
       </div>
+
+      {/* Live Job Openings */}
+      <LiveJobOpenings jobs={liveJobs?.jobs} error={liveJobsError} role={targetRole} />
     </div>
   );
 }
@@ -350,5 +388,130 @@ function Signal({ label, value, hint }) {
       <p className="mt-1 font-display text-xl font-bold text-ink">{value}</p>
       <p className="mt-1 text-xs text-faint">{hint}</p>
     </div>
+  );
+}
+
+// ── Live Job Openings ────────────────────────────────────────────────
+
+/**
+ * Formats a salary pair into a human-readable string.
+ * Assumes raw numbers are in the local currency (INR in this case).
+ */
+function formatSalary(min, max) {
+  if (min == null && max == null) return 'Not disclosed';
+
+  const fmt = (n) => {
+    if (n >= 100000) return `₹${(n / 100000).toFixed(1)}L`;
+    if (n >= 1000)   return `₹${(n / 1000).toFixed(0)}K`;
+    return `₹${n}`;
+  };
+
+  if (min != null && max != null) return `${fmt(min)} – ${fmt(max)}`;
+  if (min != null) return `From ${fmt(min)}`;
+  return `Up to ${fmt(max)}`;
+}
+
+function LiveJobCard({ job }) {
+  const salaryLabel = formatSalary(job.salaryMin, job.salaryMax);
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-line bg-surface-2/40 p-4 transition-colors hover:border-brand/30 hover:bg-surface-2/70">
+      {/* Title + company */}
+      <div>
+        <p className="text-sm font-semibold text-ink leading-tight">{job.title}</p>
+        <p className="mt-0.5 text-xs text-muted">{job.company}</p>
+      </div>
+
+      {/* Meta row */}
+      <div className="flex flex-wrap gap-2">
+        {/* Location */}
+        <span className="inline-flex items-center gap-1 rounded-md bg-surface-2 border border-line px-2 py-0.5 text-[11px] text-faint">
+          <Icon.MapPin size={10} />
+          {job.location}
+        </span>
+
+        {/* Seniority */}
+        {job.seniority && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-brand/10 border border-brand/20 px-2 py-0.5 text-[11px] font-medium text-brand capitalize">
+            {job.seniority}
+          </span>
+        )}
+
+        {/* Posted */}
+        {job.postedAgo && (
+          <span className="inline-flex items-center gap-1 rounded-md bg-surface-2 border border-line px-2 py-0.5 text-[11px] text-faint">
+            <Icon.Clock size={10} />
+            {job.postedAgo}
+          </span>
+        )}
+      </div>
+
+      {/* Salary */}
+      <p className="text-xs font-medium text-muted">
+        <span className="text-faint">Salary: </span>
+        {salaryLabel}
+      </p>
+
+      {/* Apply button */}
+      {job.applyUrl ? (
+        <a
+          href={job.applyUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-auto inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand/40 bg-brand/10 px-3 py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand/20"
+        >
+          Apply <Icon.ArrowRight size={12} />
+        </a>
+      ) : (
+        <span className="mt-auto inline-flex w-full items-center justify-center rounded-lg border border-line bg-surface-2 px-3 py-2 text-xs text-faint">
+          No apply link available
+        </span>
+      )}
+    </div>
+  );
+}
+
+function LiveJobOpenings({ jobs, error, role }) {
+  return (
+    <Card>
+      {/* Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="font-display text-base font-semibold text-ink">Live Job Openings</h2>
+        <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success sm:self-auto">
+          <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+          Live · aggregated from LinkedIn, Indeed &amp; more
+        </span>
+      </div>
+
+      <p className="mt-1 text-xs text-faint">
+        Real openings for <strong className="text-muted">{role}</strong> in India — posted in the last 30 days.
+      </p>
+
+      {/* Error state */}
+      {error && (
+        <div className="mt-4 flex items-center gap-3 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3">
+          <Icon.AlertTriangle size={16} className="shrink-0 text-warning" />
+          <p className="text-sm text-muted">{error}</p>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!error && (!jobs || jobs.length === 0) && (
+        <div className="mt-4 rounded-xl border border-line bg-surface-2/30 px-4 py-8 text-center">
+          <Icon.Briefcase size={28} className="mx-auto text-faint" />
+          <p className="mt-3 text-sm font-medium text-muted">No live openings found for this role right now</p>
+          <p className="mt-1 text-xs text-faint">Check back later — listings refresh every 6 hours.</p>
+        </div>
+      )}
+
+      {/* Job cards grid */}
+      {!error && jobs && jobs.length > 0 && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {jobs.map((job) => (
+            <LiveJobCard key={job.id} job={job} />
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }

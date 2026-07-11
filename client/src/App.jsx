@@ -24,6 +24,7 @@ const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const PublicProfilePage = lazy(() => import('@/pages/PublicProfilePage'));
 const AdminPage = lazy(() => import('@/pages/AdminPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
+const InterviewPage = lazy(() => import('@/pages/InterviewPage'));
 
 export default function App() {
   return (
@@ -58,6 +59,7 @@ export default function App() {
               <Route path="/opportunities" element={<OpportunityPage />} />
               <Route path="/report" element={<ReportPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/interview" element={<InterviewPage />} />
 
               {/* Admin-only routes */}
               <Route element={<RequireAdmin />}>

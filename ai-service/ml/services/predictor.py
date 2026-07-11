@@ -365,11 +365,15 @@ def _get_peer_benchmark_data(role_name: str, score: float) -> dict:
             with open(path) as f:
                 benchmarks = json.load(f)
         except Exception:
-            pass
+            logger.exception("Failed to load peer_benchmarks.json")
 
     if not benchmarks:
+        logger.warning(
+            "peer_benchmarks.json missing — returning isFallback=True (pct=50) "
+            "for role=%s score=%.1f", role_name, score
+        )
         return {
-            "percentile": 50.0,
+            "percentile": 50,
             "role": role_name,
             "mean": 70.0,
             "min": 40.0,
@@ -379,26 +383,49 @@ def _get_peer_benchmark_data(role_name: str, score: float) -> dict:
 
     if role_name not in benchmarks:
         # fallback to Software Engineer
+        original_role = role_name
         role_name = "Software Engineer" if "Software Engineer" in benchmarks else list(benchmarks.keys())[0]
+        logger.info("Role '%s' not in benchmarks — using '%s' as proxy", original_role, role_name)
 
     data = benchmarks[role_name]
-    percentiles = data["percentiles"]
+    percentiles = data["percentiles"]  # a list of 101 float values (P0..P100)
 
-    # Calculate percentile with interpolation
+    logger.debug(
+        "Percentile computation: role=%s score=%.1f mean=%.1f "
+        "P0=%.1f P50=%.1f P100=%.1f",
+        role_name, score, data.get("mean", 0),
+        percentiles[0], percentiles[50], percentiles[100]
+    )
+
+    # Binary boundary check first
     if score <= percentiles[0]:
         pct = 0.0
     elif score >= percentiles[100]:
         pct = 100.0
     else:
-        pct = 50.0
+        # Linear interpolation: find the bracket [P_i, P_{i+1}] that contains score
+        pct = None
         for i in range(100):
-            if percentiles[i] <= score <= percentiles[i+1]:
-                span = percentiles[i+1] - percentiles[i]
-                if span == 0:
-                    pct = float(i)
-                else:
-                    pct = i + (score - percentiles[i]) / span
+            lo, hi = percentiles[i], percentiles[i + 1]
+            if lo <= score <= hi:
+                span = hi - lo
+                pct = float(i) if span == 0 else i + (score - lo) / span
                 break
+
+        if pct is None:
+            # Should be unreachable for a well-formed distribution, but
+            # guard against floating-point gaps at the boundaries.
+            logger.warning(
+                "No percentile bracket found for score=%.1f in role=%s — "
+                "estimating from endpoints (was previously silently returning 50)",
+                score, role_name
+            )
+            # Best estimate: linear interpolation between P0 and P100
+            full_span = percentiles[100] - percentiles[0]
+            pct = 0.0 if full_span == 0 else (score - percentiles[0]) / full_span * 100.0
+
+    pct = max(0.0, min(100.0, pct))
+    logger.debug("Final percentile for score=%.1f: %.1f", score, pct)
 
     return {
         "percentile": int(round(float(pct))),
@@ -433,14 +460,15 @@ def predict_all(features: dict, current_skills: list, target_role: str) -> dict:
         "resume_score", features, _get_model("resume_score"),
         _get_scaler("resume_score"), _get_features("resume_score")
     )
+    print("SHAP Result:", shap_res)
 
     if shap_res.get("success"):
         positive = [{"feature": c["feature"], "impact": c["impact"]} for c in shap_res.get("top_positive", [])]
         negative = [{"feature": c["feature"], "impact": c["impact"]} for c in shap_res.get("top_negative", [])]
     else:
         # Fallback to feature importance if SHAP fails
-        positive = [f for f in importance[:5] if features.get(f["feature"], 0) > 0]
-        negative = [f for f in importance if features.get(f["feature"], 0) == 0][:3]
+        positive = [{"feature": f["feature"], "impact": f["importance"]} for f in importance[:5] if features.get(f["feature"], 0) > 0]
+        negative = [{"feature": f["feature"], "impact": -f["importance"] if f["importance"] > 0 else 0.0} for f in importance if features.get(f["feature"], 0) == 0][:3]
 
     role_for_benchmark = target_role or role.get("role", "Software Engineer")
     peer_benchmark = _get_peer_benchmark_data(role_for_benchmark, resume["score"])

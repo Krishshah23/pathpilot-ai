@@ -14,6 +14,7 @@ import mlRoutes from './ml.routes.js';
 import jobMarketRoutes from './jobMarket.routes.js';
 import notificationRoutes from './notification.routes.js';
 import aiCoachRoutes from './aiCoach.routes.js';
+import liveJobsRoutes from './liveJobs.routes.js';
 import { aiService } from '../services/ai.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -47,5 +48,6 @@ router.use('/report', reportRoutes);
 router.use('/admin', adminRoutes);
 router.use('/ml', mlRoutes);
 router.use('/job-market', jobMarketRoutes);
+router.use('/live-jobs', liveJobsRoutes);
 
 export default router;

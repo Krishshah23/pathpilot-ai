@@ -32,6 +32,20 @@ PHONE_RE = re.compile(r'(?:\+?\d[\s-]?){10,13}')
 LINKEDIN_RE = re.compile(r'linkedin\.com/[\w/-]+', re.I)
 GITHUB_RE = re.compile(r'github\.com/[\w/-]+', re.I)
 
+# Matches a truncated URL fragment at the END of a text run — e.g.
+# "github.com/bhattyashwi/S" where "S" is only the first char of the repo name.
+# We look for github.com or linkedin.com paths whose last path segment is 1-3 chars
+# (suspiciously short) OR whose last non-slash character is a single uppercase letter.
+PARTIAL_URL_RE = re.compile(
+    r'https?://(?:www\.)?(?P<rest>(?:github|linkedin)\.com/[\w./-]+?)(?:/$|(?<=/)[A-Z]\b|/[\w]{1,2}$)',
+    re.I
+)
+# Also match bare domain form (without scheme)
+PARTIAL_URL_BARE_RE = re.compile(
+    r'(?P<rest>(?:github|linkedin)\.com/[\w./-]+?)(?:/$|(?<=/)[A-Z]\b|/[\w]{1,2}$)',
+    re.I
+)
+
 DEGREE_KEYWORDS = [
     'b.tech', 'btech', 'b.e', 'bachelor', 'b.sc', 'bsc', 'bca', 'b.com',
     'm.tech', 'mtech', 'master', 'm.sc', 'msc', 'mca', 'mba', 'ph.d', 'phd',
@@ -115,7 +129,7 @@ def _extract_education(sections):
     return items
 
 
-def _extract_projects(sections):
+def _extract_projects(sections, links=None):
     # More robust segmentation: detect a title line followed by a tech-stack
     # line (contains separators like '·' or '|') and then bullets. This avoids
     # splitting wrapped description lines into separate project entries.
@@ -174,7 +188,7 @@ def _extract_projects(sections):
         if is_title_candidate:
             if current:
                 projects.append(current)
-            current = {'title': line[:80], 'tech_stack': next_line, 'bullets': []}
+            current = {'title': line[:150], 'tech_stack': next_line, 'bullets': []}
             i += 2
             continue
 
@@ -186,7 +200,7 @@ def _extract_projects(sections):
         else:
             # Fallback: treat an isolated non-bullet as a short description/title
             if current is None:
-                current = {'title': line[:80], 'tech_stack': '', 'bullets': []}
+                current = {'title': line[:150], 'tech_stack': '', 'bullets': []}
             else:
                 # attach to last bullet or as a loose description
                 if current['bullets']:
@@ -210,7 +224,42 @@ def _extract_projects(sections):
                 desc += ' — ' + ' '.join(p['bullets'])
             else:
                 desc = ' '.join(p['bullets'])
-        items.append({'title': p.get('title', '')[:80], 'description': desc[:400]})
+        items.append({'title': p.get('title', '')[:150], 'description': desc[:400]})
+
+    # ── URL truncation repair ─────────────────────────────────────────────────
+    # pdf-parse sometimes drops glyph groups inside hyperlink annotation rects,
+    # leaving only a 1-3 char stub at the end of a URL like
+    #   "github.com/bhattyashwi/S"   (should be "github.com/bhattyashwi/SkillLink")
+    # The full URL is always available in the annotation link list extracted by
+    # pdf.js. We match each partial URL in description text against the annotation
+    # list using prefix matching, and substitute the full form when found.
+    if links:
+        # Build a set of full URLs for fast prefix lookups
+        full_urls = [u for u in links if u and ('github.com' in u.lower() or 'linkedin.com' in u.lower())]
+        PARTIAL_RE = re.compile(
+            # A github/linkedin path whose final segment is suspiciously short
+            # (1-3 chars) — the classic symptom of annotation-rect truncation.
+            r'(https?://)?((github|linkedin)\.com/[\w./-]+?/[\w]{1,3})(?=[^\w/-]|$)',
+            re.I
+        )
+        for item in items:
+            def _replace_partial(m):
+                fragment = m.group(2)  # e.g. "github.com/bhattyashwi/S"
+                scheme   = m.group(1) or 'https://'  # scheme may be absent in text
+                for full in full_urls:
+                    # Normalize full URL to bare form for comparison
+                    full_bare = re.sub(r'^https?://', '', full).rstrip('/')
+                    fragment_norm = fragment.lower().rstrip('/')
+                    full_norm = full_bare.lower()
+                    # Check if the full URL starts with the fragment (case-insensitive)
+                    # AND the fragment is shorter than the full URL (i.e. it's partial)
+                    if full_norm.startswith(fragment_norm) and len(full_bare) > len(fragment):
+                        return scheme + full_bare  # restore the complete URL
+                return m.group(0)  # no match found — leave as-is
+
+            item['description'] = PARTIAL_RE.sub(_replace_partial, item['description'])
+            item['title'] = PARTIAL_RE.sub(_replace_partial, item['title'])
+
     return items
 
 
@@ -380,7 +429,7 @@ def parse_resume(text, links=None):
     sections = _split_sections(clean)
     skills = _find_skills(clean)
     education = _extract_education(sections)
-    projects = _extract_projects(sections)
+    projects = _extract_projects(sections, links=links)  # pass annotation links for URL repair
     experience = _extract_experience(sections)
     certifications = _extract_certifications(sections)
     contact = _contact(clean, links)

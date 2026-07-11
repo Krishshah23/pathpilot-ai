@@ -37,10 +37,10 @@ const resumeSchema = new Schema(
     experience: { type: [String], default: [] },
     certifications: { type: [String], default: [] },
     contact: {
-      email: { type: Boolean, default: false },
-      phone: { type: Boolean, default: false },
-      linkedin: { type: Boolean, default: false },
-      github: { type: Boolean, default: false },
+      email: { type: String, default: '' },
+      phone: { type: String, default: '' },
+      linkedin: { type: String, default: '' },
+      github: { type: String, default: '' },
     },
 
     // Health
