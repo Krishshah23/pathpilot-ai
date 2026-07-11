@@ -1,95 +1,150 @@
 import { useEffect, useState, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
-import { Logo } from '@/components/ui/Logo';
 import { Avatar } from '@/components/ui/Avatar';
 import { Icon } from '@/components/ui/icons';
-import { NAV_ITEMS } from '@/config/nav';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { api } from '@/lib/api';
+import { api, errorMessage } from '@/lib/api';
 
-function NavItem({ item, onNavigate }) {
-  const Ico = item.icon;
+/* ─── Top Nav ─────────────────────────────────────────────────────── */
 
-  if (!item.ready) {
-    return (
-      <div
-        className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-faint/70"
-        title="Coming soon"
-      >
-        <Ico size={18} />
-        <span className="flex-1">{item.label}</span>
-        <span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold text-faint">
-          Soon
-        </span>
-      </div>
-    );
-  }
+const NAV_LINKS = [
+  { label: 'Overview',        path: '/dashboard' },
+  { label: 'Resume Strategy', path: '/talent-analyzer' },
+  { label: 'Skill Roadmap',   path: '/execution-engine' },
+  { label: 'Interview Prep',  path: '/interview-prep' },
+];
+
+function TopNav({ user, onAvatarClick }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <NavLink
-      to={item.path}
-      onClick={onNavigate}
-      className={({ isActive }) =>
-        cn(
-          'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
-          isActive
-            ? 'bg-brand/15 text-ink shadow-[inset_0_0_0_1px_rgba(99,102,241,0.3)]'
-            : 'text-muted hover:bg-surface-2 hover:text-ink'
-        )
-      }
-    >
-      {({ isActive }) => (
-        <>
-          <Ico size={18} className={isActive ? 'text-brand-soft' : ''} />
-          <span>{item.label}</span>
-        </>
+    <header className="sticky top-0 z-40 bg-[#FBFBFA] border-b border-[#EAEAE5]">
+      <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between gap-8">
+
+        {/* Left: Logo */}
+        <a href="/dashboard" className="flex items-center gap-2.5 shrink-0">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#171717]">
+            <span className="text-white font-bold text-sm font-sans">PP</span>
+          </span>
+          <span className="font-serif font-bold text-[#171717] text-lg tracking-tight hidden sm:block">
+            PathPilot
+          </span>
+        </a>
+
+        {/* Center: Nav links (desktop) */}
+        <nav className="hidden md:flex items-center gap-1">
+          {NAV_LINKS.map((link) => (
+            <NavLink
+              key={link.path}
+              to={link.path}
+              className={({ isActive }) =>
+                cn(
+                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150',
+                  isActive
+                    ? 'bg-[#171717] text-white'
+                    : 'text-[#525252] hover:text-[#171717] hover:bg-[#F5F5F3]'
+                )
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Right: Bell + Avatar */}
+        <div className="flex items-center gap-3 shrink-0">
+          <NotificationBell />
+
+          <button
+            onClick={onAvatarClick}
+            className="flex items-center gap-2.5 rounded-full p-0.5 pr-3 transition hover:bg-[#F5F5F3]"
+            title="Open profile settings"
+          >
+            <Avatar user={user} size="sm" />
+            <span className="hidden sm:block text-sm font-medium text-[#171717]">
+              {user?.name?.split(' ')[0]}
+            </span>
+            <Icon.ChevronDown size={14} className="text-[#A3A3A3]" />
+          </button>
+
+          {/* Mobile hamburger */}
+          <button
+            className="md:hidden rounded-lg p-2 text-[#525252] hover:bg-[#F5F5F3]"
+            onClick={() => setMobileOpen((o) => !o)}
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? <Icon.X size={20} /> : <Icon.Menu size={20} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile nav drawer */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-[#EAEAE5] bg-white px-6 py-4 space-y-1 animate-fade-up">
+          {NAV_LINKS.map((link) => (
+            <NavLink
+              key={link.path}
+              to={link.path}
+              onClick={() => setMobileOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  'block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-[#171717] text-white'
+                    : 'text-[#525252] hover:text-[#171717] hover:bg-[#F5F5F3]'
+                )
+              }
+            >
+              {link.label}
+            </NavLink>
+          ))}
+        </div>
       )}
-    </NavLink>
+    </header>
   );
 }
 
-function SidebarContent({ user, onNavigate }) {
-  const items = NAV_ITEMS.filter((i) => !i.admin || user?.role === 'admin');
-  return (
-    <div className="flex h-full flex-col gap-1 p-4">
-      <div className="px-2 py-3">
-        <Logo />
-      </div>
-      <nav className="mt-2 flex flex-1 flex-col gap-1 overflow-y-auto">
-        {items.map((item) => (
-          <NavItem key={item.path} item={item} onNavigate={onNavigate} />
-        ))}
-      </nav>
-    </div>
-  );
-}
+/* ─── Profile Drawer ──────────────────────────────────────────────── */
 
-/**
- * Authenticated app shell: fixed sidebar on desktop, slide-over drawer on
- * mobile, and a sticky topbar with the page title + user menu. All feature
- * pages render inside this via the `title` + `children` props.
- */
-export function AppShell({ title, subtitle, actions, children }) {
-  const { user, logout } = useAuth();
+function ProfileDrawer({ onClose }) {
+  const { user, logout, refreshUser } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [coachOpen, setCoachOpen] = useState(false);
-  const [explainType, setExplainType] = useState(null);
 
-  useEffect(() => {
-    const handleOpenCoach = (e) => {
-      setCoachOpen(true);
-      if (e.detail?.type) {
-        setExplainType(e.detail.type);
-      }
-    };
-    window.addEventListener('open-ai-coach', handleOpenCoach);
-    return () => window.removeEventListener('open-ai-coach', handleOpenCoach);
-  }, []);
+  const p = user?.profile || {};
+  const [form, setForm] = useState({
+    college:   p.college   || '',
+    branch:    p.branch    || '',
+    semester:  p.semester  || '',
+    dreamRole: p.dreamRole || '',
+    skills:    p.skills    || [],
+    isPublic:  p.isPublic  || false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const profileUrl = `${window.location.origin}/profile/${user?._id}`;
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.patch('/profile', form);
+      await refreshUser();
+      toast.success('Profile saved');
+    } catch (err) {
+      toast.error(errorMessage(err, 'Could not save profile'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(profileUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const onLogout = async () => {
     await logout();
@@ -98,108 +153,176 @@ export function AppShell({ title, subtitle, actions, children }) {
   };
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen border-r border-line bg-surface/40 lg:block">
-        <SidebarContent user={user} />
-      </aside>
+    <div className="fixed inset-0 z-50 flex justify-end">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/20"
+        onClick={onClose}
+      />
 
-      {/* Mobile drawer */}
-      {drawerOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setDrawerOpen(false)}
-          />
-          <div className="absolute left-0 top-0 h-full w-[260px] border-r border-line bg-surface animate-fade-up">
-            <SidebarContent user={user} onNavigate={() => setDrawerOpen(false)} />
-          </div>
-        </div>
-      )}
-
-      {/* Main column */}
-      <div className="flex min-h-screen flex-col">
-        <header className="sticky top-0 z-40 glass border-b border-line">
-          <div className="flex items-center gap-3 px-4 py-3 sm:px-6">
-            <button
-              className="rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink lg:hidden"
-              onClick={() => setDrawerOpen(true)}
-              aria-label="Open menu"
-            >
-              <Icon.Menu size={20} />
-            </button>
-
-            <div className="flex-1">
-              {title && <h1 className="font-display text-lg font-bold text-ink">{title}</h1>}
-              {subtitle && <p className="text-xs text-faint">{subtitle}</p>}
+      {/* Drawer */}
+      <div className="relative flex h-full w-full max-w-sm flex-col bg-white border-l border-[#EAEAE5] shadow-xl animate-fade-right overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[#EAEAE5]">
+          <div className="flex items-center gap-3">
+            <Avatar user={user} size="md" />
+            <div>
+              <p className="font-semibold text-[#171717] text-sm">{user?.name}</p>
+              <p className="text-xs text-[#A3A3A3] truncate max-w-[160px]">{user?.email}</p>
             </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-[#A3A3A3] hover:bg-[#F5F5F3] hover:text-[#171717]"
+          >
+            <Icon.X size={18} />
+          </button>
+        </div>
 
-            {actions}
+        {/* Body */}
+        <div className="flex-1 px-6 py-6 space-y-6">
+          {/* Basic Info */}
+          <section>
+            <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-4">Basic Info</h3>
+            <div className="space-y-4">
+              <Field label="College" value={form.college} onChange={(v) => setForm((f) => ({ ...f, college: v }))} placeholder="e.g. LPU" />
+              <Field label="Branch" value={form.branch} onChange={(v) => setForm((f) => ({ ...f, branch: v }))} placeholder="e.g. Computer Science" />
+              <Field label="Semester" type="number" value={form.semester} onChange={(v) => setForm((f) => ({ ...f, semester: v }))} placeholder="e.g. 8" />
+              <Field label="Dream Role" value={form.dreamRole} onChange={(v) => setForm((f) => ({ ...f, dreamRole: v }))} placeholder="e.g. Full Stack Developer" />
+            </div>
+          </section>
 
-            <NotificationBell />
+          {/* Skills */}
+          <section>
+            <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-3">Tracked Skills</h3>
+            <SkillTagInput
+              skills={form.skills}
+              onChange={(skills) => setForm((f) => ({ ...f, skills }))}
+            />
+          </section>
 
-            {/* User menu */}
-            <div className="relative">
-              <button
-                onClick={() => setMenuOpen((o) => !o)}
-                onBlur={() => setTimeout(() => setMenuOpen(false), 150)}
-                className="flex items-center gap-2 rounded-full p-0.5 pr-2 transition hover:bg-surface-2"
-              >
-                <Avatar user={user} size="sm" />
-                <span className="hidden text-sm font-medium text-ink sm:block">
-                  {user?.name?.split(' ')[0]}
-                </span>
-              </button>
+          {/* Public Profile Toggle */}
+          <section>
+            <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-3">Public Career Card</h3>
+            <div className="rounded-xl border border-[#EAEAE5] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[#171717]">Public Profile</p>
+                  <p className="text-xs text-[#A3A3A3] mt-0.5">Let employers find your career card</p>
+                </div>
+                <button
+                  onClick={() => setForm((f) => ({ ...f, isPublic: !f.isPublic }))}
+                  className="transition-colors"
+                  aria-label="Toggle public profile"
+                >
+                  {form.isPublic
+                    ? <Icon.ToggleRight size={32} className="text-[#2B4C3F]" />
+                    : <Icon.ToggleLeft  size={32} className="text-[#D0D0CA]" />
+                  }
+                </button>
+              </div>
 
-              {menuOpen && (
-                <div className="glass absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-line shadow-xl animate-fade-up">
-                  <div className="border-b border-line px-4 py-3">
-                    <p className="truncate text-sm font-semibold text-ink">{user?.name}</p>
-                    <p className="truncate text-xs text-faint">{user?.email}</p>
-                  </div>
+              {form.isPublic && (
+                <div className="flex items-center gap-2 rounded-lg bg-[#F5F5F3] px-3 py-2 text-xs">
+                  <Icon.Link size={12} className="text-[#A3A3A3] shrink-0" />
+                  <span className="text-[#525252] truncate flex-1">{profileUrl}</span>
                   <button
-                    onMouseDown={() => navigate('/profile')}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-muted hover:bg-surface-2 hover:text-ink"
+                    onClick={handleCopyLink}
+                    className="text-[#2B4C3F] font-semibold hover:underline shrink-0"
                   >
-                    <Icon.User size={16} /> Profile
-                  </button>
-                  <button
-                    onMouseDown={onLogout}
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-danger/10"
-                  >
-                    <Icon.Logout size={16} /> Log out
+                    {copied ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
               )}
             </div>
-          </div>
-        </header>
+          </section>
+        </div>
 
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl animate-fade-up">{children}</div>
-        </main>
+        {/* Footer Actions */}
+        <div className="px-6 py-5 border-t border-[#EAEAE5] space-y-3">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full h-10 rounded-xl bg-[#171717] text-white text-sm font-semibold hover:bg-[#2a2a2a] disabled:opacity-50 transition-colors"
+          >
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+          <button
+            onClick={onLogout}
+            className="w-full h-10 rounded-xl border border-[#EAEAE5] text-[#B85A3C] text-sm font-medium hover:bg-[#FDF5F3] transition-colors"
+          >
+            Log out
+          </button>
+        </div>
       </div>
-
-      {/* Floating AI Coach Button */}
-      <button
-        onClick={() => setCoachOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-brand to-indigo-600 text-white shadow-xl shadow-brand/20 transition-all hover:scale-110 hover:shadow-brand/35"
-        aria-label="Open AI Career Coach"
-      >
-        <Icon.MessageSquare size={24} />
-      </button>
-
-      {/* AI Coach Drawer */}
-      {coachOpen && (
-        <AICoachDrawer
-          onClose={() => setCoachOpen(false)}
-          explainType={explainType}
-          clearExplainType={() => setExplainType(null)}
-        />
-      )}
     </div>
   );
 }
+
+function Field({ label, value, onChange, placeholder, type = 'text' }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-[#525252] mb-1.5">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="input w-full text-sm"
+      />
+    </div>
+  );
+}
+
+function SkillTagInput({ skills, onChange }) {
+  const [input, setInput] = useState('');
+
+  const addSkill = (skill) => {
+    const s = skill.trim();
+    if (s && !skills.includes(s)) {
+      onChange([...skills, s]);
+    }
+    setInput('');
+  };
+
+  const removeSkill = (s) => onChange(skills.filter((x) => x !== s));
+
+  return (
+    <div className="rounded-xl border border-[#EAEAE5] p-3 min-h-[80px]">
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {skills.map((s) => (
+          <span
+            key={s}
+            className="inline-flex items-center gap-1 rounded-lg bg-[#F5F5F3] border border-[#EAEAE5] px-2.5 py-1 text-xs text-[#171717]"
+          >
+            {s}
+            <button
+              onClick={() => removeSkill(s)}
+              className="text-[#A3A3A3] hover:text-[#B85A3C]"
+            >
+              <Icon.X size={10} />
+            </button>
+          </span>
+        ))}
+      </div>
+      <input
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            addSkill(input);
+          }
+        }}
+        placeholder="Type skill + Enter"
+        className="w-full text-xs text-[#171717] placeholder-[#A3A3A3] bg-transparent outline-none"
+      />
+    </div>
+  );
+}
+
+/* ─── Notification Bell ───────────────────────────────────────────── */
 
 function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
@@ -211,14 +334,11 @@ function NotificationBell() {
       const { data } = await api.get('/notifications');
       setNotifications(data.data.notifications || []);
       setUnreadCount(data.data.unreadCount || 0);
-    } catch (err) {
-      console.error('Failed to fetch notifications:', err);
-    }
+    } catch { /* silent */ }
   };
 
   useEffect(() => {
     fetchNotifications();
-    // Poll notifications every 30 seconds
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -228,21 +348,15 @@ function NotificationBell() {
       await api.patch('/notifications/mark-all');
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
-    }
+    } catch { /* silent */ }
   };
 
   const markAsRead = async (id) => {
     try {
       await api.patch(`/notifications/${id}`);
-      setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, read: true } : n))
-      );
+      setNotifications((prev) => prev.map((n) => (n._id === id ? { ...n, read: true } : n)));
       setUnreadCount((c) => Math.max(0, c - 1));
-    } catch (err) {
-      console.error('Failed to mark notification as read:', err);
-    }
+    } catch { /* silent */ }
   };
 
   return (
@@ -250,70 +364,55 @@ function NotificationBell() {
       <button
         onClick={() => setOpen((o) => !o)}
         onBlur={() => setTimeout(() => setOpen(false), 200)}
-        className="relative rounded-lg p-2 text-muted hover:bg-surface-2 hover:text-ink transition"
+        className="relative rounded-lg p-2 text-[#525252] hover:bg-[#F5F5F3] hover:text-[#171717] transition-colors"
         aria-label="Notifications"
       >
-        <Icon.Bell size={20} />
+        <Icon.Bell size={19} />
         {unreadCount > 0 && (
-          <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-brand text-[9px] font-bold text-white ring-2 ring-surface">
+          <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#2B4C3F] text-[9px] font-bold text-white">
             {unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="glass absolute right-0 mt-2 w-80 overflow-hidden rounded-xl border border-line shadow-2xl animate-fade-up z-50">
-          <div className="flex items-center justify-between border-b border-line px-4 py-3">
-            <span className="text-xs font-bold text-ink uppercase tracking-wider">Notifications</span>
+        <div className="absolute right-0 mt-2 w-80 overflow-hidden rounded-xl border border-[#EAEAE5] bg-white shadow-lg animate-fade-up z-50">
+          <div className="flex items-center justify-between border-b border-[#EAEAE5] px-4 py-3">
+            <span className="text-xs font-bold text-[#171717] uppercase tracking-wider">Notifications</span>
             {unreadCount > 0 && (
               <button
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  markAllAsRead();
-                }}
-                className="text-[10px] font-bold text-brand-soft hover:underline"
+                onMouseDown={(e) => { e.preventDefault(); markAllAsRead(); }}
+                className="text-[10px] font-semibold text-[#2B4C3F] hover:underline"
               >
-                Mark all as read
+                Mark all read
               </button>
             )}
           </div>
 
-          <div className="max-h-72 overflow-y-auto divide-y divide-line">
+          <div className="max-h-72 overflow-y-auto divide-y divide-[#EAEAE5]">
             {notifications.length === 0 ? (
-              <div className="py-8 text-center text-xs text-faint">
-                All caught up! No notifications.
+              <div className="py-8 text-center text-xs text-[#A3A3A3]">
+                All caught up!
               </div>
             ) : (
               notifications.map((n) => (
                 <div
                   key={n._id}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (!n.read) markAsRead(n._id);
-                  }}
+                  onMouseDown={(e) => { e.preventDefault(); if (!n.read) markAsRead(n._id); }}
                   className={cn(
-                    "flex items-start gap-2.5 px-4 py-3 cursor-pointer transition hover:bg-surface-2/60",
-                    !n.read && "bg-brand/5"
+                    'flex items-start gap-2.5 px-4 py-3 cursor-pointer transition hover:bg-[#F5F5F3]',
+                    !n.read && 'bg-[#F5F5F3]'
                   )}
                 >
-                  <span
-                    className={cn(
-                      "mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full",
-                      !n.read ? "bg-brand" : "bg-transparent"
-                    )}
-                  />
+                  <span className={cn(
+                    'mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full',
+                    !n.read ? 'bg-[#2B4C3F]' : 'bg-transparent'
+                  )} />
                   <div className="min-w-0 flex-1">
-                    <p className={cn("text-xs font-semibold text-ink", !n.read && "font-bold")}>
-                      {n.title}
-                    </p>
-                    <p className="text-[11px] text-muted leading-relaxed mt-0.5">
-                      {n.message}
-                    </p>
-                    <p className="text-[9px] text-faint mt-1">
-                      {new Date(n.createdAt).toLocaleDateString('en-IN', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                    <p className={cn('text-xs text-[#171717]', !n.read && 'font-semibold')}>{n.title}</p>
+                    <p className="text-[11px] text-[#525252] leading-relaxed mt-0.5">{n.message}</p>
+                    <p className="text-[9px] text-[#A3A3A3] mt-1">
+                      {new Date(n.createdAt).toLocaleDateString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>
@@ -326,16 +425,18 @@ function NotificationBell() {
   );
 }
 
+/* ─── AI Coach Drawer ─────────────────────────────────────────────── */
+
 function AICoachDrawer({ onClose, explainType, clearExplainType }) {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hi! I'm your AI Career Coach. Ask me anything about your resume, skill gaps, or readiness, or click 'Ask Why' on the dashboard to run deep-impact analytics explanations.",
+      content: "Hi! I'm your AI Career Coach. Ask me anything about your resume, skill gaps, or career readiness.",
     },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const scrollRef = useEffectEventRef();
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     if (explainType) {
@@ -344,7 +445,6 @@ function AICoachDrawer({ onClose, explainType, clearExplainType }) {
     }
   }, [explainType]);
 
-  // Keep scroll area at bottom
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -353,32 +453,20 @@ function AICoachDrawer({ onClose, explainType, clearExplainType }) {
 
   const loadExplanation = async (type) => {
     setLoading(true);
-    const label = type === 'pathScore' ? 'Path Score' : 'Resume Health';
-    const introMsg = {
+    setMessages((prev) => [...prev, {
       role: 'assistant',
-      content: `Analyzing your ${label} diagnostic metrics and generating your career impact report...`,
-    };
-    setMessages((prev) => [...prev, introMsg]);
-
+      content: `Analyzing your ${type === 'pathScore' ? 'Path Score' : 'Resume Health'} metrics…`,
+    }]);
     try {
       const { data } = await api.post('/ai-coach/explain', { type });
-      // Remove the placeholder intro message to keep it clean
       setMessages((prev) => [
-        ...prev.filter((m) => !m.content.startsWith('Analyzing your')),
-        {
-          role: 'assistant',
-          content: data.data.explanation,
-          metrics: data.data.metrics,
-        },
+        ...prev.filter((m) => !m.content.startsWith('Analyzing')),
+        { role: 'assistant', content: data.data.explanation, metrics: data.data.metrics },
       ]);
-    } catch (err) {
-      console.error(err);
+    } catch {
       setMessages((prev) => [
-        ...prev.filter((m) => !m.content.startsWith('Analyzing your')),
-        {
-          role: 'assistant',
-          content: 'I had trouble fetching your explanation metrics. Please try again in a moment.',
-        },
+        ...prev.filter((m) => !m.content.startsWith('Analyzing')),
+        { role: 'assistant', content: 'Could not fetch explanation. Please try again.' },
       ]);
     } finally {
       setLoading(false);
@@ -389,27 +477,14 @@ function AICoachDrawer({ onClose, explainType, clearExplainType }) {
     e.preventDefault();
     const text = input.trim();
     if (!text || loading) return;
-
-    const userMsg = { role: 'user', content: text };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, { role: 'user', content: text }]);
     setInput('');
     setLoading(true);
-
     try {
-      const { data } = await api.post('/ai-coach/chat', {
-        message: text,
-        history: messages,
-      });
+      const { data } = await api.post('/ai-coach/chat', { message: text, history: messages });
       setMessages((prev) => [...prev, { role: 'assistant', content: data.data.response }]);
-    } catch (err) {
-      console.error(err);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: 'Sorry, I hit a snag answering that. Can you try again?',
-        },
-      ]);
+    } catch {
+      setMessages((prev) => [...prev, { role: 'assistant', content: 'Sorry, I hit a snag. Try again.' }]);
     } finally {
       setLoading(false);
     }
@@ -417,109 +492,87 @@ function AICoachDrawer({ onClose, explainType, clearExplainType }) {
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-xs" onClick={onClose} />
-
-      {/* Drawer Container */}
-      <div className="relative flex h-full w-full max-w-md flex-col border-l border-line bg-slate-900 text-white shadow-2xl animate-fade-right">
+      <div className="absolute inset-0 bg-black/20" onClick={onClose} />
+      <div className="relative flex h-full w-full max-w-md flex-col bg-white border-l border-[#EAEAE5] shadow-xl animate-fade-right">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-line px-5 py-4 bg-slate-950/60">
+        <div className="flex items-center justify-between border-b border-[#EAEAE5] px-5 py-4">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-brand to-indigo-500 text-white shadow-md shadow-brand/20">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#171717] text-white">
               <Icon.MessageSquare size={16} />
             </span>
             <div>
-              <h3 className="text-sm font-bold tracking-wide">AI Career Coach</h3>
-              <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Online
+              <h3 className="text-sm font-bold text-[#171717]">AI Career Coach</h3>
+              <span className="flex items-center gap-1 text-[10px] text-[#2B4C3F]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#2B4C3F] animate-pulse" /> Online
               </span>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-white/5 hover:text-white"
-            aria-label="Close drawer"
-          >
+          <button onClick={onClose} className="rounded-lg p-1.5 text-[#A3A3A3] hover:bg-[#F5F5F3] hover:text-[#171717]">
             <Icon.X size={18} />
           </button>
         </div>
 
-        {/* Message Panel */}
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-900/95"
-        >
-          {messages.map((msg, index) => {
+        {/* Messages */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-3 bg-[#FBFBFA]">
+          {messages.map((msg, i) => {
             const isUser = msg.role === 'user';
             return (
               <div
-                key={index}
+                key={i}
                 className={cn(
-                  "flex flex-col max-w-[85%] rounded-2xl p-3.5 text-xs leading-relaxed",
+                  'max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
                   isUser
-                    ? "ml-auto bg-brand text-white rounded-br-none"
-                    : "mr-auto bg-slate-800/80 border border-white/5 text-slate-200 rounded-bl-none"
+                    ? 'ml-auto bg-[#171717] text-white rounded-br-none'
+                    : 'mr-auto bg-white border border-[#EAEAE5] text-[#171717] rounded-bl-none'
                 )}
               >
-                {/* Markdown render (very simplified to preserve styling tags) */}
-                <div className="space-y-1.5 whitespace-pre-line font-medium">
-                  {msg.content}
-                </div>
-
-                {/* Sub-metrics visualization card */}
-                {msg.metrics && msg.metrics.length > 0 && (
-                  <div className="mt-3.5 border-t border-white/5 pt-3 space-y-2">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Metrics Impact Details</p>
-                    <div className="space-y-2">
-                      {msg.metrics.map((m, idx) => (
-                        <div key={idx} className="space-y-0.5">
-                          <div className="flex justify-between text-[10px] font-bold text-slate-300">
-                            <span>{m.name}</span>
-                            <span>{m.value}{m.max ? `/${m.max}` : ''}</span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-slate-950 overflow-hidden border border-white/5">
-                            <div
-                              className={cn(
-                                "h-full rounded-full transition-all duration-500",
-                                m.impact === 'positive' || m.impact === 'high' ? 'bg-emerald-500' : 'bg-amber-500'
-                              )}
-                              style={{ width: `${m.max ? (m.value / m.max) * 100 : m.value}%` }}
-                            />
-                          </div>
+                <p className="whitespace-pre-line">{msg.content}</p>
+                {msg.metrics?.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-[#EAEAE5] space-y-2">
+                    {msg.metrics.map((m, idx) => (
+                      <div key={idx}>
+                        <div className="flex justify-between text-xs text-[#525252] mb-1">
+                          <span>{m.name}</span>
+                          <span>{m.value}{m.max ? `/${m.max}` : ''}</span>
                         </div>
-                      ))}
-                    </div>
+                        <div className="h-1.5 rounded-full bg-[#EAEAE5] overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-[#2B4C3F] transition-all duration-500"
+                            style={{ width: `${m.max ? (m.value / m.max) * 100 : m.value}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
             );
           })}
-
           {loading && (
-            <div className="flex items-center gap-1 mr-auto bg-slate-800/50 border border-white/5 rounded-2xl px-4 py-3">
-              <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce" />
-              <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce [animation-delay:0.2s]" />
-              <span className="h-2 w-2 rounded-full bg-slate-500 animate-bounce [animation-delay:0.4s]" />
+            <div className="flex items-center gap-1 mr-auto bg-white border border-[#EAEAE5] rounded-2xl px-4 py-3">
+              <span className="h-2 w-2 rounded-full bg-[#A3A3A3] animate-bounce" />
+              <span className="h-2 w-2 rounded-full bg-[#A3A3A3] animate-bounce [animation-delay:0.2s]" />
+              <span className="h-2 w-2 rounded-full bg-[#A3A3A3] animate-bounce [animation-delay:0.4s]" />
             </div>
           )}
         </div>
 
-        {/* Input Bar */}
-        <form onSubmit={handleSend} className="border-t border-line p-4 bg-slate-950/60 flex gap-2">
+        {/* Input */}
+        <form onSubmit={handleSend} className="border-t border-[#EAEAE5] p-4 flex gap-2 bg-white">
           <input
             type="text"
-            placeholder="Ask about resume, jobs, target skills..."
+            placeholder="Ask about resume, gaps, skills…"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            className="input flex-1 !bg-slate-900 border border-white/10 text-white placeholder-slate-500 !h-10 text-xs px-3 focus:border-brand"
+            className="input flex-1 !h-10 text-sm"
             disabled={loading}
           />
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand text-white transition hover:bg-brand-soft disabled:opacity-50"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#171717] text-white transition hover:bg-[#2a2a2a] disabled:opacity-40"
           >
-            <Icon.Send size={16} />
+            <Icon.Send size={15} />
           </button>
         </form>
       </div>
@@ -527,8 +580,57 @@ function AICoachDrawer({ onClose, explainType, clearExplainType }) {
   );
 }
 
-// React ref helper to maintain scroll anchor
-function useEffectEventRef() {
-  const ref = useRef(null);
-  return ref;
+/* ─── App Shell ───────────────────────────────────────────────────── */
+
+/**
+ * Authenticated app shell.
+ * Renders the horizontal TopNav, optional ProfileDrawer, AI Coach button/drawer,
+ * and a max-w-7xl centered main content area.
+ */
+export function AppShell({ children }) {
+  const { user } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [explainType, setExplainType] = useState(null);
+
+  useEffect(() => {
+    const handleOpenCoach = (e) => {
+      setCoachOpen(true);
+      if (e.detail?.type) setExplainType(e.detail.type);
+    };
+    window.addEventListener('open-ai-coach', handleOpenCoach);
+    return () => window.removeEventListener('open-ai-coach', handleOpenCoach);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-[#FBFBFA]">
+      <TopNav user={user} onAvatarClick={() => setProfileOpen(true)} />
+
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-8 animate-fade-up">
+        {children}
+      </main>
+
+      {/* Profile Drawer */}
+      {profileOpen && <ProfileDrawer onClose={() => setProfileOpen(false)} />}
+
+      {/* Floating AI Coach button */}
+      <button
+        onClick={() => setCoachOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex h-13 w-13 items-center justify-center rounded-full bg-[#171717] text-white shadow-lg hover:bg-[#2a2a2a] transition-all hover:scale-105"
+        style={{ height: '52px', width: '52px' }}
+        aria-label="Open AI Career Coach"
+      >
+        <Icon.MessageSquare size={22} />
+      </button>
+
+      {/* AI Coach Drawer */}
+      {coachOpen && (
+        <AICoachDrawer
+          onClose={() => setCoachOpen(false)}
+          explainType={explainType}
+          clearExplainType={() => setExplainType(null)}
+        />
+      )}
+    </div>
+  );
 }

@@ -152,8 +152,8 @@ export default function OnboardingPage() {
                     onClick={() => set('dreamRole', r)}
                     className={`rounded-lg border px-3 py-1.5 text-xs transition ${
                       form.dreamRole === r
-                        ? 'border-brand/60 bg-brand/15 text-brand-soft'
-                        : 'border-line text-muted hover:text-ink'
+                        ? 'border-[#2B4C3F]/40 bg-[#F0F5F3] text-[#2B4C3F] font-semibold'
+                        : 'border-[#EAEAE5] text-[#525252] hover:text-[#171717] hover:bg-[#F5F5F3]'
                     }`}
                   >
                     {r}

@@ -1,19 +1,13 @@
-import { Icon } from '@/components/ui/icons';
-
 /*
-  Sidebar navigation. `ready: false` items render as disabled with a "Soon" tag
-  and are enabled as each module ships. `admin: true` items show only for admins.
+  Navigation config for PathPilot AI v2.
+  The 4 main hub links are defined here and consumed by TopNav in AppShell.
 */
-export const NAV_ITEMS = [
-  { label: 'Command Center', path: '/dashboard', icon: Icon.Compass, ready: true },
-  { label: 'Resume Intelligence', path: '/resume', icon: Icon.FileText, ready: true },
-  { label: 'Path Score', path: '/path-score', icon: Icon.Gauge, ready: true },
-  { label: 'Gap Navigator', path: '/gap', icon: Icon.Target, ready: true },
-  { label: 'Growth Path', path: '/growth', icon: Icon.Route, ready: true },
-  { label: 'Insights', path: '/insights', icon: Icon.ChartBar, ready: true },
-  { label: 'Opportunity Tracker', path: '/opportunities', icon: Icon.Briefcase, ready: true },
-  { label: 'Mock Interview Room', path: '/interview', icon: Icon.MessageSquare, ready: true },
-  { label: 'Career Report', path: '/report', icon: Icon.Document, ready: true },
-  { label: 'Profile', path: '/profile', icon: Icon.User, ready: true },
-  { label: 'Admin', path: '/admin', icon: Icon.Shield, ready: true, admin: true },
+export const NAV_LINKS = [
+  { label: 'Overview',        path: '/dashboard' },
+  { label: 'Resume Strategy', path: '/talent-analyzer' },
+  { label: 'Skill Roadmap',   path: '/execution-engine' },
+  { label: 'Interview Prep',  path: '/interview-prep' },
 ];
+
+// Legacy — kept for any component still importing NAV_ITEMS
+export const NAV_ITEMS = NAV_LINKS.map((l) => ({ ...l, icon: null, ready: true }));

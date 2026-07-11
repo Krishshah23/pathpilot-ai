@@ -3,73 +3,72 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ProtectedRoute, PublicOnlyRoute, RequireOnboarding, RequireAdmin } from '@/routes/guards';
 import { FullScreenLoader } from '@/components/ui/Spinner';
 
-// Auth pages are small and needed immediately — import eagerly.
+// Auth pages — eagerly imported (small, needed immediately)
 import LoginPage from '@/pages/auth/LoginPage';
 import RegisterPage from '@/pages/auth/RegisterPage';
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
 import VerifyEmailPage from '@/pages/auth/VerifyEmailPage';
 
-// Feature pages are code-split so heavy deps (e.g. charts) load on demand.
-const OnboardingPage = lazy(() => import('@/pages/OnboardingPage'));
-const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
-const ResumePage = lazy(() => import('@/pages/ResumePage'));
-const PathScorePage = lazy(() => import('@/pages/PathScorePage'));
-const GapNavigatorPage = lazy(() => import('@/pages/GapNavigatorPage'));
-const GrowthPage = lazy(() => import('@/pages/GrowthPage'));
-const InsightsPage = lazy(() => import('@/pages/InsightsPage'));
-const OpportunityPage = lazy(() => import('@/pages/OpportunityPage'));
-const ReportPage = lazy(() => import('@/pages/ReportPage'));
-const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
-const PublicProfilePage = lazy(() => import('@/pages/PublicProfilePage'));
-const AdminPage = lazy(() => import('@/pages/AdminPage'));
-const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
-const InterviewPage = lazy(() => import('@/pages/InterviewPage'));
+// ── 4 Hub Pages (code-split) ─────────────────────────────────────────
+const OnboardingPage     = lazy(() => import('@/pages/OnboardingPage'));
+const OverviewPage       = lazy(() => import('@/pages/OverviewPage'));
+const TalentAnalyzerPage = lazy(() => import('@/pages/TalentAnalyzerPage'));
+const ExecutionEnginePage= lazy(() => import('@/pages/ExecutionEnginePage'));
+const InterviewPrepPage  = lazy(() => import('@/pages/InterviewPrepPage'));
+const AdminPage          = lazy(() => import('@/pages/AdminPage'));
+const PublicProfilePage  = lazy(() => import('@/pages/PublicProfilePage'));
+const NotFoundPage       = lazy(() => import('@/pages/NotFoundPage'));
 
 export default function App() {
   return (
     <BrowserRouter>
       <Suspense fallback={<FullScreenLoader />}>
         <Routes>
-          {/* Public auth routes (redirect away if already logged in) */}
+          {/* ── Public auth routes ── */}
           <Route element={<PublicOnlyRoute />}>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login"           element={<LoginPage />} />
+            <Route path="/register"        element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           </Route>
 
-          {/* Reachable regardless of auth state */}
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          {/* ── Always reachable ── */}
+          <Route path="/reset-password"       element={<ResetPasswordPage />} />
+          <Route path="/verify-email"         element={<VerifyEmailPage />} />
           <Route path="/profile/:publicCardId" element={<PublicProfilePage />} />
 
-          {/* Protected app routes */}
+          {/* ── Protected app routes ── */}
           <Route element={<ProtectedRoute />}>
-            {/* Onboarding is reachable before it's completed */}
             <Route path="/onboarding" element={<OnboardingPage />} />
 
-            {/* Feature pages require completed onboarding */}
             <Route element={<RequireOnboarding />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/resume" element={<ResumePage />} />
-              <Route path="/path-score" element={<PathScorePage />} />
-              <Route path="/gap" element={<GapNavigatorPage />} />
-              <Route path="/growth" element={<GrowthPage />} />
-              <Route path="/insights" element={<InsightsPage />} />
-              <Route path="/opportunities" element={<OpportunityPage />} />
-              <Route path="/report" element={<ReportPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/interview" element={<InterviewPage />} />
+              {/* ── 4 New Hubs ── */}
+              <Route path="/dashboard"        element={<OverviewPage />} />
+              <Route path="/talent-analyzer"  element={<TalentAnalyzerPage />} />
+              <Route path="/execution-engine" element={<ExecutionEnginePage />} />
+              <Route path="/interview-prep"   element={<InterviewPrepPage />} />
 
-              {/* Admin-only routes */}
+              {/* ── Admin ── */}
               <Route element={<RequireAdmin />}>
                 <Route path="/admin" element={<AdminPage />} />
               </Route>
+
+              {/* ── Legacy redirect map (old routes → new hubs) ── */}
+              <Route path="/resume"        element={<Navigate to="/talent-analyzer"  replace />} />
+              <Route path="/gap"           element={<Navigate to="/talent-analyzer"  replace />} />
+              <Route path="/growth"        element={<Navigate to="/execution-engine" replace />} />
+              <Route path="/opportunities" element={<Navigate to="/execution-engine" replace />} />
+              <Route path="/path-score"    element={<Navigate to="/dashboard"        replace />} />
+              <Route path="/insights"      element={<Navigate to="/dashboard"        replace />} />
+              <Route path="/report"        element={<Navigate to="/dashboard"        replace />} />
+              <Route path="/interview"     element={<Navigate to="/interview-prep"   replace />} />
+              <Route path="/profile"       element={<Navigate to="/dashboard"        replace />} />
             </Route>
           </Route>
 
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<NotFoundPage />} />
+          {/* ── Root + catch-all ── */}
+          <Route path="/"  element={<Navigate to="/dashboard" replace />} />
+          <Route path="*"  element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

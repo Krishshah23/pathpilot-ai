@@ -1,47 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
 /*
-  PathPilot AI — Design System
-  Dark-first, glassmorphic, premium SaaS aesthetic (Linear / Vercel / Stripe).
-  Theme tokens below generate Tailwind utilities (bg-surface, text-muted, etc.).
+  PathPilot AI — Design System v2
+  Matte & Natural. Publishing-house aesthetic.
+  Warm off-white canvas, flat white cards, deep charcoal ink.
+  No glassmorphism. No neon gradients. No glowing borders.
 */
+
 @theme {
+  /* Typography */
   --font-sans: 'Inter', system-ui, sans-serif;
-  --font-display: 'Sora', 'Inter', system-ui, sans-serif;
+  --font-serif: 'Merriweather', Georgia, serif;
+  --font-display: 'Merriweather', Georgia, serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
-  /* Base canvas */
-  --color-canvas: #08090d;
-  --color-surface: #0f1117;
-  --color-surface-2: #151823;
-  --color-elevated: #1a1e2b;
+  /* Canvas & Surfaces */
+  --color-canvas:    #FBFBFA;   /* Warm off-white — primary background */
+  --color-surface:   #FFFFFF;   /* Flat white — card background */
+  --color-surface-2: #F5F5F3;   /* Slightly warm grey — nested surfaces */
+  --color-elevated:  #FFFFFF;   /* Same as surface — no elevation games */
 
-  /* Borders & lines */
-  --color-line: #232838;
-  --color-line-soft: #1b1f2b;
+  /* Borders */
+  --color-line:      #EAEAE5;   /* Warm 1px border */
+  --color-line-soft: #F0F0EC;   /* Even softer, for dividers */
 
   /* Text */
-  --color-ink: #f4f6fb;
-  --color-muted: #9aa3b6;
-  --color-faint: #626b80;
+  --color-ink:       #171717;   /* Deep charcoal — primary text */
+  --color-muted:     #525252;   /* Medium grey — secondary text */
+  --color-faint:     #A3A3A3;   /* Light grey — hints, placeholders */
 
-  /* Brand — indigo → violet */
-  --color-brand: #6366f1;
-  --color-brand-soft: #818cf8;
-  --color-violet: #8b5cf6;
+  /* Accent: Matte Forest Green (success, scores, positive) */
+  --color-brand:      #2B4C3F;
+  --color-brand-soft: #3D6B59;
+  --color-violet:     #2B4C3F;  /* Alias — keeps brand-soft references working */
 
   /* Semantic */
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-info: #38bdf8;
+  --color-success: #2B4C3F;     /* Forest green */
+  --color-warning: #92400E;     /* Amber-brown */
+  --color-danger:  #B85A3C;     /* Matte terracotta / rust */
+  --color-info:    #1E40AF;     /* Deep blue */
 
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
+  /* Extra named tokens */
+  --color-accent-green: #2B4C3F;
+  --color-accent-rust:  #B85A3C;
+  --color-bg-cream:     #FBFBFA;
+  --color-surface-white: #FFFFFF;
+  --color-border-warm:  #EAEAE5;
+  --color-ink-dark:     #171717;
+
+  --radius-xl:  0.75rem;
+  --radius-2xl: 1rem;
 }
 
 @layer base {
   * {
     border-color: var(--color-line);
+    box-sizing: border-box;
   }
 
   html {
@@ -58,68 +73,53 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  h1, h2, h3, h4 {
-    font-family: var(--font-display);
+  /* Serif for headings */
+  h1, h2 {
+    font-family: var(--font-serif);
     letter-spacing: -0.02em;
   }
 
-  /* Ambient gradient glow behind the app */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background:
-      radial-gradient(60rem 40rem at 15% -10%, rgba(99, 102, 241, 0.14), transparent 60%),
-      radial-gradient(50rem 40rem at 100% 0%, rgba(139, 92, 246, 0.12), transparent 55%),
-      radial-gradient(40rem 30rem at 50% 120%, rgba(56, 189, 248, 0.08), transparent 60%);
-    pointer-events: none;
+  h3, h4, h5, h6 {
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
   }
 
   ::selection {
-    background: rgba(99, 102, 241, 0.35);
+    background: rgba(43, 76, 63, 0.2);
   }
 
-  /* Slim, dark scrollbars */
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  /* Slim, warm scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
     background: var(--color-line);
     border-radius: 9999px;
-    border: 2px solid var(--color-canvas);
   }
-  ::-webkit-scrollbar-thumb:hover { background: #2e3550; }
+  ::-webkit-scrollbar-thumb:hover { background: #D0D0CA; }
 }
 
 @layer components {
-  /* Glassmorphic card surface */
-  .glass {
-    background: color-mix(in srgb, var(--color-surface) 78%, transparent);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--color-line);
-  }
-
+  /* Flat white card — zero shadow, warm border */
   .card {
     background-color: var(--color-surface);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-2xl);
   }
 
-  /* Brand gradient text */
-  .text-gradient {
-    background: linear-gradient(120deg, var(--color-brand-soft), var(--color-violet));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  /* Legacy .glass — remapped to flat warm white for backward compat */
+  .glass {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
   }
 
+  /* Matte primary button */
   .btn-brand {
-    background: linear-gradient(120deg, var(--color-brand), var(--color-violet));
-    box-shadow: 0 8px 24px -8px rgba(99, 102, 241, 0.6);
+    background-color: var(--color-ink-dark);
+    color: #ffffff;
   }
-  .btn-brand:hover { filter: brightness(1.08); }
+  .btn-brand:hover { background-color: #2a2a2a; }
 
-  /* Reusable standalone input — matches the Input component styling. */
+  /* Form input — light mode */
   .input {
     display: block;
     width: 100%;
@@ -127,26 +127,45 @@
     padding-inline: 1rem;
     border-radius: var(--radius-xl);
     border: 1px solid var(--color-line);
-    background: color-mix(in srgb, var(--color-surface-2) 60%, transparent);
+    background: var(--color-surface);
     color: var(--color-ink);
     font-size: 0.875rem;
-    transition: all 0.15s ease;
+    font-family: var(--font-sans);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
   .input::placeholder { color: var(--color-faint); }
   .input:focus {
     outline: none;
-    border-color: color-mix(in srgb, var(--color-brand) 60%, transparent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-brand) 30%, transparent);
+    border-color: var(--color-brand);
+    box-shadow: 0 0 0 3px rgba(43, 76, 63, 0.12);
   }
-  textarea.input { height: auto; padding-block: 0.625rem; }
+  textarea.input { height: auto; padding-block: 0.75rem; }
+
+  /* Typography helpers */
+  .text-gradient {
+    background: linear-gradient(135deg, var(--color-brand), var(--color-brand-soft));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Serif display heading */
+  .font-display { font-family: var(--font-serif); }
 }
 
 @layer utilities {
+  /* Animations */
   @keyframes fade-up {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
-  .animate-fade-up { animation: fade-up 0.4s ease both; }
+  .animate-fade-up { animation: fade-up 0.35s ease both; }
+
+  @keyframes fade-right {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .animate-fade-right { animation: fade-right 0.3s ease both; }
 
   @keyframes shimmer {
     100% { transform: translateX(100%); }
@@ -156,7 +175,35 @@
     position: absolute;
     inset: 0;
     transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+    background: linear-gradient(90deg, transparent, rgba(0,0,0,0.03), transparent);
     animation: shimmer 1.5s infinite;
   }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+  .animate-pulse { animation: pulse-dot 2s ease-in-out infinite; }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .animate-spin { animation: spin 1s linear infinite; }
+
+  @keyframes spin-slow {
+    to { transform: rotate(360deg); }
+  }
+  .animate-spin-slow { animation: spin-slow 3s linear infinite; }
+
+  @keyframes bounce-dot {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(-4px); }
+  }
+  .animate-bounce { animation: bounce-dot 0.8s ease-in-out infinite; }
+
+  /* Ping animation for live indicators */
+  @keyframes ping {
+    75%, 100% { transform: scale(2); opacity: 0; }
+  }
+  .animate-ping { animation: ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite; }
 }

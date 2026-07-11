@@ -38,9 +38,21 @@ export default function AdminPage() {
   }, [toast]);
 
   return (
-    <AppShell title="Admin Dashboard" subtitle="Platform management & analytics">
-      {/* ─── Tab bar ─── */}
-      <div className="mb-6 flex items-center gap-1 rounded-xl border border-line bg-surface-2/40 p-1 w-fit">
+    <AppShell>
+      {/* Ledger Header */}
+      <div className="mb-8 pb-6 border-b border-[#EAEAE5]">
+        <div className="flex items-center gap-3 mb-1">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#EAEAE5] bg-[#F5F5F3]">
+            <Icon.Shield size={16} className="text-[#525252]" />
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#A3A3A3]">Admin Access</span>
+        </div>
+        <h1 className="font-serif text-3xl font-black text-[#171717]">The Admin Ledger</h1>
+        <p className="mt-1 text-sm text-[#A3A3A3]">Platform monitoring · User management · System metrics</p>
+      </div>
+
+      {/* Tab bar */}
+      <div className="mb-6 flex items-center gap-1 rounded-xl border border-[#EAEAE5] bg-[#F5F5F3] p-1 w-fit">
         {TABS.map((t) => {
           const Ico = t.icon;
           return (
@@ -50,8 +62,8 @@ export default function AdminPage() {
               className={cn(
                 'flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition',
                 tab === t.key
-                  ? 'bg-brand/15 text-brand-soft shadow-sm'
-                  : 'text-faint hover:text-muted'
+                  ? 'bg-[#171717] text-white shadow-sm'
+                  : 'text-[#A3A3A3] hover:text-[#525252]'
               )}
             >
               <Ico size={15} />
@@ -63,7 +75,7 @@ export default function AdminPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#EAEAE5] border-t-[#171717]" />
         </div>
       ) : tab === 'overview' ? (
         <OverviewTab stats={stats} />
@@ -73,6 +85,7 @@ export default function AdminPage() {
     </AppShell>
   );
 }
+
 
 /* ═══════════════════════════════════════════════════════════════════════════
    OVERVIEW TAB

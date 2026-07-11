@@ -256,5 +256,71 @@ export const Icon = {
       <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
     </Svg>
   ),
+  TrendingUp: (p) => (
+    <Svg {...p}>
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+      <polyline points="16 7 22 7 22 13" />
+    </Svg>
+  ),
+  ArrowUp: (p) => (
+    <Svg {...p}>
+      <path d="M12 19V5M5 12l7-7 7 7" />
+    </Svg>
+  ),
+  ArrowDown: (p) => (
+    <Svg {...p}>
+      <path d="M12 5v14M19 12l-7 7-7-7" />
+    </Svg>
+  ),
+  Zap: (p) => (
+    <Svg {...p}>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </Svg>
+  ),
+  BookOpen: (p) => (
+    <Svg {...p}>
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    </Svg>
+  ),
+  GripVertical: (p) => (
+    <Svg {...p}>
+      <circle cx="9" cy="5" r="1" fill="currentColor" />
+      <circle cx="9" cy="12" r="1" fill="currentColor" />
+      <circle cx="9" cy="19" r="1" fill="currentColor" />
+      <circle cx="15" cy="5" r="1" fill="currentColor" />
+      <circle cx="15" cy="12" r="1" fill="currentColor" />
+      <circle cx="15" cy="19" r="1" fill="currentColor" />
+    </Svg>
+  ),
+  ChevronLeft: (p) => (
+    <Svg {...p}>
+      <path d="m15 18-6-6 6-6" />
+    </Svg>
+  ),
+  PanelRight: (p) => (
+    <Svg {...p}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M15 3v18" />
+    </Svg>
+  ),
+  Link: (p) => (
+    <Svg {...p}>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </Svg>
+  ),
+  ToggleLeft: (p) => (
+    <Svg {...p}>
+      <rect x="1" y="5" width="22" height="14" rx="7" />
+      <circle cx="8" cy="12" r="3" fill="currentColor" />
+    </Svg>
+  ),
+  ToggleRight: (p) => (
+    <Svg {...p}>
+      <rect x="1" y="5" width="22" height="14" rx="7" fill="currentColor" />
+      <circle cx="16" cy="12" r="3" fill="white" />
+    </Svg>
+  ),
 };
 
