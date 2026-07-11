@@ -48,10 +48,13 @@ export default function TalentAnalyzerPage() {
   const loadGap = async () => {
     setLoadingGap(true);
     try {
-      const { data } = await api.get(`/gap?role=${encodeURIComponent(role)}`);
-      setGapData(data.data);
-    } catch { /* silent */ }
-    finally { setLoadingGap(false); }
+      const { data } = await api.post('/gap/analyze', { targetRole: role });
+      setGapData(data.data.gap);
+    } catch (err) {
+      toast.error(errorMessage(err, 'Failed to analyze skill gap'));
+    } finally {
+      setLoadingGap(false);
+    }
   };
 
   const loadJobs = async () => {
