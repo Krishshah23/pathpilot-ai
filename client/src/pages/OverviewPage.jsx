@@ -16,18 +16,37 @@ export default function OverviewPage() {
   const [blendedBenchmark, setBlendedBenchmark] = useState(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [growthPlan, setGrowthPlan] = useState(null);
+  const [aiExplanation, setAiExplanation] = useState(null);
+  const [loadingAi, setLoadingAi] = useState(false);
+
+  const [editingRole, setEditingRole] = useState(false);
+  const [selectedRole, setSelectedRole] = useState(user?.profile?.dreamRole || 'your target role');
 
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await api.get('/path-score');
-        setPathScore(data.data.pathScore || {});
-        setMarketSalary(data.data.marketSalary || null);
-        setBlendedBenchmark(data.data.blendedBenchmark || null);
+        const [scoreRes, growthRes] = await Promise.all([
+          api.get('/path-score'),
+          api.get('/growth').catch(() => ({ data: { data: { plan: null } } })) // Handle 404s gracefully
+        ]);
+        
+        setPathScore(scoreRes.data.data.pathScore || {});
+        setMarketSalary(scoreRes.data.data.marketSalary || null);
+        setBlendedBenchmark(scoreRes.data.data.blendedBenchmark || null);
+        setGrowthPlan(growthRes.data?.data?.plan || null);
+        
+        // If they have a resume, fetch the true Gemini explanation
+        if (user?.profile?.resumeUrl) {
+          setLoadingAi(true);
+          api.post('/ai-coach/explain').then((res) => {
+            setAiExplanation(res.data.data.explanation);
+          }).catch(() => {}).finally(() => setLoadingAi(false));
+        }
       } catch { /* silent */ }
       finally { setLoading(false); }
     })();
-  }, []);
+  }, [user?.profile?.resumeUrl]);
 
   const handleExportPDF = async () => {
     setExporting(true);
@@ -58,12 +77,56 @@ export default function OverviewPage() {
 
   const firstName = user?.name?.split(' ')[0] || 'there';
   const dreamRole = user?.profile?.dreamRole || 'your target role';
+  
+  const handleRoleUpdate = async (newRole) => {
+    setSelectedRole(newRole);
+    setEditingRole(false);
+    try {
+      await api.patch('/profile', { profile: { dreamRole: newRole } });
+      window.location.reload(); // Refresh everything to get new predictions and insights
+    } catch (err) {
+      // silent fail or toast
+    }
+  };
+
   const score = pathScore?.displayScore ?? Math.round(pathScore?.score || 0);
   const readiness = pathScore?.readiness;
   const predictions = pathScore?.predictions;
   const peerBenchmark = pathScore?.peerBenchmark;
   const factors = pathScore?.factors || [];
   const explanations = predictions?.explanations;
+  // Only show AI diagnostics when the user has an analyzed resume.
+  // Without one the ML models run on all-zero inputs and produce nonsense.
+  const hasResume = !!(user?.profile?.resumeUrl);
+
+  // Determine Smart CTA State
+  let smartCta = {
+    title: 'Upload your resume',
+    desc: 'Unlock your AI career audit, gap analysis, and path score.',
+    btn: 'Analyze Resume',
+    link: '/talent-analyzer',
+    icon: <Icon.FileText size={20} />
+  };
+  
+  if (hasResume) {
+    if (!growthPlan) {
+      smartCta = {
+        title: 'Generate your skill roadmap',
+        desc: 'Build a personalized weekly plan targeting your exact resume gaps.',
+        btn: 'Build Roadmap',
+        link: '/execution-engine',
+        icon: <Icon.Map size={20} />
+      };
+    } else {
+      smartCta = {
+        title: 'Practice your weak points',
+        desc: 'Start an AI mock interview focused on the gaps we identified.',
+        btn: 'Start Interview',
+        link: '/interview-prep',
+        icon: <Icon.Mic size={20} />
+      };
+    }
+  }
 
   return (
     <AppShell>
@@ -78,7 +141,27 @@ export default function OverviewPage() {
             </h1>
             <p className="mt-3 text-base text-[#525252] max-w-xl leading-relaxed">
               Here's your career readiness snapshot for{' '}
-              <span className="font-semibold text-[#2B4C3F]">{dreamRole}</span>.
+              {editingRole ? (
+                <select 
+                  autoFocus
+                  value={selectedRole} 
+                  onChange={(e) => handleRoleUpdate(e.target.value)}
+                  onBlur={() => setEditingRole(false)}
+                  className="bg-transparent font-semibold text-[#2B4C3F] border-b-2 border-[#2B4C3F] outline-none"
+                >
+                  {['Software Engineer', 'Full Stack Developer', 'Frontend Developer', 'Backend Developer', 'Data Scientist', 'Product Manager'].map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              ) : (
+                <span 
+                  onClick={() => setEditingRole(true)} 
+                  className="font-semibold text-[#2B4C3F] cursor-pointer hover:underline underline-offset-4 decoration-2 decoration-[#C8DDD6]"
+                  title="Click to change target role"
+                >
+                  {dreamRole} <Icon.Edit size={14} className="inline-block mb-1 text-[#A3A3A3] hover:text-[#2B4C3F]" />
+                </span>
+              )}.
               {readiness?.summary && ` ${readiness.summary}`}
             </p>
           </div>
@@ -92,6 +175,26 @@ export default function OverviewPage() {
               ? <><Spinner className="h-4 w-4" /> Generating…</>
               : <><Icon.Download size={16} /> Export Career Audit</>
             }
+          </button>
+        </div>
+
+        {/* ── Smart Action Card ────────────────────────────────────── */}
+        <div className="bg-[#2B4C3F] rounded-2xl p-6 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-xl shadow-[#2B4C3F]/10">
+          <div className="flex items-center gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#C8DDD6]">
+              {smartCta.icon}
+            </span>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#C8DDD6] mb-1">Next Best Action</p>
+              <h2 className="font-serif text-lg font-bold text-white">{smartCta.title}</h2>
+              <p className="text-sm text-white/80">{smartCta.desc}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate(smartCta.link)}
+            className="shrink-0 h-10 px-6 rounded-xl bg-white text-sm font-bold text-[#171717] hover:bg-[#F5F5F3] transition-colors"
+          >
+            {smartCta.btn}
           </button>
         </div>
 
@@ -141,131 +244,63 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* ── SHAP Explainability ───────────────────────────────────── */}
-        {explanations && (
-          <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8">
-            <div className="mb-6">
-              <h2 className="font-serif text-lg font-bold text-[#171717]">AI Explainability — Score Drivers</h2>
-              <p className="text-sm text-[#A3A3A3] mt-1">Shapley values: mathematical impact of each resume attribute.</p>
-            </div>
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Positive */}
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#2B4C3F] mb-3 flex items-center gap-1.5">
-                  <Icon.ArrowUp size={14} /> Positive Drivers
-                </h3>
-                <div className="space-y-2">
-                  {explanations.topPositive?.map((item) => (
-                    <div key={item.feature} className="flex items-center justify-between rounded-lg border border-[#EAEAE5] bg-[#F5F5F3] px-3 py-2.5 text-sm">
-                      <span className="text-[#171717] font-medium">{formatFeatureName(item.feature)}</span>
-                      <span className="font-mono text-xs font-bold text-[#2B4C3F]">+{item.impact.toFixed(2)}</span>
-                    </div>
-                  ))}
-                  {!explanations.topPositive?.length && (
-                    <p className="text-xs text-[#A3A3A3]">No major positive drivers yet.</p>
-                  )}
-                </div>
-              </div>
-              {/* Negative */}
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#B85A3C] mb-3 flex items-center gap-1.5">
-                  <Icon.ArrowDown size={14} /> Negative Drivers
-                </h3>
-                <div className="space-y-2">
-                  {explanations.topNegative?.map((item) => (
-                    <div key={item.feature} className="flex items-center justify-between rounded-lg border border-[#EAEAE5] bg-[#FDF5F3] px-3 py-2.5 text-sm">
-                      <span className="text-[#171717] font-medium">{formatFeatureName(item.feature)}</span>
-                      <span className="font-mono text-xs font-bold text-[#B85A3C]">{item.impact.toFixed(2)}</span>
-                    </div>
-                  ))}
-                  {!explanations.topNegative?.length && (
-                    <p className="text-xs text-[#A3A3A3]">No negative drivers identified.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── AI Prediction Cards ───────────────────────────────────── */}
-        {predictions && (
-          <div>
-            <h2 className="font-serif text-xl font-bold text-[#171717] mb-5">AI Predictive Diagnostics</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <PredCard
-                label="ATS Pass Probability"
-                value={`${predictions.atsProbability}%`}
-                sub={predictions.atsPass ? 'Likely Pass' : 'At Risk'}
-                subColor={predictions.atsPass ? '#2B4C3F' : '#B85A3C'}
-                icon={<Icon.Shield size={20} />}
-              />
-              <PredCard
-                label="Salary Projection"
-                value={`₹${predictions.salaryPrediction?.salaryLPA} LPA`}
-                sub={marketSalary?.available ? `Market: ₹${marketSalary.min}–₹${marketSalary.max} LPA` : 'ML model estimate'}
-                icon={<Icon.DollarSign size={20} />}
-              />
-              <PredCard
-                label="Interview Success"
-                value={`${predictions.interviewProbability}%`}
-                sub="Probability of clearing round 1"
-                icon={<Icon.Users size={20} />}
-              />
-              <PredCard
-                label="Recommended Role"
-                value={predictions.recommendedRole?.role || '—'}
-                sub={`${predictions.recommendedRole?.confidence}% confidence`}
-                icon={<Icon.Sparkles size={20} />}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* ── Peer Benchmark + Market Alignment ────────────────────── */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Peer Benchmark */}
-          {peerBenchmark && (
-            <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="font-serif text-base font-bold text-[#171717]">Peer Benchmark</h2>
-                  <p className="text-xs text-[#A3A3A3] mt-1">vs. 50,000 synthetic student profiles</p>
-                </div>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-[#F5F5F3] border border-[#EAEAE5] text-[#A3A3A3] px-2 py-1 rounded-full">
-                  Synthetic
+        {/* ── AI Career Audit Narrative (Replaces SHAP) ── */}
+        {hasResume ? (
+          <div className="bg-[#171717] rounded-2xl p-8 text-white relative overflow-hidden">
+            {/* Background flair */}
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#2B4C3F] opacity-30 rounded-full blur-3xl pointer-events-none" />
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2a2a2a]">
+                  <Icon.Sparkles size={18} className="text-[#C8DDD6]" />
                 </span>
-              </div>
-              <div className="flex items-center gap-6">
-                {/* Percentile ring */}
-                <div className="relative flex h-24 w-24 shrink-0 items-center justify-center">
-                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 96 96">
-                    <circle cx="48" cy="48" r="40" stroke="#EAEAE5" strokeWidth="7" fill="none" />
-                    <circle
-                      cx="48" cy="48" r="40"
-                      stroke="#2B4C3F" strokeWidth="7" fill="none"
-                      strokeLinecap="round"
-                      strokeDasharray={2 * Math.PI * 40}
-                      strokeDashoffset={2 * Math.PI * 40 * (1 - peerBenchmark.percentile / 100)}
-                    />
-                  </svg>
-                  <div className="text-center z-10">
-                    <span className="font-serif text-2xl font-black text-[#171717]">{peerBenchmark.percentile}th</span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-[#171717]">Top {100 - peerBenchmark.percentile}% for <span className="text-[#2B4C3F]">{peerBenchmark.role}</span></p>
-                  <p className="text-xs text-[#525252]">You score higher than {peerBenchmark.percentile}% of peers.</p>
-                  <div className="flex gap-4 mt-3 text-xs text-[#A3A3A3]">
-                    <span>Min: <b className="text-[#171717]">{peerBenchmark.min}</b></span>
-                    <span>Avg: <b className="text-[#171717]">{peerBenchmark.mean}</b></span>
-                    <span>Max: <b className="text-[#171717]">{peerBenchmark.max}</b></span>
-                  </div>
+                <div>
+                  <h2 className="font-serif text-lg font-bold">PathPilot AI Analysis</h2>
+                  <p className="text-xs text-[#A3A3A3]">Personalized career audit for {dreamRole}</p>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Live Market Alignment */}
+              {loadingAi ? (
+                <div className="flex items-center gap-3 py-6">
+                  <Spinner className="h-5 w-5 text-[#C8DDD6]" />
+                  <span className="text-sm text-[#A3A3A3]">AI is writing your career narrative...</span>
+                </div>
+              ) : aiExplanation ? (
+                <div className="prose prose-sm prose-invert max-w-none">
+                  {/* Safely map paragraphs (Gemini returns a string) */}
+                  <div className="space-y-4 text-[#D0D0CA] leading-relaxed text-sm">
+                    {aiExplanation.split('\n').filter(p => p.trim()).map((paragraph, i) => (
+                      <p key={i}>{paragraph}</p>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-[#A3A3A3]">Could not load AI explanation.</p>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* No resume yet — show prompt instead of garbage predictions */
+          <div className="rounded-2xl border border-dashed border-[#EAEAE5] bg-[#F5F5F3] p-10 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white border border-[#EAEAE5] mx-auto mb-4">
+              <Icon.FileText size={24} className="text-[#A3A3A3]" />
+            </div>
+            <h3 className="font-serif text-base font-bold text-[#171717] mb-1">No resume analyzed yet</h3>
+            <p className="text-sm text-[#A3A3A3] max-w-sm mx-auto mb-5">
+              Upload and analyze your resume to unlock your AI-powered career audit and actionable feedback.
+            </p>
+            <a
+              href="/talent-analyzer"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#171717] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#2a2a2a] transition-colors"
+            >
+              <Icon.Upload size={15} /> Analyze Resume
+            </a>
+          </div>
+        )}
+
+        {/* ── Live Market Alignment ────────────────────── */}
+        <div className="grid gap-6">
           {blendedBenchmark?.available && (
             <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8">
               <div className="flex items-center justify-between mb-6">
@@ -345,23 +380,6 @@ export default function OverviewPage() {
             </div>
           )}
         </div>
-
-        {/* ── AI Recommendations ───────────────────────────────────── */}
-        {predictions?.recommendations?.length > 0 && (
-          <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8">
-            <h2 className="font-serif text-lg font-bold text-[#171717] mb-5">AI Career Improvement Roadmap</h2>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {predictions.recommendations.map((rec, idx) => (
-                <li key={idx} className="flex items-start gap-3 rounded-xl border border-[#EAEAE5] bg-[#F5F5F3] px-4 py-3 text-sm text-[#525252]">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#171717] text-xs font-bold text-white mt-0.5">
-                    {idx + 1}
-                  </span>
-                  <span>{rec}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
     </AppShell>
   );

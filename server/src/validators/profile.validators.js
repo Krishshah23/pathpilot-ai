@@ -7,10 +7,7 @@ const skills = z
   .optional();
 
 export const onboardingSchema = z.object({
-  college: z.string().trim().min(2, 'College is required').max(120),
-  branch: z.string().trim().min(2, 'Branch is required').max(80),
-  semester: z.coerce.number().int().min(1, 'Invalid semester').max(12),
-  dreamRole: z.string().trim().min(2, 'Dream role is required').max(80),
+  dreamRole: z.string().trim().min(2, 'Please pick a target role').max(80),
   skills: z.array(z.string().trim().min(1).max(40)).max(50).default([]),
 });
 

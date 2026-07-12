@@ -63,6 +63,16 @@ const resumeSchema = new Schema(
 
     wordCount: { type: Number, default: 0 },
     lowText: { type: Boolean, default: false },
+
+    // ── Gemini AI Intelligence Layer ──────────────────────────────────
+    // Populated after Gemini analyzes parsed data against the target role.
+    // Django parsing runs first; Gemini adds role-specific intelligence on top.
+    roleFitScore: { type: Number, default: null },
+    keyGaps: { type: [String], default: [] },
+    strengthAreas: { type: [String], default: [] },
+    atsKeywordsMissing: { type: [String], default: [] },
+    aiRecommendations: { type: [String], default: [] },
+    nextStepPriority: { type: String, default: '' },
   },
   { timestamps: true }
 );

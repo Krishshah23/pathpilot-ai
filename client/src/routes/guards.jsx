@@ -16,10 +16,12 @@ export function ProtectedRoute() {
 
 /** Keeps authenticated users out of auth pages (login/register). */
 export function PublicOnlyRoute() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) return <FullScreenLoader />;
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) {
+    return <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />;
+  }
   return <Outlet />;
 }
 
@@ -44,6 +46,18 @@ export function RequireAdmin() {
   const { user } = useAuth();
   if (user?.role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
+  }
+  return <Outlet />;
+}
+
+/**
+ * Blocks admin users from accessing student-only pages.
+ * Admins should only use /admin — not the product features.
+ */
+export function StudentOnlyRoute() {
+  const { user } = useAuth();
+  if (user?.role === 'admin') {
+    return <Navigate to="/admin" replace />;
   }
   return <Outlet />;
 }

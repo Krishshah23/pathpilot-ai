@@ -322,5 +322,11 @@ export const Icon = {
       <circle cx="16" cy="12" r="3" fill="white" />
     </Svg>
   ),
+  Mic: (p) => (
+    <Svg {...p}>
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8" />
+    </Svg>
+  ),
 };
 

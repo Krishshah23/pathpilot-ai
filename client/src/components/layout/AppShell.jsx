@@ -16,8 +16,14 @@ const NAV_LINKS = [
   { label: 'Interview Prep',  path: '/interview-prep' },
 ];
 
+const ADMIN_NAV_LINKS = [
+  { label: 'Admin Panel', path: '/admin' },
+];
+
 function TopNav({ user, onAvatarClick }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const isAdmin = user?.role === 'admin';
+  const links = isAdmin ? ADMIN_NAV_LINKS : NAV_LINKS;
 
   return (
     <header className="sticky top-0 z-40 bg-[#FBFBFA] border-b border-[#EAEAE5]">
@@ -35,7 +41,7 @@ function TopNav({ user, onAvatarClick }) {
 
         {/* Center: Nav links (desktop) */}
         <nav className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map((link) => (
+          {links.map((link) => (
             <NavLink
               key={link.path}
               to={link.path}
@@ -83,7 +89,7 @@ function TopNav({ user, onAvatarClick }) {
       {/* Mobile nav drawer */}
       {mobileOpen && (
         <div className="md:hidden border-t border-[#EAEAE5] bg-white px-6 py-4 space-y-1 animate-fade-up">
-          {NAV_LINKS.map((link) => (
+          {links.map((link) => (
             <NavLink
               key={link.path}
               to={link.path}
@@ -113,6 +119,7 @@ function ProfileDrawer({ onClose }) {
   const toast = useToast();
   const navigate = useNavigate();
 
+  const isAdmin = user?.role === 'admin';
   const p = user?.profile || {};
   const [form, setForm] = useState({
     college:   p.college   || '',
@@ -181,72 +188,98 @@ function ProfileDrawer({ onClose }) {
 
         {/* Body */}
         <div className="flex-1 px-6 py-6 space-y-6">
-          {/* Basic Info */}
-          <section>
-            <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-4">Basic Info</h3>
-            <div className="space-y-4">
-              <Field label="College" value={form.college} onChange={(v) => setForm((f) => ({ ...f, college: v }))} placeholder="e.g. LPU" />
-              <Field label="Branch" value={form.branch} onChange={(v) => setForm((f) => ({ ...f, branch: v }))} placeholder="e.g. Computer Science" />
-              <Field label="Semester" type="number" value={form.semester} onChange={(v) => setForm((f) => ({ ...f, semester: v }))} placeholder="e.g. 8" />
-              <Field label="Dream Role" value={form.dreamRole} onChange={(v) => setForm((f) => ({ ...f, dreamRole: v }))} placeholder="e.g. Full Stack Developer" />
-            </div>
-          </section>
-
-          {/* Skills */}
-          <section>
-            <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-3">Tracked Skills</h3>
-            <SkillTagInput
-              skills={form.skills}
-              onChange={(skills) => setForm((f) => ({ ...f, skills }))}
-            />
-          </section>
-
-          {/* Public Profile Toggle */}
-          <section>
-            <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-3">Public Career Card</h3>
-            <div className="rounded-xl border border-[#EAEAE5] p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-[#171717]">Public Profile</p>
-                  <p className="text-xs text-[#A3A3A3] mt-0.5">Let employers find your career card</p>
+          {isAdmin ? (
+            /* ── Admin: minimal account info only ── */
+            <section>
+              <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-4">Account</h3>
+              <div className="rounded-xl border border-[#EAEAE5] p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#525252]">Name</span>
+                  <span className="text-xs font-medium text-[#171717]">{user?.name}</span>
                 </div>
-                <button
-                  onClick={() => setForm((f) => ({ ...f, isPublic: !f.isPublic }))}
-                  className="transition-colors"
-                  aria-label="Toggle public profile"
-                >
-                  {form.isPublic
-                    ? <Icon.ToggleRight size={32} className="text-[#2B4C3F]" />
-                    : <Icon.ToggleLeft  size={32} className="text-[#D0D0CA]" />
-                  }
-                </button>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#525252]">Email</span>
+                  <span className="text-xs font-medium text-[#171717] truncate max-w-[160px]">{user?.email}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[#525252]">Role</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-md bg-violet/10 px-2.5 py-1 text-xs font-semibold text-violet border border-violet/20">
+                    <Icon.Shield size={11} />
+                    Administrator
+                  </span>
+                </div>
               </div>
-
-              {form.isPublic && (
-                <div className="flex items-center gap-2 rounded-lg bg-[#F5F5F3] px-3 py-2 text-xs">
-                  <Icon.Link size={12} className="text-[#A3A3A3] shrink-0" />
-                  <span className="text-[#525252] truncate flex-1">{profileUrl}</span>
-                  <button
-                    onClick={handleCopyLink}
-                    className="text-[#2B4C3F] font-semibold hover:underline shrink-0"
-                  >
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
+            </section>
+          ) : (
+            /* ── Student: full profile form ── */
+            <>
+              {/* Target Role */}
+              <section>
+                <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-4">Target Role</h3>
+                <div className="space-y-4">
+                  <Field label="Dream Role" value={form.dreamRole} onChange={(v) => setForm((f) => ({ ...f, dreamRole: v }))} placeholder="e.g. Full Stack Developer" />
                 </div>
-              )}
-            </div>
-          </section>
+              </section>
+
+              {/* Skills */}
+              <section>
+                <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-3">Tracked Skills</h3>
+                <SkillTagInput
+                  skills={form.skills}
+                  onChange={(skills) => setForm((f) => ({ ...f, skills }))}
+                />
+              </section>
+
+              {/* Public Profile Toggle */}
+              <section>
+                <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-3">Public Career Card</h3>
+                <div className="rounded-xl border border-[#EAEAE5] p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-[#171717]">Public Profile</p>
+                      <p className="text-xs text-[#A3A3A3] mt-0.5">Let employers find your career card</p>
+                    </div>
+                    <button
+                      onClick={() => setForm((f) => ({ ...f, isPublic: !f.isPublic }))}
+                      className="transition-colors"
+                      aria-label="Toggle public profile"
+                    >
+                      {form.isPublic
+                        ? <Icon.ToggleRight size={32} className="text-[#2B4C3F]" />
+                        : <Icon.ToggleLeft  size={32} className="text-[#D0D0CA]" />
+                      }
+                    </button>
+                  </div>
+
+                  {form.isPublic && (
+                    <div className="flex items-center gap-2 rounded-lg bg-[#F5F5F3] px-3 py-2 text-xs">
+                      <Icon.Link size={12} className="text-[#A3A3A3] shrink-0" />
+                      <span className="text-[#525252] truncate flex-1">{profileUrl}</span>
+                      <button
+                        onClick={handleCopyLink}
+                        className="text-[#2B4C3F] font-semibold hover:underline shrink-0"
+                      >
+                        {copied ? 'Copied!' : 'Copy'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </>
+          )}
         </div>
 
         {/* Footer Actions */}
         <div className="px-6 py-5 border-t border-[#EAEAE5] space-y-3">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full h-10 rounded-xl bg-[#171717] text-white text-sm font-semibold hover:bg-[#2a2a2a] disabled:opacity-50 transition-colors"
-          >
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
+          {!isAdmin && (
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full h-10 rounded-xl bg-[#171717] text-white text-sm font-semibold hover:bg-[#2a2a2a] disabled:opacity-50 transition-colors"
+            >
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+          )}
           <button
             onClick={onLogout}
             className="w-full h-10 rounded-xl border border-[#EAEAE5] text-[#B85A3C] text-sm font-medium hover:bg-[#FDF5F3] transition-colors"
@@ -613,18 +646,20 @@ export function AppShell({ children }) {
       {/* Profile Drawer */}
       {profileOpen && <ProfileDrawer onClose={() => setProfileOpen(false)} />}
 
-      {/* Floating AI Coach button */}
-      <button
-        onClick={() => setCoachOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex h-13 w-13 items-center justify-center rounded-full bg-[#171717] text-white shadow-lg hover:bg-[#2a2a2a] transition-all hover:scale-105"
-        style={{ height: '52px', width: '52px' }}
-        aria-label="Open AI Career Coach"
-      >
-        <Icon.MessageSquare size={22} />
-      </button>
+      {/* Floating AI Coach button — hidden for admins */}
+      {user?.role !== 'admin' && (
+        <button
+          onClick={() => setCoachOpen(true)}
+          className="fixed bottom-6 right-6 z-40 flex h-13 w-13 items-center justify-center rounded-full bg-[#171717] text-white shadow-lg hover:bg-[#2a2a2a] transition-all hover:scale-105"
+          style={{ height: '52px', width: '52px' }}
+          aria-label="Open AI Career Coach"
+        >
+          <Icon.MessageSquare size={22} />
+        </button>
+      )}
 
-      {/* AI Coach Drawer */}
-      {coachOpen && (
+      {/* AI Coach Drawer — hidden for admins */}
+      {user?.role !== 'admin' && coachOpen && (
         <AICoachDrawer
           onClose={() => setCoachOpen(false)}
           explainType={explainType}

@@ -8,6 +8,7 @@ import { publicUrl } from '../middleware/upload.middleware.js';
 import { extractResumeText } from '../services/resumeText.service.js';
 import { aiService } from '../services/ai.service.js';
 import { detectRedFlags } from '../services/resumeRedFlags.js';
+import { geminiAnalyzeResume } from '../services/gemini.service.js';
 
 /**
  * Resume Intelligence pipeline:
@@ -46,6 +47,17 @@ export const analyzeResume = asyncHandler(async (req, res) => {
   // 4. persist
   const redFlags = detectRedFlags(text, parsed);
 
+  // ── Gemini Intelligence Layer ────────────────────────────────────
+  // Django parsed the structure. Gemini now adds role-specific intelligence:
+  // gaps, fit score, ATS keywords, personalized recommendations.
+  const targetRole = req.user.profile?.dreamRole || 'Software Engineer';
+  const geminiInsights = await geminiAnalyzeResume({
+    resumeText: text,
+    parsedData: parsed,
+    targetRole,
+    skills: parsed.skills || [],
+  });
+
   const resume = await Resume.create({
     user: req.user._id,
     fileUrl,
@@ -62,6 +74,13 @@ export const analyzeResume = asyncHandler(async (req, res) => {
     redFlags,
     wordCount: parsed.wordCount,
     lowText: parsed.lowText,
+    // Gemini AI insights
+    roleFitScore: geminiInsights.roleFitScore ?? null,
+    keyGaps: geminiInsights.keyGaps ?? [],
+    strengthAreas: geminiInsights.strengthAreas ?? [],
+    atsKeywordsMissing: geminiInsights.atsKeywordsMissing ?? [],
+    aiRecommendations: geminiInsights.recommendations ?? [],
+    nextStepPriority: geminiInsights.nextStepPriority ?? '',
   });
 
   // Keep the user's active resume pointer in sync.

@@ -3,22 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { TagInput } from '@/components/ui/TagInput';
-import { FileUpload } from '@/components/ui/FileUpload';
 import { Stepper } from '@/components/ui/Stepper';
 import { Icon } from '@/components/ui/icons';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
-import { BRANCHES, SEMESTERS, DREAM_ROLES, COMMON_SKILLS } from '@/config/careerData';
+import { DREAM_ROLES, COMMON_SKILLS } from '@/config/careerData';
 
-const STEPS = ['Education', 'Goal', 'Skills', 'Resume'];
+const STEPS = ['Goal', 'Skills'];
 
 /**
- * Multi-step onboarding wizard. Captures education, dream role, current skills,
- * and an optional resume, then submits to the backend and unlocks the app.
+ * Streamlined onboarding wizard.
+ * Only captures the two fields that actually drive the app:
+ *   1. Dream Role  — personalises Path Score, Skill Roadmap, Interview Prep
+ *   2. Current Skills — seeds the gap analysis
+ * Resume upload is intentionally skipped here; users do it properly
+ * inside Resume Strategy where they get full AI feedback immediately.
  */
 export default function OnboardingPage() {
   const navigate = useNavigate();
@@ -30,24 +32,17 @@ export default function OnboardingPage() {
   const [errors, setErrors] = useState({});
 
   const [form, setForm] = useState({
-    college: user?.profile?.college || '',
-    branch: user?.profile?.branch || '',
-    semester: user?.profile?.semester || '',
     dreamRole: user?.profile?.dreamRole || '',
-    skills: user?.profile?.skills || [],
+    skills:    user?.profile?.skills    || [],
   });
-  const [resumeFile, setResumeFile] = useState(null);
 
   const set = (key, val) => setForm((f) => ({ ...f, [key]: val }));
 
   const validateStep = () => {
     const e = {};
-    if (step === 0) {
-      if (form.college.trim().length < 2) e.college = 'Enter your college';
-      if (!form.branch) e.branch = 'Select your branch';
-      if (!form.semester) e.semester = 'Select your semester';
+    if (step === 0 && form.dreamRole.trim().length < 2) {
+      e.dreamRole = 'Pick a target role to continue';
     }
-    if (step === 1 && form.dreamRole.trim().length < 2) e.dreamRole = 'Choose a target role';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -59,25 +54,15 @@ export default function OnboardingPage() {
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
   const finish = async () => {
-    if (!validateStep()) return;
     setSubmitting(true);
     try {
       await api.put('/onboarding', {
-        college: form.college,
-        branch: form.branch,
-        semester: Number(form.semester),
         dreamRole: form.dreamRole,
-        skills: form.skills,
+        skills:    form.skills,
       });
 
-      if (resumeFile) {
-        const fd = new FormData();
-        fd.append('file', resumeFile);
-        await api.post('/profile/resume', fd);
-      }
-
       await refreshUser();
-      toast.success('You’re all set! Welcome to PathPilot.');
+      toast.success('You\'re all set! Welcome to PathPilot.');
       navigate('/dashboard', { replace: true });
     } catch (err) {
       toast.error(errorMessage(err, 'Could not save onboarding'));
@@ -98,43 +83,11 @@ export default function OnboardingPage() {
         </div>
 
         <Card className="animate-fade-up">
+          {/* ── Step 0: Dream Role ── */}
           {step === 0 && (
             <StepShell
-              title="Tell us about your education"
-              desc="This helps us tailor recommendations to where you are."
-            >
-              <Input
-                label="College / University"
-                placeholder="e.g. Indian Institute of Technology"
-                value={form.college}
-                onChange={(e) => set('college', e.target.value)}
-                error={errors.college}
-              />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Select
-                  label="Branch"
-                  placeholder="Select branch"
-                  options={BRANCHES}
-                  value={form.branch}
-                  onChange={(e) => set('branch', e.target.value)}
-                  error={errors.branch}
-                />
-                <Select
-                  label="Semester"
-                  placeholder="Select semester"
-                  options={SEMESTERS}
-                  value={form.semester}
-                  onChange={(e) => set('semester', e.target.value)}
-                  error={errors.semester}
-                />
-              </div>
-            </StepShell>
-          )}
-
-          {step === 1 && (
-            <StepShell
-              title="What's your dream role?"
-              desc="We'll map your path toward this target. You can change it anytime."
+              title="What's your target role?"
+              desc="We'll personalise your Path Score, Skill Roadmap, and Interview Prep around this. You can change it anytime."
             >
               <Select
                 label="Target role"
@@ -144,8 +97,9 @@ export default function OnboardingPage() {
                 onChange={(e) => set('dreamRole', e.target.value)}
                 error={errors.dreamRole}
               />
+              {/* Quick-pick chips */}
               <div className="flex flex-wrap gap-2">
-                {DREAM_ROLES.slice(0, 6).map((r) => (
+                {DREAM_ROLES.slice(0, 8).map((r) => (
                   <button
                     key={r}
                     type="button"
@@ -163,10 +117,11 @@ export default function OnboardingPage() {
             </StepShell>
           )}
 
-          {step === 2 && (
+          {/* ── Step 1: Skills ── */}
+          {step === 1 && (
             <StepShell
-              title="What skills do you have?"
-              desc="Add the skills you're comfortable with. Don't worry — you can refine these later."
+              title="What skills do you already have?"
+              desc="Add what you're comfortable with. This seeds your skill gap analysis — you can refine anytime."
             >
               <TagInput
                 label="Current skills"
@@ -174,27 +129,13 @@ export default function OnboardingPage() {
                 onChange={(v) => set('skills', v)}
                 suggestions={COMMON_SKILLS}
               />
-            </StepShell>
-          )}
-
-          {step === 3 && (
-            <StepShell
-              title="Upload your resume"
-              desc="Optional — but it powers Resume Intelligence and a more accurate Path Score."
-            >
-              <FileUpload
-                file={resumeFile}
-                onSelect={setResumeFile}
-                existingLabel={
-                  user?.profile?.resumeUrl && !resumeFile ? 'A resume is already on file' : undefined
-                }
-              />
               <p className="text-xs text-faint">
-                You can skip this and add it later from your profile.
+                Don't worry about being exhaustive — the AI will also extract skills from your resume when you upload it later.
               </p>
             </StepShell>
           )}
 
+          {/* ── Navigation ── */}
           <div className="mt-8 flex items-center justify-between border-t border-line pt-6">
             <Button variant="ghost" onClick={back} disabled={step === 0 || submitting}>
               Back
@@ -206,7 +147,7 @@ export default function OnboardingPage() {
               </Button>
             ) : (
               <Button onClick={finish} loading={submitting}>
-                {resumeFile ? 'Finish & upload' : 'Finish'}
+                Get started
               </Button>
             )}
           </div>

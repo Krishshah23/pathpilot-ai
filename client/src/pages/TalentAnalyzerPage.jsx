@@ -9,7 +9,7 @@ import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { DREAM_ROLES } from '@/config/careerData';
 
-const TABS = ['Recruiter Feedback', 'Market Alignment', 'Live Jobs'];
+const TABS = ['AI Role Analysis', 'Recruiter Feedback', 'Market Alignment', 'Live Jobs'];
 
 export default function TalentAnalyzerPage() {
   const { user, refreshUser } = useAuth();
@@ -18,6 +18,7 @@ export default function TalentAnalyzerPage() {
   const [resume, setResume] = useState(null);
   const [loadingResume, setLoadingResume] = useState(true);
   const [file, setFile] = useState(null);
+  const [replacing, setReplacing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
 
@@ -75,6 +76,7 @@ export default function TalentAnalyzerPage() {
       const { data } = await api.post('/resume/analyze', fd);
       setResume(data.data.resume);
       setFile(null);
+      setReplacing(false);
       await refreshUser();
       toast.success('Resume analyzed!');
     } catch (err) {
@@ -98,16 +100,16 @@ export default function TalentAnalyzerPage() {
             <div className="flex h-64 items-center justify-center rounded-2xl border border-[#EAEAE5] bg-white">
               <Spinner className="h-6 w-6 text-[#2B4C3F]" />
             </div>
-          ) : !resume || file ? (
+          ) : !resume || replacing ? (
             <UploadZone
               file={file}
               setFile={setFile}
               analyzing={analyzing}
               onAnalyze={analyze}
-              onCancel={resume ? () => setFile(null) : null}
+              onCancel={resume ? () => { setFile(null); setReplacing(false); } : null}
             />
           ) : (
-            <DocumentPanel resume={resume} onReplace={() => setFile(null)} />
+            <DocumentPanel resume={resume} onReplace={() => { setFile(null); setReplacing(true); }} />
           )}
         </div>
 
@@ -133,8 +135,9 @@ export default function TalentAnalyzerPage() {
 
           {/* Tab Content */}
           <div className="p-6">
-            {activeTab === 0 && <RecruiterFeedbackTab resume={resume} />}
-            {activeTab === 1 && (
+            {activeTab === 0 && <AIRoleAnalysisTab resume={resume} role={role} />}
+            {activeTab === 1 && <RecruiterFeedbackTab resume={resume} />}
+            {activeTab === 2 && (
               <MarketAlignmentTab
                 gapData={gapData}
                 loading={loadingGap}
@@ -143,7 +146,7 @@ export default function TalentAnalyzerPage() {
                 onRefresh={loadGap}
               />
             )}
-            {activeTab === 2 && (
+            {activeTab === 3 && (
               <LiveJobsTab
                 jobs={liveJobs}
                 loading={loadingJobs}
@@ -258,7 +261,142 @@ function SectionList({ title, items }) {
   );
 }
 
-/* ── Tab A: Recruiter Feedback ── */
+/* ── Tab 0: AI Role Analysis (Gemini-powered) ── */
+function AIRoleAnalysisTab({ resume, role }) {
+  if (!resume) return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <Icon.Sparkles size={40} className="text-[#EAEAE5] mb-4" />
+      <p className="text-sm font-medium text-[#A3A3A3] mb-1">No resume analyzed yet</p>
+      <p className="text-xs text-[#D0D0CA]">Upload a resume to unlock AI role analysis</p>
+    </div>
+  );
+
+  const keyGaps = resume.keyGaps || [];
+  const strengthAreas = resume.strengthAreas || [];
+  const atsKeywordsMissing = resume.atsKeywordsMissing || [];
+  const aiRecommendations = resume.aiRecommendations || [];
+  const roleFitScore = resume.roleFitScore;
+  const nextStep = resume.nextStepPriority;
+
+  const hasInsights = keyGaps.length > 0 || strengthAreas.length > 0;
+
+  if (!hasInsights) return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <Icon.Sparkles size={40} className="text-[#EAEAE5] mb-4" />
+      <p className="text-sm font-medium text-[#A3A3A3] mb-1">Re-analyze to get AI insights</p>
+      <p className="text-xs text-[#D0D0CA]">This resume was analyzed before the AI layer was added. Upload it again to get role-specific analysis.</p>
+    </div>
+  );
+
+  const fitColor = roleFitScore >= 70 ? '#2B4C3F' : roleFitScore >= 45 ? '#92400E' : '#B85A3C';
+  const fitBg   = roleFitScore >= 70 ? '#F0F5F3' : roleFitScore >= 45 ? '#FEFBF0' : '#FDF5F3';
+
+  return (
+    <div className="space-y-6">
+      {/* Role Fit Score */}
+      {roleFitScore != null && (
+        <div className="rounded-xl border border-[#EAEAE5] p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-[#A3A3A3]">Role Fit Score</p>
+              <p className="text-xs text-[#A3A3A3] mt-0.5">How well your resume matches {role}</p>
+            </div>
+            <span
+              className="font-serif text-3xl font-black"
+              style={{ color: fitColor }}
+            >
+              {roleFitScore}<span className="text-sm font-normal text-[#A3A3A3]">/100</span>
+            </span>
+          </div>
+          <div className="h-2 rounded-full bg-[#EAEAE5] overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${roleFitScore}%`, backgroundColor: fitColor }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Next Step Priority */}
+      {nextStep && (
+        <div className="flex items-start gap-3 rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] p-4">
+          <Icon.ArrowRight size={16} className="text-[#2B4C3F] mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#2B4C3F] mb-1">Top Priority Right Now</p>
+            <p className="text-sm text-[#2B4C3F] font-medium">{nextStep}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        {/* Key Gaps */}
+        {keyGaps.length > 0 && (
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#B85A3C] mb-3 flex items-center gap-1.5">
+              <Icon.AlertTriangle size={12} /> Key Gaps ({keyGaps.length})
+            </h3>
+            <div className="space-y-2">
+              {keyGaps.map((gap, i) => (
+                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-[#E8C4B8] bg-[#FDF5F3] px-3 py-2.5 text-sm">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#B85A3C] text-white text-[10px] font-bold mt-0.5">{i + 1}</span>
+                  <span className="text-[#525252]">{gap}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Strengths */}
+        {strengthAreas.length > 0 && (
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2B4C3F] mb-3 flex items-center gap-1.5">
+              <Icon.Check size={12} /> Strengths
+            </h3>
+            <div className="space-y-2">
+              {strengthAreas.map((s, i) => (
+                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-[#C8DDD6] bg-[#F0F5F3] px-3 py-2.5 text-sm">
+                  <Icon.Check size={14} className="text-[#2B4C3F] shrink-0 mt-0.5" />
+                  <span className="text-[#2B4C3F]">{s}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Missing ATS Keywords */}
+      {atsKeywordsMissing.length > 0 && (
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#A3A3A3] mb-3">Missing ATS Keywords</h3>
+          <div className="flex flex-wrap gap-2">
+            {atsKeywordsMissing.map((kw, i) => (
+              <span key={i} className="rounded-lg border border-[#E8C4B8] bg-[#FDF5F3] px-3 py-1 text-xs font-medium text-[#B85A3C]">
+                {kw}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* AI Recommendations */}
+      {aiRecommendations.length > 0 && (
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#A3A3A3] mb-3">AI Recommendations</h3>
+          <ul className="space-y-2">
+            {aiRecommendations.map((rec, i) => (
+              <li key={i} className="flex items-start gap-3 rounded-xl border border-[#EAEAE5] bg-[#F5F5F3] px-4 py-3 text-sm text-[#525252]">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#171717] text-xs font-bold text-white mt-0.5">{i + 1}</span>
+                {rec}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Tab 1: Recruiter Feedback ── */
 function RecruiterFeedbackTab({ resume }) {
   if (!resume) return (
     <div className="flex flex-col items-center justify-center py-16 text-center">

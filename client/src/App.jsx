@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { ProtectedRoute, PublicOnlyRoute, RequireOnboarding, RequireAdmin } from '@/routes/guards';
+import { ProtectedRoute, PublicOnlyRoute, RequireOnboarding, RequireAdmin, StudentOnlyRoute } from '@/routes/guards';
 import { FullScreenLoader } from '@/components/ui/Spinner';
 
 // Auth pages — eagerly imported (small, needed immediately)
@@ -42,27 +42,29 @@ export default function App() {
             <Route path="/onboarding" element={<OnboardingPage />} />
 
             <Route element={<RequireOnboarding />}>
-              {/* ── 4 New Hubs ── */}
-              <Route path="/dashboard"        element={<OverviewPage />} />
-              <Route path="/talent-analyzer"  element={<TalentAnalyzerPage />} />
-              <Route path="/execution-engine" element={<ExecutionEnginePage />} />
-              <Route path="/interview-prep"   element={<InterviewPrepPage />} />
+              {/* ── Student-only routes (admins are redirected away) ── */}
+              <Route element={<StudentOnlyRoute />}>
+                <Route path="/dashboard"        element={<OverviewPage />} />
+                <Route path="/talent-analyzer"  element={<TalentAnalyzerPage />} />
+                <Route path="/execution-engine" element={<ExecutionEnginePage />} />
+                <Route path="/interview-prep"   element={<InterviewPrepPage />} />
+
+                {/* ── Legacy redirect map (old routes → new hubs) ── */}
+                <Route path="/resume"        element={<Navigate to="/talent-analyzer"  replace />} />
+                <Route path="/gap"           element={<Navigate to="/talent-analyzer"  replace />} />
+                <Route path="/growth"        element={<Navigate to="/execution-engine" replace />} />
+                <Route path="/opportunities" element={<Navigate to="/execution-engine" replace />} />
+                <Route path="/path-score"    element={<Navigate to="/dashboard"        replace />} />
+                <Route path="/insights"      element={<Navigate to="/dashboard"        replace />} />
+                <Route path="/report"        element={<Navigate to="/dashboard"        replace />} />
+                <Route path="/interview"     element={<Navigate to="/interview-prep"   replace />} />
+                <Route path="/profile"       element={<Navigate to="/dashboard"        replace />} />
+              </Route>
 
               {/* ── Admin ── */}
               <Route element={<RequireAdmin />}>
                 <Route path="/admin" element={<AdminPage />} />
               </Route>
-
-              {/* ── Legacy redirect map (old routes → new hubs) ── */}
-              <Route path="/resume"        element={<Navigate to="/talent-analyzer"  replace />} />
-              <Route path="/gap"           element={<Navigate to="/talent-analyzer"  replace />} />
-              <Route path="/growth"        element={<Navigate to="/execution-engine" replace />} />
-              <Route path="/opportunities" element={<Navigate to="/execution-engine" replace />} />
-              <Route path="/path-score"    element={<Navigate to="/dashboard"        replace />} />
-              <Route path="/insights"      element={<Navigate to="/dashboard"        replace />} />
-              <Route path="/report"        element={<Navigate to="/dashboard"        replace />} />
-              <Route path="/interview"     element={<Navigate to="/interview-prep"   replace />} />
-              <Route path="/profile"       element={<Navigate to="/dashboard"        replace />} />
             </Route>
           </Route>
 

@@ -39,13 +39,21 @@ export const register = asyncHandler(async (req, res) => {
 
   const user = await User.create({ name, email, password });
 
-  const verifyToken = signPurposeToken(user._id, 'verify-email', '24h');
-  await sendVerificationEmail(user, verifyToken);
+  // Fire-and-forget: email delivery failure must NOT block account creation.
+  // Resend sandbox only allows sending to the owner's own address; other
+  // recipients will get a 550 — we log it but don't surface it to the user.
+  try {
+    const verifyToken = signPurposeToken(user._id, 'verify-email', '24h');
+    await sendVerificationEmail(user, verifyToken);
+  } catch (emailErr) {
+    // eslint-disable-next-line no-console
+    console.warn('[register] Verification email failed to send:', emailErr?.message ?? emailErr);
+  }
 
   const accessToken = issueSession(res, user);
   return sendSuccess(res, {
     statusCode: 201,
-    message: 'Account created. Check your email to verify your account.',
+    message: 'Account created successfully! A verification email will be sent shortly.',
     data: { user: user.toSafeJSON(), accessToken },
   });
 });
@@ -131,8 +139,13 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 
   // Always respond with success to avoid leaking which emails are registered.
   if (user) {
-    const resetToken = signPurposeToken(user._id, 'reset-password', '1h');
-    await sendPasswordResetEmail(user, resetToken);
+    try {
+      const resetToken = signPurposeToken(user._id, 'reset-password', '1h');
+      await sendPasswordResetEmail(user, resetToken);
+    } catch (emailErr) {
+      // eslint-disable-next-line no-console
+      console.warn('[forgotPassword] Reset email failed to send:', emailErr?.message ?? emailErr);
+    }
   }
 
   return sendSuccess(res, {

@@ -57,4 +57,11 @@ export const env = {
   theirstack: {
     apiKey: process.env.THEIRSTACK_API_KEY || '',
   },
+
+  // Google Gemini — real AI intelligence layer.
+  // Get a free key at https://aistudio.google.com
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || '',
+    model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+  },
 };

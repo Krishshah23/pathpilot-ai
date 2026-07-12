@@ -166,14 +166,23 @@ export default function ExecutionEnginePage() {
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-serif text-xl font-bold text-[#171717]">Skill Roadmap</h2>
             {plan && (
-              <button
-                onClick={generatePlan}
-                disabled={generating}
-                className="inline-flex items-center gap-2 h-9 px-4 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F5F5F3] disabled:opacity-50 transition-colors"
-              >
-                {generating ? <Spinner className="h-4 w-4" /> : <Icon.Sparkles size={14} />}
-                Rebuild
-              </button>
+              <div className="flex items-center gap-3">
+                <select 
+                  value={planRole} 
+                  onChange={(e) => setPlanRole(e.target.value)} 
+                  className="input h-9 py-0 text-sm w-48"
+                >
+                  {DREAM_ROLES?.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <button
+                  onClick={generatePlan}
+                  disabled={generating}
+                  className="inline-flex items-center gap-2 h-9 px-4 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F5F5F3] disabled:opacity-50 transition-colors"
+                >
+                  {generating ? <Spinner className="h-4 w-4" /> : <Icon.Sparkles size={14} />}
+                  Rebuild
+                </button>
+              </div>
             )}
           </div>
 

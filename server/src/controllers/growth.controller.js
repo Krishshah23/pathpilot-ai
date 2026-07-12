@@ -1,6 +1,7 @@
 import { GrowthPlan } from '../models/GrowthPlan.js';
 import { Resume } from '../models/Resume.js';
 import { aiService } from '../services/ai.service.js';
+import { geminiGenerateGapRoadmap } from '../services/gemini.service.js';
 import { collectStudentSkills } from '../services/pathScore.service.js';
 import { roadmapToWeeks, preserveCompletion, withProgress } from '../services/growth.service.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -33,7 +34,40 @@ export const generateGrowthPlan = asyncHandler(async (req, res) => {
   }
 
   const existing = await GrowthPlan.findOne({ user: req.user._id });
-  const weeks = preserveCompletion(roadmapToWeeks(roadmap), existing);
+  let weeks = preserveCompletion(roadmapToWeeks(roadmap), existing);
+
+  // -- Phase 5 Connection: Inject Gemini Gap Weeks --
+  const gaps = resume?.keyGaps || [];
+  if (gaps.length > 0) {
+    try {
+      const gapWeeks = await geminiGenerateGapRoadmap({ gaps, targetRole });
+      if (gapWeeks && gapWeeks.length > 0) {
+        // Format the gap weeks to match the roadmap structure
+        const formattedGapWeeks = gapWeeks.map((w, idx) => ({
+          weekNumber: idx + 1,
+          topic: w.topic,
+          focus: w.focus,
+          tasks: w.tasks.map(t => ({
+            key: `gap-task-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+            name: t.name,
+            hours: t.hours,
+            completed: false,
+            completedAt: null
+          }))
+        }));
+        
+        // Shift existing weeks down
+        const shiftedExisting = weeks.map(w => ({
+          ...w,
+          weekNumber: w.weekNumber + formattedGapWeeks.length
+        }));
+
+        weeks = [...formattedGapWeeks, ...shiftedExisting];
+      }
+    } catch (err) {
+      console.error('Failed to generate gap roadmap', err);
+    }
+  }
 
   const fields = {
     user: req.user._id,

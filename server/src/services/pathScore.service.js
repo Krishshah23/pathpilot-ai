@@ -88,9 +88,6 @@ export function buildPathScore(user, resume) {
   const projects = resume?.projects || [];
 
   const profileChecks = [
-    { label: 'College', complete: Boolean(profile.college) },
-    { label: 'Branch', complete: Boolean(profile.branch) },
-    { label: 'Semester', complete: Boolean(profile.semester) },
     { label: 'Dream role', complete: Boolean(profile.dreamRole) },
     { label: 'Skills', complete: skills.length > 0 },
     { label: 'Resume', complete: Boolean(profile.resumeUrl || resume?.fileUrl) },
@@ -128,7 +125,7 @@ export function buildPathScore(user, resume) {
       score: (completedProfile / profileChecks.length) * 20,
       max: 20,
       detail: `${completedProfile}/${profileChecks.length} profile signals complete`,
-      tip: 'Complete your education, target role, skills, and resume details.',
+      tip: 'Complete your target role, add skills, and upload a resume.',
     }),
   ];
 
