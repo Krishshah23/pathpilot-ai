@@ -182,7 +182,8 @@ export async function geminiChat({ user, resume, roadmap, history = [], message 
  * Django parses structure first — Gemini adds role-specific intelligence on top.
  */
 export async function geminiAnalyzeResume({ resumeText, parsedData, targetRole, skills = [] }) {
-  const prompt = `You are an expert career coach and recruiter specializing in ${targetRole} roles.
+  try {
+    const prompt = `You are an expert career coach and recruiter specializing in ${targetRole} roles.
 
 Analyze this resume for a candidate targeting: ${targetRole}
 
@@ -212,7 +213,11 @@ Return ONLY a JSON object with this exact structure:
   "nextStepPriority": "<single most important thing to do right now>"
 }`;
 
-  return generateJson(prompt);
+    return await generateJson(prompt);
+  } catch (err) {
+    console.warn('[Gemini] Analyze resume failed or overloaded. Falling back to local heuristic analysis.', err.message || err);
+    return getLocalResumeFallback(parsedData, targetRole);
+  }
 }
 
 /**
@@ -345,4 +350,65 @@ Return ONLY a valid JSON array of week objects:
 ]`;
 
   return generateJson(prompt);
+}
+
+/**
+ * Fallback heuristic resume analyzer when Gemini is overloaded or API key fails.
+ * Guarantees candidate onboarding succeeds with high-quality localized insights.
+ */
+function getLocalResumeFallback(parsedData, targetRole) {
+  const candidateSkills = (parsedData?.skills || []).map(s => s.toLowerCase());
+  const roleLower = targetRole.toLowerCase();
+  
+  let expectedSkills = ['git', 'agile', 'rest api', 'problem solving'];
+  let defaultAts = ['CI/CD', 'Docker', 'Testing', 'Clean Code'];
+  
+  if (roleLower.includes('front') || roleLower.includes('web') || roleLower.includes('ui')) {
+    expectedSkills = ['javascript', 'html', 'css', 'react', 'typescript', 'tailwind'];
+    defaultAts = ['Responsive Design', 'Web Performance', 'State Management', 'Vite'];
+  } else if (roleLower.includes('back') || roleLower.includes('node') || roleLower.includes('api')) {
+    expectedSkills = ['node.js', 'express', 'databases', 'sql', 'mongodb', 'rest api'];
+    defaultAts = ['System Design', 'Redis', 'Unit Testing', 'Authentication'];
+  } else if (roleLower.includes('data') || roleLower.includes('ml') || roleLower.includes('python')) {
+    expectedSkills = ['python', 'pandas', 'sql', 'machine learning', 'data analysis'];
+    defaultAts = ['Data Pipelines', 'Scikit-learn', 'Feature Engineering', 'Jupyter'];
+  }
+  
+  const missingSkills = expectedSkills.filter(s => !candidateSkills.includes(s));
+  const keyGaps = missingSkills.length > 0 
+    ? missingSkills.map(s => `Expand proficiency in ${s.toUpperCase()}`)
+    : ['Integrate advanced system architecture patterns', 'Implement CI/CD pipeline automation'];
+  
+  const matches = expectedSkills.filter(s => candidateSkills.includes(s)).length;
+  const roleFitScore = Math.min(92, Math.max(55, 60 + matches * 8));
+  
+  const strengthAreas = [];
+  if (candidateSkills.length > 3) {
+    strengthAreas.push(`Broad core foundation: ${candidateSkills.slice(0, 3).join(', ').toUpperCase()}`);
+  } else {
+    strengthAreas.push('Shows initiative in academic project implementation');
+  }
+  if ((parsedData?.projects || []).length > 0) {
+    strengthAreas.push(`Practical project execution (${parsedData.projects.length} parsed project(s))`);
+  }
+  
+  const atsKeywordsPresent = (parsedData?.skills || []).slice(0, 5);
+  const atsKeywordsMissing = defaultAts.filter(k => !candidateSkills.includes(k.toLowerCase())).slice(0, 3);
+  
+  const recommendations = [
+    `Incorporate professional project structures utilizing ${expectedSkills[0] || 'modern tech stack'} practices.`,
+    'Quantify resume project results using metric impact percentages (e.g. "reduced latency by 20%").',
+    'Include direct documentation of API design, schema definition, and deployment flows.'
+  ];
+
+  return {
+    roleFitScore,
+    roleFitReason: `Analyzed against ${targetRole} standards (local heuristics backup). Matches key foundation parameters.`,
+    keyGaps: keyGaps.slice(0, 3),
+    strengthAreas: strengthAreas.slice(0, 2),
+    atsKeywordsPresent,
+    atsKeywordsMissing,
+    recommendations,
+    nextStepPriority: `Add a comprehensive capstone project explicitly showcasing ${expectedSkills.slice(0, 2).join(' and ').toUpperCase()}.`
+  };
 }
