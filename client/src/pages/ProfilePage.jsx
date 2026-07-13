@@ -143,8 +143,12 @@ export default function ProfilePage() {
   const handleResendVerification = async () => {
     setSendingVerification(true);
     try {
-      await api.post('/auth/resend-verification');
-      toast.success('Verification email sent! Check your inbox.');
+      const { data } = await api.post('/auth/resend-verification');
+      if (data?.data?.sandbox) {
+        toast.info('Sandbox mode: Verification link logged to server console.');
+      } else {
+        toast.success('Verification email sent! Check your inbox.');
+      }
       setVerificationSent(true);
     } catch (err) {
       toast.error(errorMessage(err, 'Failed to send verification email'));

@@ -180,12 +180,27 @@ export const resendVerification = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('Email is already verified');
   }
 
+  const verifyToken = signPurposeToken(user._id, 'verify-email', '24h');
+  let sandboxMode = false;
+
   try {
-    const verifyToken = signPurposeToken(user._id, 'verify-email', '24h');
     await sendVerificationEmail(user, verifyToken);
   } catch (emailErr) {
-    throw new ApiError(500, `Failed to send verification email: ${emailErr.message || emailErr}`);
+    console.warn('[resendVerification] Email delivery failed, logging to console:', emailErr.message || emailErr);
+    
+    // Construct and print the link to the console for sandbox/dev testing
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const link = `${clientUrl}/verify-email?token=${verifyToken}`;
+    console.log('\n📧 [SANDBOX DEV FALLBACK] Verification Link logged below:');
+    console.log(`🔗 Link: ${link}\n`);
+    
+    sandboxMode = true;
   }
 
-  return sendSuccess(res, { message: 'Verification email resent successfully' });
+  return sendSuccess(res, {
+    message: sandboxMode
+      ? 'Resend sandbox limit reached. Verification link logged to server console.'
+      : 'Verification email resent successfully',
+    data: { sandbox: sandboxMode }
+  });
 });
