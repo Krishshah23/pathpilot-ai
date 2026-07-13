@@ -7,6 +7,7 @@ import {
   logout,
   me,
   verifyEmail,
+  resendVerification,
   forgotPassword,
   resetPassword,
 } from '../controllers/auth.controller.js';
@@ -38,6 +39,7 @@ router.post('/logout', logout);
 router.get('/me', protect, me);
 
 router.post('/verify-email', validate(verifyEmailSchema), verifyEmail);
+router.post('/resend-verification', protect, resendVerification);
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), forgotPassword);
 router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
 

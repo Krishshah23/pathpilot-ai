@@ -33,6 +33,8 @@ export default function ProfilePage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const profileUrl = `${window.location.origin}/profile/${user?.publicCardId}`;
@@ -138,6 +140,19 @@ export default function ProfilePage() {
     navigate('/login');
   };
 
+  const handleResendVerification = async () => {
+    setSendingVerification(true);
+    try {
+      await api.post('/auth/resend-verification');
+      toast.success('Verification email sent! Check your inbox.');
+      setVerificationSent(true);
+    } catch (err) {
+      toast.error(errorMessage(err, 'Failed to send verification email'));
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
   return (
     <AppShell>
       <div className="max-w-4xl mx-auto space-y-8">
@@ -187,9 +202,42 @@ export default function ProfilePage() {
 
               <h2 className="text-lg font-bold text-[#171717]">{user?.name}</h2>
               <p className="text-xs text-[#A3A3A3] mb-1">{user?.email}</p>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold tracking-wider uppercase border border-slate-200">
-                {user?.role}
-              </span>
+              
+              <div className="flex flex-wrap gap-1.5 justify-center mt-1.5">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold tracking-wider uppercase border border-slate-200">
+                  {user?.role}
+                </span>
+
+                {user?.isEmailVerified ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold tracking-wider uppercase border border-emerald-200">
+                    <Icon.Check size={10} />
+                    Verified
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-semibold tracking-wider uppercase border border-amber-200">
+                    Unverified
+                  </span>
+                )}
+              </div>
+
+              {!user?.isEmailVerified && (
+                <button
+                  onClick={handleResendVerification}
+                  disabled={sendingVerification}
+                  className="mt-3 text-xs font-bold text-indigo-600 hover:text-indigo-500 hover:underline disabled:opacity-50 flex items-center gap-1 transition-colors bg-transparent border-0 cursor-pointer"
+                >
+                  {sendingVerification ? (
+                    <>
+                      <div className="h-3 w-3 animate-spin rounded-full border border-indigo-600/20 border-t-indigo-600" />
+                      Sending...
+                    </>
+                  ) : verificationSent ? (
+                    'Verification link sent! Resend?'
+                  ) : (
+                    'Verify email address'
+                  )}
+                </button>
+              )}
 
               <p className="text-[11px] text-[#A3A3A3] mt-4 leading-normal">
                 Click on the avatar frame to upload or change your profile photo.

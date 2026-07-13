@@ -172,3 +172,20 @@ export const resetPassword = asyncHandler(async (req, res) => {
 
   return sendSuccess(res, { message: 'Password reset successfully. You can now log in.' });
 });
+
+// POST /api/auth/resend-verification
+export const resendVerification = asyncHandler(async (req, res) => {
+  const user = req.user;
+  if (user.isEmailVerified) {
+    throw ApiError.badRequest('Email is already verified');
+  }
+
+  try {
+    const verifyToken = signPurposeToken(user._id, 'verify-email', '24h');
+    await sendVerificationEmail(user, verifyToken);
+  } catch (emailErr) {
+    throw new ApiError(500, `Failed to send verification email: ${emailErr.message || emailErr}`);
+  }
+
+  return sendSuccess(res, { message: 'Verification email resent successfully' });
+});
