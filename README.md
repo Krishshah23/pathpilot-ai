@@ -27,11 +27,11 @@ React Frontend  ──►  Node.js / Express API  ──►  MongoDB (Atlas)
 
 | Layer      | Technology                                             |
 | ---------- | ------------------------------------------------------ |
-| Frontend   | React, React Router, Tailwind CSS, Axios, Context API  |
-| Backend    | Node.js, Express, JWT, Multer, Nodemailer              |
-| Database   | MongoDB, Mongoose                                      |
-| AI Service | Python, Django, Django REST Framework                  |
-| ML         | Pandas, scikit-learn (Random Forest, Decision Tree, Linear Regression) |
+| Frontend   | React, React Router, Tailwind CSS v4, Recharts         |
+| Backend    | Node.js, Express, MongoDB (Mongoose), JWT             |
+| AI Engine  | Gemini 2.5 Flash SDK (Real Career Intelligence)        |
+| ML Demo    | Django REST Framework, Python, CatBoost, XGBoost       |
+| Parsing    | Python PDF Parsing & Custom Feature Engineering        |
 | Charts     | Recharts                                               |
 
 ## Monorepo Layout
@@ -94,20 +94,17 @@ The script is idempotent — running it again skips already-existing users.
 
 - [x] **Phase 9** — Machine Learning Integration (7 Data-Driven Models + SHAP Explainable AI)
 
-## Machine Learning Integration (Phase 9)
+### Blended ML + LLM Hybrid Pipeline
 
-PathPilot AI is now powered by **7 production-grade Machine Learning models** trained on 50,000+ synthetic student profiles. The ML service replaces all hardcoded, heuristic scoring functions with data-driven predictive diagnostics:
+PathPilot uses a dual-engine architecture:
+1. **Python ML Layer (Academic Demo)**: CatBoost models trained on 50,000+ student profiles provide the quantitative scores (`ATS probability`, `Peer benchmark`, `Career readiness class`).
+2. **Gemini LLM Layer (Production Diagnostics)**: Takes the resume text and the feature-engineered output from the ML models to generate:
+   - Deep context-aware career audits.
+   - Interactive mock interviews target-built from the user's resume gaps.
+   - Tailored learning path weeks injected dynamically into the roadmap.
+   - Context-aware chatbot coaching sessions that persist history.
 
-1. **Resume Score Regressor** (CatBoost Regressor)
-2. **ATS Pass Predictor** (CatBoost Binary Classifier)
-3. **Career Readiness Classifier** (CatBoost Multi-class Classifier)
-4. **Role Recommendation Engine** (CatBoost Multi-class Classifier)
-5. **Interview Success Regressor** (Random Forest Regressor)
-6. **Salary Projector** (CatBoost Regressor)
-7. **Learning Path Roadmap Planner** (K-Nearest Neighbors / Cosine Similarity)
-
-### Explainable AI (XAI)
-Every prediction is accompanied by a **SHAP (Shapley Additive exPlanations)** explainer, calculated in real-time. This highlights the top positive and negative features that contributed to the student's score, displaying clear mathematical feature importances inside the user dashboard.
+This architecture showcases the best of both worlds: robust machine learning inference combined with state-of-the-art LLM personalization.
 
 ### How to Run the ML Service
 To start the Django ML service inside the virtual environment:
