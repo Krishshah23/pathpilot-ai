@@ -72,6 +72,13 @@ export const generate = asyncHandler(async (req, res) => {
           healthBreakdown: latestResume.healthBreakdown,
           suggestions: latestResume.suggestions,
           versions: resumes.length,
+          // Gemini AI Intelligence fields
+          roleFitScore: latestResume.roleFitScore,
+          keyGaps: latestResume.keyGaps,
+          strengthAreas: latestResume.strengthAreas,
+          atsKeywordsMissing: latestResume.atsKeywordsMissing,
+          aiRecommendations: latestResume.aiRecommendations,
+          nextStepPriority: latestResume.nextStepPriority,
         }
       : null,
     growthPlan: planData
@@ -98,6 +105,10 @@ export const generate = asyncHandler(async (req, res) => {
     },
   };
 
+  // LEGACY — kept for ML model demonstration during academic review.
+  // Django predictions (atsProbability, salaryLPA, etc.) are synthetic and
+  // no longer surfaced in the main UI. Gemini AI insights on the resume
+  // document are the source of truth for all user-facing analysis.
   try {
     if (latestResume) {
       const payload = {
@@ -122,15 +133,13 @@ export const generate = asyncHandler(async (req, res) => {
         targetRole: user.profile?.dreamRole || '',
       };
       
-      const mlResponse = await aiService.predict(payload);
+      const mlResponse = await aiService.predict(payload); /* LEGACY — model demo */
       if (mlResponse?.data) {
-        report.pathScore.score = mlResponse.data.resumeScore;
-        report.pathScore.readiness = mlResponse.data.careerReadiness;
-        report.pathScore.predictions = mlResponse.data;
+        report.pathScore.predictions = mlResponse.data; // Only added for professor demo
       }
     }
   } catch (err) {
-    console.error('Error fetching ML predictions for report:', err);
+    console.error('Error fetching ML predictions for report (non-critical):', err);
   }
 
   sendSuccess(res, { data: { report } });

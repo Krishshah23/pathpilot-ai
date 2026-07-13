@@ -77,6 +77,8 @@ export default function OverviewPage() {
 
   const firstName = user?.name?.split(' ')[0] || 'there';
   const dreamRole = user?.profile?.dreamRole || 'your target role';
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   
   const handleRoleUpdate = async (newRole) => {
     setSelectedRole(newRole);
@@ -135,7 +137,7 @@ export default function OverviewPage() {
         {/* ── Hero Bar ─────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6 pb-8 border-b border-[#EAEAE5]">
           <div>
-            <p className="text-sm font-medium text-[#A3A3A3] mb-2">Good morning</p>
+            <p className="text-sm font-medium text-[#A3A3A3] mb-2">{greeting}</p>
             <h1 className="font-serif text-4xl font-bold text-[#171717] leading-tight">
               {firstName}.
             </h1>

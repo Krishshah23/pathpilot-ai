@@ -8,7 +8,7 @@ import { cn } from '@/lib/cn';
 
 export default function InterviewPrepPage() {
   const { user } = useAuth();
-  const [stage, setStage] = useState('setup'); // setup | loading | active | evaluating | result
+  const [stage, setStage] = useState('setup'); // setup | loading | active | evaluating | result | complete
   const [resume, setResume] = useState(null);
   const [loadingResume, setLoadingResume] = useState(true);
 
@@ -20,7 +20,9 @@ export default function InterviewPrepPage() {
   // Session state
   const [questionsAsked, setQuestionsAsked] = useState([]);
   const [sessionScores, setSessionScores] = useState([]);
+  const [sessionLog, setSessionLog] = useState([]); // full Q&A history for persistence
   const [gapIndex, setGapIndex] = useState(0);
+  const [savingSession, setSavingSession] = useState(false);
 
   const [error, setError] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -101,7 +103,7 @@ export default function InterviewPrepPage() {
   };
 
   const startSession = () => {
-    setQuestionsAsked([]); setSessionScores([]); setGapIndex(0);
+    setQuestionsAsked([]); setSessionScores([]); setSessionLog([]); setGapIndex(0);
     fetchQuestion(0);
   };
 
@@ -118,8 +120,21 @@ export default function InterviewPrepPage() {
         rubric: questionData.rubric,
         questionType: questionData.questionType,
       });
-      setEvaluation(data.data);
-      setSessionScores((prev) => [...prev, data.data.totalScore]);
+      const evalData = data.data;
+      setEvaluation(evalData);
+      setSessionScores((prev) => [...prev, evalData.totalScore]);
+      // Track the full Q&A result for session persistence
+      setSessionLog((prev) => [...prev, {
+        question: questionData.question,
+        answer: responseText,
+        gapAddressed: questionData.gapAddressed || '',
+        totalScore: evalData.totalScore,
+        grade: evalData.grade || '',
+        strengths: evalData.strengths || [],
+        improvements: evalData.improvements || [],
+        modelAnswer: evalData.modelAnswer || '',
+        timeTakenSeconds: secondsElapsed,
+      }]);
       setStage('result');
     } catch (err) {
       setError(errorMessage(err, 'Evaluation failed.'));
@@ -134,10 +149,32 @@ export default function InterviewPrepPage() {
     fetchQuestion(nextIdx);
   };
 
-  const endSession = () => {
-    setStage('setup'); setQuestionData(null); setEvaluation(null);
-    setResponseText(''); setQuestionsAsked([]); setSessionScores([]); setGapIndex(0);
+  const endSession = async () => {
     stopTimer();
+    const currentLog = [...sessionLog];
+    const currentScores = [...sessionScores];
+
+    // Save to DB if at least one question was answered
+    if (currentLog.length > 0) {
+      setSavingSession(true);
+      try {
+        await api.post('/ai-coach/interview/save-session', {
+          questions: currentLog,
+          gapsAddressed: [...new Set(currentLog.map(q => q.gapAddressed).filter(Boolean))],
+        });
+      } catch { /* silent — don't block UX if save fails */ }
+      finally { setSavingSession(false); }
+      setStage('complete');
+    } else {
+      // No questions answered, just reset
+      resetSession();
+    }
+  };
+
+  const resetSession = () => {
+    setStage('setup'); setQuestionData(null); setEvaluation(null);
+    setResponseText(''); setQuestionsAsked([]); setSessionScores([]);
+    setSessionLog([]); setGapIndex(0);
   };
 
   const avgScore = sessionScores.length > 0
@@ -433,6 +470,58 @@ export default function InterviewPrepPage() {
               >
                 <Icon.ArrowRight size={15} /> Next Question
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── SAVING ── */}
+        {savingSession && (
+          <div className="flex flex-col items-center justify-center py-24 gap-4">
+            <Spinner className="h-8 w-8 text-[#2B4C3F]" />
+            <p className="text-sm text-[#525252]">Saving your session...</p>
+          </div>
+        )}
+
+        {/* ── SESSION COMPLETE ── */}
+        {stage === 'complete' && !savingSession && (
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-[#171717] rounded-2xl p-10 text-white text-center relative overflow-hidden">
+              <div className="absolute -top-20 -right-20 w-56 h-56 bg-[#2B4C3F] opacity-30 rounded-full blur-3xl pointer-events-none" />
+              <div className="relative z-10">
+                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2B4C3F] mx-auto mb-6">
+                  <Icon.Shield size={28} className="text-white" />
+                </span>
+                <h2 className="font-serif text-3xl font-black text-white mb-2">Session Complete</h2>
+                <p className="text-sm text-white/70 mb-8">Great work, {user?.name?.split(' ')[0]}. Your results have been saved.</p>
+
+                <div className="grid grid-cols-3 gap-4 mb-8">
+                  {[
+                    { label: 'Avg Score', value: avgScore !== null ? `${avgScore}/100` : '—' },
+                    { label: 'Questions', value: sessionLog.length },
+                    { label: 'Gaps Covered', value: [...new Set(sessionLog.map(q => q.gapAddressed).filter(Boolean))].length },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="rounded-xl bg-white/10 px-4 py-4">
+                      <p className="font-serif text-2xl font-black text-white">{value}</p>
+                      <p className="text-xs text-white/60 mt-1">{label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    onClick={resetSession}
+                    className="h-10 px-6 rounded-xl border border-white/20 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
+                  >
+                    New Session
+                  </button>
+                  <a
+                    href="/execution-engine"
+                    className="h-10 px-6 rounded-xl bg-white text-sm font-bold text-[#171717] hover:bg-[#F5F5F3] transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Icon.Map size={15} /> View My Roadmap
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         )}

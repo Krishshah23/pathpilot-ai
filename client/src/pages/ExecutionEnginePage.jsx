@@ -362,6 +362,7 @@ function RoadmapView({ plan, role, setRole, generating, onGenerate, onToggle }) 
 
 function WeekCard({ week, onToggle }) {
   const [open, setOpen] = useState(week.week === 1);
+  const isGapTargeted = week.tasks?.some(t => t.key?.startsWith('gap-task-'));
   return (
     <div className="bg-white border border-[#EAEAE5] rounded-2xl overflow-hidden">
       {/* Header */}
@@ -373,8 +374,15 @@ function WeekCard({ week, onToggle }) {
           {week.week}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[#171717]">{week.title}</p>
-          <p className="text-xs text-[#A3A3A3]">~{week.focusHours} hrs · {week.completedTasks}/{week.tasks?.length} tasks</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-semibold text-[#171717]">{week.title}</p>
+            {isGapTargeted && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-[#C8DDD6] text-[#2B4C3F] bg-[#F0F5F3]">
+                ⚡ Gap-targeted
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-[#A3A3A3]">{isGapTargeted ? 'AI-personalized from your resume gaps · ' : ''}{week.focusHours ? `~${week.focusHours} hrs · ` : ''}{week.completedTasks}/{week.tasks?.length} tasks</p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-20 h-1.5 rounded-full bg-[#EAEAE5] overflow-hidden">

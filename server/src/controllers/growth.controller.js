@@ -42,9 +42,7 @@ export const generateGrowthPlan = asyncHandler(async (req, res) => {
     try {
       const gapWeeks = await geminiGenerateGapRoadmap({ gaps, targetRole });
       if (gapWeeks && gapWeeks.length > 0) {
-        // Format the gap weeks to match the roadmap structure
-        const formattedGapWeeks = gapWeeks.map((w, idx) => ({
-          weekNumber: idx + 1,
+        const formattedGapWeeks = gapWeeks.map((w) => ({
           topic: w.topic,
           focus: w.focus,
           tasks: w.tasks.map(t => ({
@@ -55,14 +53,10 @@ export const generateGrowthPlan = asyncHandler(async (req, res) => {
             completedAt: null
           }))
         }));
-        
-        // Shift existing weeks down
-        const shiftedExisting = weeks.map(w => ({
-          ...w,
-          weekNumber: w.weekNumber + formattedGapWeeks.length
-        }));
 
-        weeks = [...formattedGapWeeks, ...shiftedExisting];
+        // Merge and re-index ALL weeks sequentially to prevent weekNumber collisions
+        const merged = [...formattedGapWeeks, ...weeks];
+        weeks = merged.map((w, idx) => ({ ...w, weekNumber: idx + 1 }));
       }
     } catch (err) {
       console.error('Failed to generate gap roadmap', err);

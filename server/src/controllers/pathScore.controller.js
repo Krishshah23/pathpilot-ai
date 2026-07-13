@@ -59,7 +59,11 @@ export const getPathScore = asyncHandler(async (req, res) => {
       targetRole: req.user.profile?.dreamRole || '',
     };
 
-    const mlResponse = await aiService.predict(payload);
+    // LEGACY — Django Python ML pipeline (kept for academic model demonstration).
+    // These models (CatBoost, XGBoost) were trained on synthetic student data and
+    // provide feature-engineered scoring. The main UI now uses Gemini AI insights
+    // instead, but this pipeline remains active for professor demo purposes.
+    const mlResponse = await aiService.predict(payload); /* LEGACY — model demo */
     if (mlResponse?.data) {
       const mlData = mlResponse.data;
       pathScore.score = mlData.resumeScore;
@@ -68,7 +72,6 @@ export const getPathScore = asyncHandler(async (req, res) => {
       if (mlData.peerBenchmark) {
         pathScore.peerBenchmark = mlData.peerBenchmark;
       }
-      // Map SHAP explanations to recommendations or show directly
       if (mlData.recommendations) {
         pathScore.recommendations = mlData.recommendations;
       }

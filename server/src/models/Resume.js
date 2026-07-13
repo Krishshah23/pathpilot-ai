@@ -73,6 +73,8 @@ const resumeSchema = new Schema(
     atsKeywordsMissing: { type: [String], default: [] },
     aiRecommendations: { type: [String], default: [] },
     nextStepPriority: { type: String, default: '' },
+    // Cached Gemini career audit narrative — avoids re-calling API on every page load
+    aiNarrative: { type: String, default: '' },
   },
   { timestamps: true }
 );
