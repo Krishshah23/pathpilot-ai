@@ -20,10 +20,33 @@ const ADMIN_NAV_LINKS = [
   { label: 'Admin Panel', path: '/admin' },
 ];
 
-function TopNav({ user, onAvatarClick }) {
+function TopNav({ user }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const toast = useToast();
+
   const isAdmin = user?.role === 'admin';
   const links = isAdmin ? ADMIN_NAV_LINKS : NAV_LINKS;
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    setDropdownOpen(false);
+    await logout();
+    toast.info('Logged out successfully');
+    navigate('/login');
+  };
 
   return (
     <header className="sticky top-0 z-40 bg-[#FBFBFA] border-b border-[#EAEAE5]">
@@ -60,20 +83,56 @@ function TopNav({ user, onAvatarClick }) {
         </nav>
 
         {/* Right: Bell + Avatar */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-3 shrink-0 relative" ref={dropdownRef}>
           <NotificationBell />
 
           <button
-            onClick={onAvatarClick}
-            className="flex items-center gap-2.5 rounded-full p-0.5 pr-3 transition hover:bg-[#F5F5F3]"
-            title="Open profile settings"
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center gap-2.5 rounded-full p-0.5 pr-3 transition hover:bg-[#F5F5F3] focus:outline-none"
+            title="Account options"
           >
             <Avatar user={user} size="sm" />
             <span className="hidden sm:block text-sm font-medium text-[#171717]">
               {user?.name?.split(' ')[0]}
             </span>
-            <Icon.ChevronDown size={14} className="text-[#A3A3A3]" />
+            <Icon.ChevronDown size={14} className={cn("text-[#A3A3A3] transition-transform duration-200", dropdownOpen && "rotate-180")} />
           </button>
+
+          {/* Account Dropdown Popover */}
+          {dropdownOpen && (
+            <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-[#EAEAE5] bg-white p-1.5 shadow-xl z-50 animate-fade-down origin-top-right">
+              {/* Account Header */}
+              <div className="px-3 py-2 border-b border-[#F5F5F3] mb-1">
+                <p className="text-xs font-bold text-[#171717] leading-tight truncate">{user?.name}</p>
+                <p className="text-[10px] text-[#A3A3A3] truncate mt-0.5">{user?.email}</p>
+                <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[9px] font-semibold uppercase tracking-wider border border-slate-200">
+                  {user?.role}
+                </span>
+              </div>
+
+              {/* Actions */}
+              {!isAdmin && (
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    navigate('/profile');
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#525252] hover:text-[#171717] hover:bg-[#F5F5F3] rounded-lg transition-colors"
+                >
+                  <Icon.User size={14} />
+                  Profile Settings
+                </button>
+              )}
+
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#B85A3C] hover:text-[#A14022] hover:bg-[#FDF5F3] rounded-lg transition-colors"
+              >
+                <Icon.Logout size={14} />
+                Log out
+              </button>
+            </div>
+          )}
 
           {/* Mobile hamburger */}
           <button
@@ -494,7 +553,7 @@ export function AppShell({ children }) {
 
   return (
     <div className="min-h-screen bg-[#FBFBFA]">
-      <TopNav user={user} onAvatarClick={() => navigate('/profile')} />
+      <TopNav user={user} />
 
       <main className="mx-auto max-w-7xl px-4 sm:px-6 py-8 animate-fade-up">
         {children}

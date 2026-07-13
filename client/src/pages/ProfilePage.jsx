@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppShell, Field, SkillTagInput } from '@/components/layout/AppShell';
 import { Icon } from '@/components/ui/icons';
 import { Card } from '@/components/ui/Card';
@@ -8,8 +9,9 @@ import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
 
 export default function ProfilePage() {
-  const { user, refreshUser } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const toast = useToast();
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
   const p = user?.profile || {};
@@ -130,6 +132,12 @@ export default function ProfilePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    toast.info('Logged out successfully');
+    navigate('/login');
+  };
+
   return (
     <AppShell>
       <div className="max-w-4xl mx-auto space-y-8">
@@ -219,6 +227,15 @@ export default function ProfilePage() {
                 </button>
               </form>
             </Card>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="w-full h-11 rounded-xl border border-[#EAEAE5] text-[#B85A3C] text-sm font-bold hover:bg-[#FDF5F3] hover:border-[#F5D5CB] transition-colors flex items-center justify-center gap-2 bg-white shadow-sm"
+            >
+              <Icon.Logout size={15} />
+              Log out
+            </button>
           </div>
 
           {/* Right Column: Profile and Career Metadata */}
