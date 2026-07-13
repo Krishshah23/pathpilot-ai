@@ -85,10 +85,26 @@ export default function OverviewPage() {
     setEditingRole(false);
     try {
       await api.patch('/profile', { profile: { dreamRole: newRole } });
-      window.location.reload(); // Refresh everything to get new predictions and insights
-    } catch (err) {
-      // silent fail or toast
-    }
+      // Soft re-fetch — no reload, no flash
+      setLoading(true);
+      setAiExplanation(null); // Will trigger fresh Gemini call for new role
+      const [scoreRes, growthRes] = await Promise.all([
+        api.get('/path-score'),
+        api.get('/growth').catch(() => ({ data: { data: { plan: null } } }))
+      ]);
+      setPathScore(scoreRes.data.data.pathScore || {});
+      setMarketSalary(scoreRes.data.data.marketSalary || null);
+      setBlendedBenchmark(scoreRes.data.data.blendedBenchmark || null);
+      setGrowthPlan(growthRes.data?.data?.plan || null);
+      // Re-trigger AI explanation for the new role (only if they have a resume)
+      if (user?.profile?.resumeUrl) {
+        setLoadingAi(true);
+        api.post('/ai-coach/explain').then((res) => {
+          setAiExplanation(res.data.data.explanation);
+        }).catch(() => {}).finally(() => setLoadingAi(false));
+      }
+    } catch { /* silent */ }
+    finally { setLoading(false); }
   };
 
   const score = pathScore?.displayScore ?? Math.round(pathScore?.score || 0);

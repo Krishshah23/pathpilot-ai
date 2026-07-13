@@ -460,16 +460,16 @@ function NotificationBell() {
 
 /* ─── AI Coach Drawer ─────────────────────────────────────────────── */
 
-function AICoachDrawer({ onClose, explainType, clearExplainType }) {
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: "Hi! I'm your AI Career Coach. Ask me anything about your resume, skill gaps, or career readiness.",
-    },
-  ]);
+function AICoachDrawer({ onClose, explainType, clearExplainType, messages, setMessages }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
+
+  const QUICK_PROMPTS = [
+    "What are my biggest resume gaps?",
+    "How can I improve my Path Score?",
+    "What should I focus on this week?",
+  ];
 
   useEffect(() => {
     if (explainType) {
@@ -590,6 +590,37 @@ function AICoachDrawer({ onClose, explainType, clearExplainType }) {
           )}
         </div>
 
+        {/* Quick-reply chips — only shown on fresh conversation */}
+        {messages.length <= 1 && !loading && (
+          <div className="border-t border-[#EAEAE5] px-4 pt-3 pb-1 bg-white">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3] mb-2">Suggested</p>
+            <div className="flex flex-col gap-1.5">
+              {QUICK_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  onClick={() => {
+                    setInput(prompt);
+                    // Trigger send with slight delay so input state updates
+                    setTimeout(() => {
+                      const fakeEvent = { preventDefault: () => {} };
+                      setMessages((prev) => [...prev, { role: 'user', content: prompt }]);
+                      setInput('');
+                      setLoading(true);
+                      api.post('/ai-coach/chat', { message: prompt, history: messages })
+                        .then(({ data }) => setMessages((prev) => [...prev, { role: 'assistant', content: data.data.response }]))
+                        .catch(() => setMessages((prev) => [...prev, { role: 'assistant', content: 'Sorry, I hit a snag. Try again.' }]))
+                        .finally(() => setLoading(false));
+                    }, 0);
+                  }}
+                  className="text-left w-full rounded-xl border border-[#EAEAE5] px-3 py-2 text-xs text-[#525252] hover:bg-[#F5F5F3] hover:border-[#D0D0CA] transition-colors"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Input */}
         <form onSubmit={handleSend} className="border-t border-[#EAEAE5] p-4 flex gap-2 bg-white">
           <input
@@ -625,6 +656,10 @@ export function AppShell({ children }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [coachOpen, setCoachOpen] = useState(false);
   const [explainType, setExplainType] = useState(null);
+  // Lifted here so chat history persists when drawer is closed/reopened
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'assistant', content: "Hi! I'm your AI Career Coach. Ask me anything about your resume, skill gaps, or career readiness." }
+  ]);
 
   useEffect(() => {
     const handleOpenCoach = (e) => {
@@ -664,6 +699,8 @@ export function AppShell({ children }) {
           onClose={() => setCoachOpen(false)}
           explainType={explainType}
           clearExplainType={() => setExplainType(null)}
+          messages={chatMessages}
+          setMessages={setChatMessages}
         />
       )}
     </div>

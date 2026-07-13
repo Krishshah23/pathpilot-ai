@@ -31,11 +31,19 @@ export default function TalentAnalyzerPage() {
   const [liveJobs, setLiveJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
 
+  // Resume version history
+  const [resumeHistory, setResumeHistory] = useState([]);
+
   useEffect(() => {
     (async () => {
       try {
         const { data } = await api.get('/resume');
         setResume(data.data.resume);
+        // Fetch version history in parallel
+        const histRes = await api.get('/resume/history').catch(() => null);
+        if (histRes?.data?.data?.history?.length > 1) {
+          setResumeHistory(histRes.data.data.history);
+        }
       } catch { /* no resume yet */ }
       finally { setLoadingResume(false); }
     })();
@@ -110,6 +118,29 @@ export default function TalentAnalyzerPage() {
             />
           ) : (
             <DocumentPanel resume={resume} onReplace={() => { setFile(null); setReplacing(true); }} />
+          )}
+
+          {/* Resume score history — only visible with 2+ uploads */}
+          {resumeHistory.length > 1 && (
+            <div className="rounded-2xl border border-[#EAEAE5] bg-white p-5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3] mb-3">Score History</p>
+              <div className="flex items-end gap-2 h-12">
+                {resumeHistory.slice().reverse().map((h, i) => {
+                  const isLatest = i === resumeHistory.length - 1;
+                  const barH = Math.max(16, Math.round((h.healthScore / 100) * 48));
+                  return (
+                    <div key={h._id} className="flex flex-col items-center gap-1 flex-1" title={`${new Date(h.createdAt).toLocaleDateString()} — ${h.healthScore}/100`}>
+                      <span className="text-[9px] font-bold text-[#A3A3A3]">{h.healthScore}</span>
+                      <div
+                        className="w-full rounded-t-md transition-all"
+                        style={{ height: `${barH}px`, backgroundColor: isLatest ? '#2B4C3F' : '#EAEAE5' }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-[#A3A3A3] mt-2">{resumeHistory.length} versions uploaded</p>
+            </div>
           )}
         </div>
 

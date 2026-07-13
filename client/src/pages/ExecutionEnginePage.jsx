@@ -235,7 +235,10 @@ export default function ExecutionEnginePage() {
                         {/* Cards */}
                         <div className="flex flex-col gap-2 p-2 overflow-y-auto" style={{ maxHeight: '50vh' }}>
                           {cards.length === 0 ? (
-                            <p className="py-5 text-center text-[11px] text-[#D0D0CA]">Empty</p>
+                            <div className="m-1 rounded-xl border-2 border-dashed border-[#EAEAE5] py-5 flex flex-col items-center justify-center text-center gap-1">
+                              <p className="text-[10px] font-semibold text-[#D0D0CA]">{stage.label}</p>
+                              <p className="text-[9px] text-[#D0D0CA]">No applications</p>
+                            </div>
                           ) : (
                             cards.map((opp) => (
                               <KanbanCard
