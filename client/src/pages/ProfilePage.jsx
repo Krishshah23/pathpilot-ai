@@ -17,6 +17,7 @@ export default function ProfilePage() {
   const p = user?.profile || {};
   const [profileForm, setProfileForm] = useState({
     name:      user?.name      || '',
+    email:     user?.email     || '',
     college:   p.college       || '',
     branch:    p.branch        || '',
     semester:  p.semester      || '',
@@ -46,6 +47,7 @@ export default function ProfilePage() {
       // 1. General details
       await api.patch('/profile', {
         name: profileForm.name,
+        email: profileForm.email,
         college: profileForm.college,
         branch: profileForm.branch,
         semester: profileForm.semester ? Number(profileForm.semester) : null,
@@ -301,12 +303,21 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-4">
-                <Field
-                  label="Full Name"
-                  value={profileForm.name}
-                  onChange={(v) => setProfileForm((f) => ({ ...f, name: v }))}
-                  placeholder="e.g. Demo Student"
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field
+                    label="Full Name"
+                    value={profileForm.name}
+                    onChange={(v) => setProfileForm((f) => ({ ...f, name: v }))}
+                    placeholder="e.g. Demo Student"
+                  />
+                  <Field
+                    label="Email Address"
+                    value={profileForm.email}
+                    onChange={(v) => setProfileForm((f) => ({ ...f, email: v }))}
+                    placeholder="you@college.edu"
+                    type="email"
+                  />
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Field

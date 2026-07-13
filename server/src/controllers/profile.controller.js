@@ -23,9 +23,17 @@ export const getProfile = asyncHandler(async (req, res) => {
 // PATCH /api/profile
 export const updateProfile = asyncHandler(async (req, res) => {
   const user = req.user;
-  const { name, college, branch, semester, dreamRole, skills } = req.body;
+  const { name, email, college, branch, semester, dreamRole, skills } = req.body;
 
   if (name !== undefined) user.name = name;
+  
+  if (email !== undefined && email.toLowerCase() !== user.email) {
+    const exists = await User.findOne({ email: email.toLowerCase() });
+    if (exists) throw ApiError.conflict('An account with this email already exists');
+    user.email = email.toLowerCase();
+    user.isEmailVerified = false;
+  }
+
   if (college !== undefined) user.profile.college = college;
   if (branch !== undefined) user.profile.branch = branch;
   if (semester !== undefined) user.profile.semester = semester;
