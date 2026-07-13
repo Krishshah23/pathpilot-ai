@@ -8,7 +8,8 @@ import { publicUrl } from '../middleware/upload.middleware.js';
 import { extractResumeText } from '../services/resumeText.service.js';
 import { aiService } from '../services/ai.service.js';
 import { detectRedFlags } from '../services/resumeRedFlags.js';
-import { geminiAnalyzeResume } from '../services/gemini.service.js';
+import { geminiAnalyzeResume, geminiExplainScore } from '../services/gemini.service.js';
+import { buildPathScore } from '../services/pathScore.service.js';
 
 /**
  * Resume Intelligence pipeline:
@@ -86,6 +87,19 @@ export const analyzeResume = asyncHandler(async (req, res) => {
   // Keep the user's active resume pointer in sync.
   req.user.profile.resumeUrl = fileUrl;
   await req.user.save();
+
+  // Pre-generate the AI score explanation narrative so Overview page load is instant
+  try {
+    const pathScore = buildPathScore(req.user, resume);
+    const explanation = await geminiExplainScore({ user: req.user, resume, pathScore });
+    if (explanation) {
+      resume.aiNarrative = explanation;
+      await resume.save();
+    }
+  } catch (err) {
+    // Fail silently so upload succeeds even if Gemini narrative generation times out
+    console.error('Failed to pre-generate Gemini narrative:', err);
+  }
 
   // Create notification
   await Notification.create({

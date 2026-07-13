@@ -23,6 +23,17 @@ export default function OverviewPage() {
   const [editingRole, setEditingRole] = useState(false);
   const [selectedRole, setSelectedRole] = useState(user?.profile?.dreamRole || 'your target role');
 
+  const fetchAiExplanation = () => {
+    if (!user?.profile?.resumeUrl) return;
+    setLoadingAi(true);
+    api.post('/ai-coach/explain')
+      .then((res) => {
+        setAiExplanation(res.data.data.explanation);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingAi(false));
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -38,10 +49,7 @@ export default function OverviewPage() {
         
         // If they have a resume, fetch the true Gemini explanation
         if (user?.profile?.resumeUrl) {
-          setLoadingAi(true);
-          api.post('/ai-coach/explain').then((res) => {
-            setAiExplanation(res.data.data.explanation);
-          }).catch(() => {}).finally(() => setLoadingAi(false));
+          fetchAiExplanation();
         }
       } catch { /* silent */ }
       finally { setLoading(false); }
@@ -294,7 +302,15 @@ export default function OverviewPage() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-[#A3A3A3]">Could not load AI explanation.</p>
+                <div className="py-2">
+                  <p className="text-sm text-[#A3A3A3] mb-4">Could not load AI explanation.</p>
+                  <button
+                    onClick={fetchAiExplanation}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#2a2a2a] px-4 py-2 text-xs font-semibold text-white hover:bg-[#3a3a3a] transition-colors border border-[#333]"
+                  >
+                    <Icon.RotateCw size={13} /> Retry Audit
+                  </button>
+                </div>
               )}
             </div>
           </div>

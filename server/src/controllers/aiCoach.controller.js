@@ -12,6 +12,32 @@ import {
   geminiEvaluateAnswer,
 } from '../services/gemini.service.js';
 
+function buildFallbackNarrative({ user, resume, pathScore }) {
+  const firstName = user.name ? user.name.split(' ')[0] : 'there';
+  const dreamRole = user.profile?.dreamRole || 'Software Engineer';
+  const score = pathScore.displayScore;
+  const readiness = pathScore.readiness?.label || 'Building momentum';
+
+  const goodFactors = (pathScore.factors || []).filter(f => f.status === 'good').map(f => f.label.toLowerCase());
+  const badFactors = (pathScore.factors || []).filter(f => f.status !== 'good').map(f => f.label.toLowerCase());
+
+  let narrative = `Hi ${firstName}! Reaching a score of ${score}/100 and achieving "${readiness}" status is a solid starting point for your journey toward becoming a ${dreamRole}. 
+
+This evaluation is calculated across several readiness factors. Your profile is showing strong performance in ${goodFactors.length > 0 ? goodFactors.join(', ') : 'initial structural setup'}. This means you have successfully established a baseline foundation that you can build upon.`;
+
+  if (badFactors.length > 0) {
+    narrative += `\n\nHowever, to progress into a highly competitive candidate, we need to focus on your remaining gaps. Particularly, improving your standing in ${badFactors.join(' and ')} will have the highest impact on lifting your overall score.`;
+  }
+
+  if (resume?.keyGaps && resume.keyGaps.length > 0) {
+    narrative += `\n\nSpecifically, your resume analysis highlighted a few skill gaps: ${resume.keyGaps.slice(0, 3).join(', ')}. Addressing these target areas through project work and hands-on learning is your single best next step today. Check your Growth Roadmap for personalized tasks that target these exact areas.`;
+  } else {
+    narrative += `\n\nYour single best next step today is to continue building out hands-on projects and aligning your skill set with current market demands. Keep refining your application portfolio and practicing targeted interview scenarios.`;
+  }
+
+  return narrative;
+}
+
 /**
  * POST /api/ai-coach/explain
  * Gemini-powered score explanation — replaces the fake "synthetic SHAP" narrative.
@@ -32,7 +58,13 @@ export const explainScore = asyncHandler(async (req, res) => {
     return sendSuccess(res, { data: { explanation: resume.aiNarrative, metrics, cached: true } });
   }
 
-  const explanation = await geminiExplainScore({ user, resume, pathScore });
+  let explanation;
+  try {
+    explanation = await geminiExplainScore({ user, resume, pathScore });
+  } catch (err) {
+    console.warn('Gemini explainScore failed, using personalized fallback narrative:', err.message);
+    explanation = buildFallbackNarrative({ user, resume, pathScore });
+  }
 
   // Persist the narrative so future calls skip the Gemini API entirely
   if (resume && explanation) {
@@ -63,7 +95,13 @@ export const chat = asyncHandler(async (req, res) => {
   const resume = await Resume.findOne({ user: user._id }).sort({ createdAt: -1 });
   const roadmap = await GrowthPlan.findOne({ user: user._id });
 
-  const response = await geminiChat({ user, resume, roadmap, history, message });
+  let response;
+  try {
+    response = await geminiChat({ user, resume, roadmap, history, message });
+  } catch (err) {
+    console.warn('Gemini chat failed, using fallback coach response:', err.message);
+    response = `I'm sorry, I'm experiencing high traffic right now and couldn't process that message. Please try asking again in a few seconds! If you have specific questions about your Path Score or roadmap, I will be ready to help shortly.`;
+  }
 
   return sendSuccess(res, { data: { response } });
 });
@@ -85,12 +123,33 @@ export const generateInterviewQuestion = asyncHandler(async (req, res) => {
   const targetGap = keyGaps[gapIndex]
     || `General ${dreamRole} competency`;
 
-  const questionData = await geminiGenerateQuestion({
-    targetRole: dreamRole,
-    gap: targetGap,
-    previousQuestions,
-    difficulty,
-  });
+  let questionData;
+  try {
+    questionData = await geminiGenerateQuestion({
+      targetRole: dreamRole,
+      gap: targetGap,
+      previousQuestions,
+      difficulty,
+    });
+  } catch (err) {
+    console.warn('Gemini generateQuestion failed, using fallback question:', err.message);
+    questionData = {
+      question: `Describe a time when you had to work with or implement a feature involving: ${targetGap}. How did you handle it and what was the outcome?`,
+      questionType: 'behavioral',
+      whatWereTesting: targetGap,
+      goodAnswerShouldContain: [
+        'Clear context and explanation of the technology',
+        'Your specific responsibilities and actions taken',
+        'The final result and any lessons learned'
+      ],
+      rubric: {
+        relevance: 30,
+        depth: 40,
+        communication: 30
+      },
+      hint: 'Focus on explaining the challenge clearly, your specific thought process, and what you achieved.'
+    };
+  }
 
   return sendSuccess(res, {
     data: {
@@ -115,13 +174,38 @@ export const evaluateInterviewAnswer = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('Question and answer are required');
   }
 
-  const evaluation = await geminiEvaluateAnswer({
-    question,
-    answer,
-    targetRole: dreamRole,
-    rubric,
-    questionType,
-  });
+  let evaluation;
+  try {
+    evaluation = await geminiEvaluateAnswer({
+      question,
+      answer,
+      targetRole: dreamRole,
+      rubric,
+      questionType,
+    });
+  } catch (err) {
+    console.warn('Gemini evaluateAnswer failed, using fallback evaluation:', err.message);
+    const wordCount = answer.split(/\s+/).filter(Boolean).length;
+    const depthScore = Math.min(Math.round(wordCount / 5), 40);
+    const relevanceScore = wordCount > 10 ? 25 : 10;
+    const communicationScore = wordCount > 15 ? 25 : 10;
+    const totalScore = relevanceScore + depthScore + communicationScore;
+    const grade = totalScore >= 80 ? 'Excellent' : totalScore >= 60 ? 'Good' : totalScore >= 40 ? 'Average' : 'Needs Work';
+
+    evaluation = {
+      scores: {
+        relevance: relevanceScore,
+        depth: depthScore,
+        communication: communicationScore
+      },
+      totalScore,
+      grade,
+      strengths: ['You provided a detailed answer showing good initial understanding of the context.'],
+      improvements: ['Consider elaborating more on your specific hands-on experience and implementation details.'],
+      modelAnswer: 'A strong answer would follow the STAR framework (Situation, Task, Action, Result) to clearly articulate the problem, action, and results.',
+      encouragement: 'Great effort! Keep practicing structured interview answers.'
+    };
+  }
 
   return sendSuccess(res, { data: evaluation });
 });
