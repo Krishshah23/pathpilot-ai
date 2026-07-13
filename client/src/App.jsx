@@ -18,6 +18,7 @@ const ExecutionEnginePage= lazy(() => import('@/pages/ExecutionEnginePage'));
 const InterviewPrepPage  = lazy(() => import('@/pages/InterviewPrepPage'));
 const AdminPage          = lazy(() => import('@/pages/AdminPage'));
 const PublicProfilePage  = lazy(() => import('@/pages/PublicProfilePage'));
+const ProfilePage        = lazy(() => import('@/pages/ProfilePage'));
 const NotFoundPage       = lazy(() => import('@/pages/NotFoundPage'));
 
 export default function App() {
@@ -58,7 +59,7 @@ export default function App() {
                 <Route path="/insights"      element={<Navigate to="/dashboard"        replace />} />
                 <Route path="/report"        element={<Navigate to="/dashboard"        replace />} />
                 <Route path="/interview"     element={<Navigate to="/interview-prep"   replace />} />
-                <Route path="/profile"       element={<Navigate to="/dashboard"        replace />} />
+                <Route path="/profile"       element={<ProfilePage />} />
               </Route>
 
               {/* ── Admin ── */}

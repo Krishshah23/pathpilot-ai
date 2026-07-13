@@ -112,203 +112,9 @@ function TopNav({ user, onAvatarClick }) {
   );
 }
 
-/* ─── Profile Drawer ──────────────────────────────────────────────── */
+/* ─── Shared Profile Components ───────────────────────────────────── */
 
-function ProfileDrawer({ onClose }) {
-  const { user, logout, refreshUser } = useAuth();
-  const toast = useToast();
-  const navigate = useNavigate();
-
-  const isAdmin = user?.role === 'admin';
-  const p = user?.profile || {};
-  const [form, setForm] = useState({
-    college:   p.college   || '',
-    branch:    p.branch    || '',
-    semester:  p.semester  || '',
-    dreamRole: p.dreamRole || '',
-    skills:    p.skills    || [],
-    isPublic:  user?.isPublicCardEnabled || false,
-  });
-  const [saving, setSaving] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const profileUrl = `${window.location.origin}/profile/${user?.publicCardId}`;
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      // 1. Update general profile fields
-      await api.patch('/profile', {
-        college: form.college,
-        branch: form.branch,
-        semester: form.semester ? Number(form.semester) : null,
-        dreamRole: form.dreamRole,
-        skills: form.skills,
-      });
-      // 2. Update public card toggle status
-      await api.patch('/profile/public-card', {
-        isPublicCardEnabled: form.isPublic,
-      });
-      await refreshUser();
-      toast.success('Profile and preferences saved');
-    } catch (err) {
-      toast.error(errorMessage(err, 'Could not save profile'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(profileUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const onLogout = async () => {
-    await logout();
-    toast.info('Logged out');
-    navigate('/login');
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
-        onClick={onClose}
-      />
-
-      {/* Drawer */}
-      <div className="relative flex h-full w-full max-w-sm flex-col bg-white border-l border-[#EAEAE5] shadow-2xl animate-fade-right overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-[#EAEAE5] bg-[#FBFBFA]">
-          <div className="flex items-center gap-3">
-            <Avatar user={user} size="md" />
-            <div>
-              <p className="font-semibold text-[#171717] text-sm leading-tight">{user?.name}</p>
-              <p className="text-xs text-[#A3A3A3] truncate max-w-[160px]">{user?.email}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-[#A3A3A3] hover:bg-[#F5F5F3] hover:text-[#171717] transition-colors"
-          >
-            <Icon.X size={18} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 px-6 py-6 space-y-6">
-          {isAdmin ? (
-            /* ── Admin: minimal account info only ── */
-            <section>
-              <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-4">Account</h3>
-              <div className="rounded-xl border border-[#EAEAE5] p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#525252]">Name</span>
-                  <span className="text-xs font-medium text-[#171717]">{user?.name}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#525252]">Email</span>
-                  <span className="text-xs font-medium text-[#171717] truncate max-w-[160px]">{user?.email}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#525252]">Role</span>
-                  <span className="inline-flex items-center gap-1.5 rounded-md bg-violet/10 px-2.5 py-1 text-xs font-semibold text-violet border border-violet/20">
-                    <Icon.Shield size={11} />
-                    Administrator
-                  </span>
-                </div>
-              </div>
-            </section>
-          ) : (
-            /* ── Student: full profile form ── */
-            <>
-              {/* Target Role & Education */}
-              <section className="space-y-4">
-                <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider">Career & Education</h3>
-                <div className="space-y-3.5">
-                  <Field label="Dream Role" value={form.dreamRole} onChange={(v) => setForm((f) => ({ ...f, dreamRole: v }))} placeholder="e.g. Full Stack Developer" />
-                  <Field label="College / Institution" value={form.college} onChange={(v) => setForm((f) => ({ ...f, college: v }))} placeholder="e.g. IIT Bombay" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field label="Branch / Major" value={form.branch} onChange={(v) => setForm((f) => ({ ...f, branch: v }))} placeholder="e.g. Computer Science" />
-                    <Field label="Current Semester" value={form.semester} onChange={(v) => setForm((f) => ({ ...f, semester: v }))} placeholder="e.g. 6" type="number" />
-                  </div>
-                </div>
-              </section>
-
-              {/* Skills */}
-              <section>
-                <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-3">Tracked Skills</h3>
-                <SkillTagInput
-                  skills={form.skills}
-                  onChange={(skills) => setForm((f) => ({ ...f, skills }))}
-                />
-              </section>
-
-              {/* Public Profile Toggle */}
-              <section>
-                <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-3">Public Career Card</h3>
-                <div className="rounded-xl border border-[#EAEAE5] p-4 space-y-3 bg-[#FBFBFA]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-[#171717]">Public Profile</p>
-                      <p className="text-xs text-[#A3A3A3] mt-0.5">Let employers find your career card</p>
-                    </div>
-                    <button
-                      onClick={() => setForm((f) => ({ ...f, isPublic: !f.isPublic }))}
-                      className="transition-colors focus:outline-none"
-                      aria-label="Toggle public profile"
-                    >
-                      {form.isPublic
-                        ? <Icon.ToggleRight size={32} className="text-[#2B4C3F]" />
-                        : <Icon.ToggleLeft  size={32} className="text-[#D0D0CA]" />
-                      }
-                    </button>
-                  </div>
-
-                  {form.isPublic && (
-                    <div className="flex items-center gap-2 rounded-lg bg-white border border-[#EAEAE5] px-3 py-2 text-xs">
-                      <Icon.Link size={12} className="text-[#A3A3A3] shrink-0" />
-                      <span className="text-[#525252] truncate flex-1">{profileUrl}</span>
-                      <button
-                        onClick={handleCopyLink}
-                        className="text-[#2B4C3F] font-semibold hover:underline shrink-0"
-                      >
-                        {copied ? 'Copied!' : 'Copy'}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </section>
-            </>
-          )}
-        </div>
-
-        {/* Footer Actions */}
-        <div className="px-6 py-5 border-t border-[#EAEAE5] bg-[#FBFBFA] space-y-3">
-          {!isAdmin && (
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full h-10 rounded-xl bg-[#171717] text-white text-sm font-semibold hover:bg-[#2a2a2a] disabled:opacity-50 transition-colors shadow-sm"
-            >
-              {saving ? 'Saving…' : 'Save Changes'}
-            </button>
-          )}
-          <button
-            onClick={onLogout}
-            className="w-full h-10 rounded-xl border border-[#EAEAE5] text-[#B85A3C] text-sm font-semibold hover:bg-[#FDF5F3] hover:border-[#F5D5CB] transition-colors"
-          >
-            Log out
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Field({ label, value, onChange, placeholder, type = 'text' }) {
+export function Field({ label, value, onChange, placeholder, type = 'text' }) {
   return (
     <div>
       <label className="block text-xs font-medium text-[#525252] mb-1.5">{label}</label>
@@ -323,7 +129,7 @@ function Field({ label, value, onChange, placeholder, type = 'text' }) {
   );
 }
 
-function SkillTagInput({ skills, onChange }) {
+export function SkillTagInput({ skills, onChange }) {
   const [input, setInput] = useState('');
 
   const addSkill = (skill) => {
@@ -669,7 +475,7 @@ function AICoachDrawer({ onClose, explainType, clearExplainType, messages, setMe
  */
 export function AppShell({ children }) {
   const { user } = useAuth();
-  const [profileOpen, setProfileOpen] = useState(false);
+  const navigate = useNavigate();
   const [coachOpen, setCoachOpen] = useState(false);
   const [explainType, setExplainType] = useState(null);
   // Lifted here so chat history persists when drawer is closed/reopened
@@ -688,14 +494,11 @@ export function AppShell({ children }) {
 
   return (
     <div className="min-h-screen bg-[#FBFBFA]">
-      <TopNav user={user} onAvatarClick={() => setProfileOpen(true)} />
+      <TopNav user={user} onAvatarClick={() => navigate('/profile')} />
 
       <main className="mx-auto max-w-7xl px-4 sm:px-6 py-8 animate-fade-up">
         {children}
       </main>
-
-      {/* Profile Drawer */}
-      {profileOpen && <ProfileDrawer onClose={() => setProfileOpen(false)} />}
 
       {/* Floating AI Coach button — hidden for admins */}
       {user?.role !== 'admin' && (
