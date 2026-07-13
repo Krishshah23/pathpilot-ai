@@ -23,6 +23,8 @@ export default function InterviewPrepPage() {
   const [sessionLog, setSessionLog] = useState([]); // full Q&A history for persistence
   const [gapIndex, setGapIndex] = useState(0);
   const [savingSession, setSavingSession] = useState(false);
+  const [pastSessions, setPastSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
 
   const [error, setError] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -42,6 +44,17 @@ export default function InterviewPrepPage() {
         setResume(data.data.resume);
       } catch { /* no resume */ }
       finally { setLoadingResume(false); }
+    })();
+  }, []);
+
+  /* ── Load past interview sessions ── */
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get('/ai-coach/interview/sessions');
+        setPastSessions(data.data.sessions || []);
+      } catch { /* silent */ }
+      finally { setLoadingSessions(false); }
     })();
   }, []);
 
@@ -280,7 +293,44 @@ export default function InterviewPrepPage() {
           </div>
         )}
 
-        {/* ── LOADING ── */}
+        {/* ── PAST SESSIONS ── */}
+        {stage === 'setup' && !loadingSessions && pastSessions.length > 0 && (
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-white border border-[#EAEAE5] rounded-2xl p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Icon.History size={16} className="text-[#525252]" />
+                <h3 className="font-semibold text-sm text-[#171717]">Past Sessions</h3>
+                <span className="ml-auto text-[10px] text-[#A3A3A3]">{pastSessions.length} session{pastSessions.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="space-y-2">
+                {pastSessions.slice(0, 5).map((s) => {
+                  const date = new Date(s.completedAt || s.createdAt).toLocaleDateString('en-IN', {
+                    day: 'numeric', month: 'short', year: 'numeric'
+                  });
+                  const scoreColor = s.averageScore >= 75 ? '#22c55e' : s.averageScore >= 50 ? '#f59e0b' : '#ef4444';
+                  return (
+                    <div key={s._id} className="flex items-center gap-4 rounded-xl border border-[#EAEAE5] bg-[#F9F9F8] px-4 py-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl shrink-0"
+                        style={{ backgroundColor: `${scoreColor}18` }}>
+                        <span className="text-sm font-bold" style={{ color: scoreColor }}>{s.averageScore}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-[#171717] truncate">{s.targetRole}</p>
+                        <p className="text-[10px] text-[#A3A3A3] mt-0.5">
+                          {s.totalQuestions} question{s.totalQuestions !== 1 ? 's' : ''}
+                          {s.gapsAddressed?.length > 0 && ` · ${s.gapsAddressed.length} gap${s.gapsAddressed.length !== 1 ? 's' : ''} covered`}
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-[#A3A3A3] shrink-0">{date}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+
         {stage === 'loading' && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <Spinner className="h-8 w-8 text-[#2B4C3F]" />

@@ -16,6 +16,19 @@ export default function PublicProfilePage() {
       try {
         const { data } = await api.get(`/profile/public/${publicCardId}`);
         setProfile(data.data);
+        // Dynamically update document title and OG meta tags for rich link previews
+        const name = data.data.user?.name;
+        const role = data.data.user?.profile?.dreamRole;
+        const title = role
+          ? `${name} — ${role} | PathPilot AI`
+          : `${name}'s Career Profile | PathPilot AI`;
+        const desc = `View ${name}'s verified career profile, skills, and path score on PathPilot AI.`;
+        document.title = title;
+        document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
+        document.querySelector('meta[property="og:description"]')?.setAttribute('content', desc);
+        document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', title);
+        document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', desc);
+        document.querySelector('meta[name="description"]')?.setAttribute('content', desc);
       } catch (err) {
         setError(errorMessage(err, 'This public career profile could not be found or is set to private.'));
       } finally {

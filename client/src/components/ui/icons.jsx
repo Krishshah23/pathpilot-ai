@@ -340,5 +340,12 @@ export const Icon = {
       <circle cx="12" cy="13" r="4" />
     </Svg>
   ),
+  History: (p) => (
+    <Svg {...p}>
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <polyline points="3 3 3 8 8 8" />
+      <polyline points="12 7 12 12 15 15" />
+    </Svg>
+  ),
 };
 
