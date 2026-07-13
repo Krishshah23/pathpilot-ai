@@ -109,6 +109,7 @@ export const getPublicCard = asyncHandler(async (req, res) => {
       readinessLabel: pathScore.readiness?.label || pathScore.label || 'Exploring',
       readinessSummary: pathScore.readiness?.summary || pathScore.summary || '',
       avatarUrl: user.profile.avatarUrl,
+      factors: pathScore.factors || [],
     },
   });
 });
