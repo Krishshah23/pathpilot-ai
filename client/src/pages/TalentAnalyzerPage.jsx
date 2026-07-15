@@ -415,76 +415,7 @@ export default function TalentAnalyzerPage() {
       </div>
 
       {/* ── Fix Helper Side Panel Overlay ── */}
-      {fixTarget && (() => {
-        const [copied, setCopied] = useState(false);
-        const handleCopy = () => {
-          navigator.clipboard.writeText(fixTarget.fix);
-          setCopied(true);
-          toast.success('Fix copied to clipboard!');
-          setTimeout(() => setCopied(false), 2000);
-        };
-
-        return (
-          <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity">
-            <div className="absolute inset-0" onClick={() => setFixTarget(null)} />
-            <div className="relative w-full max-w-md h-full bg-white border-l border-[#EAEAE5] shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-fade-in">
-              <div className="space-y-6">
-                <div className="flex items-center justify-between border-b border-[#EAEAE5] pb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2B4C3F]/10 text-[#2B4C3F]">
-                      <Icon.Sparkles size={16} />
-                    </span>
-                    <h3 className="text-sm font-bold text-[#171717]">Interactive Fix Helper</h3>
-                  </div>
-                  <button onClick={() => setFixTarget(null)} className="text-[#A3A3A3] hover:text-[#525252] transition-colors">
-                    <Icon.X size={20} />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">Critique Target</span>
-                    <h4 className="text-sm font-bold text-[#171717] mt-1">{fixTarget.title}</h4>
-                    <p className="text-xs text-[#525252] mt-1 leading-relaxed">{fixTarget.current}</p>
-                  </div>
-
-                  <div className="rounded-xl border border-[#E8C4B8] bg-[#FDF5F3] p-4 space-y-2">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#B85A3C]">
-                      <Icon.AlertTriangle size={12} /> Target Issue
-                    </div>
-                    <p className="text-xs text-[#525252] leading-relaxed">
-                      This issue negatively impacts your overall score. Standard recruiter filters penalize this pattern.
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">AI Rewrite Recommendation</span>
-                    <div className="rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] p-4 text-xs font-mono text-[#2B4C3F] leading-relaxed break-words whitespace-pre-wrap select-all">
-                      {fixTarget.fix}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-[#EAEAE5] pt-5 mt-6 flex gap-3">
-                <button
-                  onClick={() => setFixTarget(null)}
-                  className="flex-1 h-10 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F5F5F3] transition-colors"
-                >
-                  Close Panel
-                </button>
-                <button
-                  onClick={handleCopy}
-                  className="flex-1 h-10 rounded-xl bg-[#2B4C3F] text-white text-sm font-semibold hover:bg-[#20392F] transition-colors flex items-center justify-center gap-2 shadow-sm"
-                >
-                  {copied ? <Icon.Check size={16} /> : <Icon.Copy size={16} />}
-                  {copied ? 'Copied!' : 'Copy AI Fix'}
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      <FixHelperPanel fixTarget={fixTarget} onClose={() => setFixTarget(null)} />
     </AppShell>
   );
 }
@@ -888,6 +819,85 @@ function JobListCard({ job }) {
           Apply <Icon.ArrowRight size={12} />
         </a>
       )}
+    </div>
+  );
+}
+
+function FixHelperPanel({ fixTarget, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const toast = useToast();
+
+  useEffect(() => {
+    setCopied(false);
+  }, [fixTarget]);
+
+  if (!fixTarget) return null;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(fixTarget.fix);
+    setCopied(true);
+    toast.success('Fix copied to clipboard!');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="relative w-full max-w-md h-full bg-white border-l border-[#EAEAE5] shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-fade-in">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-[#EAEAE5] pb-4">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2B4C3F]/10 text-[#2B4C3F]">
+                <Icon.Sparkles size={16} />
+              </span>
+              <h3 className="text-sm font-bold text-[#171717]">Interactive Fix Helper</h3>
+            </div>
+            <button onClick={onClose} className="text-[#A3A3A3] hover:text-[#525252] transition-colors">
+              <Icon.X size={20} />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">Critique Target</span>
+              <h4 className="text-sm font-bold text-[#171717] mt-1">{fixTarget.title}</h4>
+              <p className="text-xs text-[#525252] mt-1 leading-relaxed">{fixTarget.current}</p>
+            </div>
+
+            <div className="rounded-xl border border-[#E8C4B8] bg-[#FDF5F3] p-4 space-y-2">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#B85A3C]">
+                <Icon.AlertTriangle size={12} /> Target Issue
+              </div>
+              <p className="text-xs text-[#525252] leading-relaxed">
+                This issue negatively impacts your overall score. Standard recruiter filters penalize this pattern.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">AI Rewrite Recommendation</span>
+              <div className="rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] p-4 text-xs font-mono text-[#2B4C3F] leading-relaxed break-words whitespace-pre-wrap select-all">
+                {fixTarget.fix}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-[#EAEAE5] pt-5 mt-6 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 h-10 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F5F5F3] transition-colors"
+          >
+            Close Panel
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex-1 h-10 rounded-xl bg-[#2B4C3F] text-white text-sm font-semibold hover:bg-[#20392F] transition-colors flex items-center justify-center gap-2 shadow-sm"
+          >
+            {copied ? <Icon.Check size={16} /> : <Icon.Copy size={16} />}
+            {copied ? 'Copied!' : 'Copy AI Fix'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
