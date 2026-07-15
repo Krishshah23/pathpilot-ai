@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
@@ -825,10 +826,34 @@ function JobListCard({ job }) {
 
 function FixHelperPanel({ fixTarget, onClose }) {
   const [copied, setCopied] = useState(false);
+  const [visible, setVisible] = useState(false);
   const toast = useToast();
+  const panelRef = useRef(null);
 
+  // Reset copy state & trigger entrance animation when target changes
   useEffect(() => {
     setCopied(false);
+    if (fixTarget) {
+      requestAnimationFrame(() => setVisible(true));
+    } else {
+      setVisible(false);
+    }
+  }, [fixTarget]);
+
+  // Escape key dismissal
+  useEffect(() => {
+    if (!fixTarget) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [fixTarget, onClose]);
+
+  // Lock body scroll while panel is open
+  useEffect(() => {
+    if (fixTarget) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
   }, [fixTarget]);
 
   if (!fixTarget) return null;
@@ -837,67 +862,138 @@ function FixHelperPanel({ fixTarget, onClose }) {
     navigator.clipboard.writeText(fixTarget.fix);
     setCopied(true);
     toast.success('Fix copied to clipboard!');
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), 2500);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity">
-      <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-md h-full bg-white border-l border-[#EAEAE5] shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-fade-in">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between border-b border-[#EAEAE5] pb-4">
-            <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2B4C3F]/10 text-[#2B4C3F]">
-                <Icon.Sparkles size={16} />
-              </span>
-              <h3 className="text-sm font-bold text-[#171717]">Interactive Fix Helper</h3>
-            </div>
-            <button onClick={onClose} className="text-[#A3A3A3] hover:text-[#525252] transition-colors">
-              <Icon.X size={20} />
-            </button>
-          </div>
+  const isCritical = fixTarget.type === 'flag';
 
-          <div className="space-y-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex justify-end">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/30 backdrop-blur-[6px] fix-panel-backdrop"
+        onClick={onClose}
+      />
+
+      {/* Drawer */}
+      <div
+        ref={panelRef}
+        className="relative w-full max-w-[440px] h-full bg-white border-l border-[#EAEAE5] flex flex-col fix-panel-drawer"
+      >
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[#EAEAE5] bg-[#FBFBFA]">
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#2B4C3F] text-white shadow-sm">
+              <Icon.Sparkles size={16} />
+            </span>
             <div>
-              <span className="text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">Critique Target</span>
-              <h4 className="text-sm font-bold text-[#171717] mt-1">{fixTarget.title}</h4>
-              <p className="text-xs text-[#525252] mt-1 leading-relaxed">{fixTarget.current}</p>
+              <h3 className="text-sm font-bold text-[#171717] leading-tight">Fix Helper</h3>
+              <p className="text-[10px] text-[#A3A3A3] mt-0.5">AI-powered recommendation</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#F5F5F3] text-[#A3A3A3] hover:text-[#525252] transition-all duration-200"
+            aria-label="Close panel"
+          >
+            <Icon.X size={18} />
+          </button>
+        </div>
+
+        {/* ── Scrollable Content ── */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="fix-panel-content space-y-5">
+
+            {/* Section 1: What was flagged */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#F5F5F3] text-[10px] font-bold text-[#525252]">1</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#A3A3A3]">What was flagged</span>
+              </div>
+              <div className="rounded-xl border border-[#EAEAE5] bg-white p-4">
+                <h4 className="text-[13px] font-bold text-[#171717] leading-snug">{fixTarget.title}</h4>
+                <p className="text-xs text-[#525252] mt-2 leading-relaxed">{fixTarget.current}</p>
+              </div>
             </div>
 
-            <div className="rounded-xl border border-[#E8C4B8] bg-[#FDF5F3] p-4 space-y-2">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#B85A3C]">
-                <Icon.AlertTriangle size={12} /> Target Issue
+            {/* Section 2: Why it matters */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#F5F5F3] text-[10px] font-bold text-[#525252]">2</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#A3A3A3]">Why it matters</span>
               </div>
-              <p className="text-xs text-[#525252] leading-relaxed">
-                This issue negatively impacts your overall score. Standard recruiter filters penalize this pattern.
+              <div className={cn(
+                'rounded-xl border p-4 space-y-2',
+                isCritical ? 'border-[#E8C4B8] bg-[#FDF5F3]' : 'border-[#E8D8A8] bg-[#FEFBF0]'
+              )}>
+                <div className="flex items-center gap-2">
+                  <Icon.AlertTriangle size={14} className={isCritical ? 'text-[#B85A3C]' : 'text-[#92400E]'} />
+                  <span className={cn(
+                    'text-[10px] font-bold uppercase tracking-wider',
+                    isCritical ? 'text-[#B85A3C]' : 'text-[#92400E]'
+                  )}>
+                    {isCritical ? 'Recruiter Red Flag' : 'Improvement Area'}
+                  </span>
+                </div>
+                <p className="text-xs text-[#525252] leading-relaxed">
+                  {isCritical
+                    ? 'This pattern triggers automated rejection in most ATS systems. Recruiters reviewing your resume will flag this as incomplete or unprofessional.'
+                    : 'Addressing this will strengthen your resume\'s competitive positioning and improve match scores with target roles.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Section 3: Recommended fix */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#2B4C3F] text-[10px] font-bold text-white">3</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#A3A3A3]">Recommended fix</span>
+              </div>
+              <div className="rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] p-4 fix-panel-shimmer relative overflow-hidden">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <Icon.Sparkles size={12} className="text-[#2B4C3F]" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#2B4C3F]">AI Suggestion</span>
+                </div>
+                <p className="text-[13px] text-[#2B4C3F] leading-relaxed font-medium break-words whitespace-pre-wrap select-all">
+                  {fixTarget.fix}
+                </p>
+              </div>
+            </div>
+
+            {/* Quick tip */}
+            <div className="flex items-start gap-2.5 rounded-lg border border-[#EAEAE5] bg-[#FBFBFA] px-4 py-3">
+              <Icon.Info size={14} className="text-[#A3A3A3] shrink-0 mt-0.5" />
+              <p className="text-[11px] text-[#A3A3A3] leading-relaxed">
+                Copy this fix, paste it into your resume, then re-upload to see your updated score.
               </p>
             </div>
 
-            <div className="space-y-2">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">AI Rewrite Recommendation</span>
-              <div className="rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] p-4 text-xs font-mono text-[#2B4C3F] leading-relaxed break-words whitespace-pre-wrap select-all">
-                {fixTarget.fix}
-              </div>
-            </div>
           </div>
         </div>
 
-        <div className="border-t border-[#EAEAE5] pt-5 mt-6 flex gap-3">
+        {/* ── Footer Actions ── */}
+        <div className="px-6 py-4 border-t border-[#EAEAE5] bg-[#FBFBFA] flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 h-10 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F5F5F3] transition-colors"
+            className="flex-1 h-11 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F0F0EC] hover:border-[#D0D0CA] transition-all duration-200"
           >
-            Close Panel
+            Dismiss
           </button>
           <button
             onClick={handleCopy}
-            className="flex-1 h-10 rounded-xl bg-[#2B4C3F] text-white text-sm font-semibold hover:bg-[#20392F] transition-colors flex items-center justify-center gap-2 shadow-sm"
+            className={cn(
+              'flex-1 h-11 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm',
+              copied
+                ? 'bg-[#2B4C3F] text-white fix-panel-copy-success'
+                : 'bg-[#171717] text-white hover:bg-[#2a2a2a] hover:shadow-md active:scale-[0.98]'
+            )}
           >
             {copied ? <Icon.Check size={16} /> : <Icon.Copy size={16} />}
-            {copied ? 'Copied!' : 'Copy AI Fix'}
+            {copied ? 'Copied to clipboard!' : 'Copy AI Fix'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

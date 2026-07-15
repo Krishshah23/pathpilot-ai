@@ -363,4 +363,55 @@ textarea.input { height: auto; padding-block: 0.75rem; }
     to   { opacity: 1; transform: translateY(0); }
   }
   .animate-count-up { animation: count-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both; }
+
+  /* ── Fix Helper Side-Panel (Notion-style drawer) ──────────── */
+  @keyframes panel-backdrop-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes panel-slide-in {
+    from { transform: translateX(100%); opacity: 0.5; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  @keyframes panel-content-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes panel-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes copy-success {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+
+  .fix-panel-backdrop {
+    animation: panel-backdrop-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .fix-panel-drawer {
+    animation: panel-slide-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+    box-shadow:
+      -8px 0 30px rgba(0,0,0,0.08),
+      -2px 0 8px rgba(0,0,0,0.04);
+  }
+  .fix-panel-content > * {
+    opacity: 0;
+    animation: panel-content-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .fix-panel-content > *:nth-child(1) { animation-delay: 0.12s; }
+  .fix-panel-content > *:nth-child(2) { animation-delay: 0.18s; }
+  .fix-panel-content > *:nth-child(3) { animation-delay: 0.24s; }
+  .fix-panel-content > *:nth-child(4) { animation-delay: 0.30s; }
+  .fix-panel-content > *:nth-child(5) { animation-delay: 0.36s; }
+
+  .fix-panel-shimmer {
+    background: linear-gradient(90deg, transparent 30%, rgba(43,76,63,0.06) 50%, transparent 70%);
+    background-size: 200% 100%;
+    animation: panel-shimmer 2.5s ease-in-out infinite;
+  }
+  .fix-panel-copy-success {
+    animation: copy-success 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 }
