@@ -6,6 +6,29 @@ const ai = new GoogleGenAI({ apiKey: env.gemini.apiKey });
 
 const MODEL = env.gemini.model; // gemini-3.5-flash
 
+async function safeGenerateContent({ model, contents, config }) {
+  try {
+    return await ai.models.generateContent({ model, contents, config });
+  } catch (err) {
+    const msg = err?.message || String(err);
+    const isQuota = msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota') || msg.includes('limit');
+    if (isQuota && model !== 'gemini-3.1-flash-lite') {
+      console.warn(`[Gemini Fallback] Quota exceeded on model '${model}'. Retrying with 'gemini-3.1-flash-lite'...`);
+      try {
+        return await ai.models.generateContent({
+          model: 'gemini-3.1-flash-lite',
+          contents,
+          config,
+        });
+      } catch (fallbackErr) {
+        console.error('[Gemini Fallback] Fallback model also failed:', fallbackErr.message);
+        throw fallbackErr;
+      }
+    }
+    throw err;
+  }
+}
+
 /**
  * Converts raw Google API errors into clean, user-friendly ApiErrors.
  * Prevents raw 429/403 JSON from leaking to the frontend.
@@ -97,7 +120,7 @@ COACHING RULES:
 
 async function generateText(systemInstruction, userPrompt) {
   try {
-    const response = await ai.models.generateContent({
+    const response = await safeGenerateContent({
       model: MODEL,
       contents: userPrompt,
       config: {
@@ -114,7 +137,7 @@ async function generateText(systemInstruction, userPrompt) {
 
 async function generateJson(prompt) {
   try {
-    const response = await ai.models.generateContent({
+    const response = await safeGenerateContent({
       model: MODEL,
       contents: prompt,
       config: {
@@ -162,7 +185,7 @@ export async function geminiChat({ user, resume, roadmap, history = [], message 
     }
     contents.push({ role: 'user', parts: [{ text: message }] });
 
-    const response = await ai.models.generateContent({
+    const response = await safeGenerateContent({
       model: MODEL,
       contents,
       config: {
@@ -308,7 +331,7 @@ Write 3-4 short paragraphs:
 Write directly to them, use their first name (${user.name.split(' ')[0]}), be honest but motivating.`;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await safeGenerateContent({
       model: MODEL,
       contents: userPrompt,
       config: {
