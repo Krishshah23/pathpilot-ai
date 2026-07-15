@@ -9,7 +9,11 @@ import { asyncHandler } from '../utils/asyncHandler.js';
  */
 export const protect = asyncHandler(async (req, _res, next) => {
   const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  let token = header.startsWith('Bearer ') ? header.slice(7) : null;
+
+  if (!token && req.query.token) {
+    token = req.query.token;
+  }
 
   if (!token) throw ApiError.unauthorized('Authentication required');
 

@@ -2,10 +2,10 @@
 @import 'tailwindcss';
 
 /*
-  PathPilot AI — Design System v2
+  PathPilot AI — Design System v3
   Matte & Natural. Publishing-house aesthetic.
   Warm off-white canvas, flat white cards, deep charcoal ink.
-  No glassmorphism. No neon gradients. No glowing borders.
+  Premium micro-interactions, frosted surfaces, luxury easing.
 */
 
 @theme {
@@ -67,6 +67,9 @@
     margin: 0;
     min-height: 100vh;
     background-color: var(--color-canvas);
+    background-image: radial-gradient(#D0D0CA 1.5px, transparent 1.5px);
+    background-size: 32px 32px;
+    background-attachment: fixed;
     color: var(--color-ink);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -88,84 +91,231 @@
     background: rgba(43, 76, 63, 0.2);
   }
 
+  /* Ruler-style progress tracks — high-contrast precision ticks */
+  .progress-ruler {
+    position: relative;
+    background-color: #F3F3EF;
+    background-image: repeating-linear-gradient(90deg, transparent, transparent 7px, #C0C0B5 7px, #C0C0B5 8px) !important;
+  }
+
   /* Slim, warm scrollbars */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-line);
+    background: #D5D5CD;
     border-radius: 9999px;
   }
-  ::-webkit-scrollbar-thumb:hover { background: #D0D0CA; }
+  ::-webkit-scrollbar-thumb:hover { background: #B5B5AB; }
 }
 
-@layer components {
-  /* Flat white card — zero shadow, warm border */
-  .card {
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-2xl);
-  }
+/* ─── Cards ────────────────────────────────────────────────────────── */
 
-  /* Legacy .glass — remapped to flat warm white for backward compat */
-  .glass {
-    background-color: var(--color-surface);
-    border: 1px solid var(--color-line);
-  }
-
-  /* Matte primary button */
-  .btn-brand {
-    background-color: var(--color-ink-dark);
-    color: #ffffff;
-  }
-  .btn-brand:hover { background-color: #2a2a2a; }
-
-  /* Form input — light mode */
-  .input {
-    display: block;
-    width: 100%;
-    height: 2.75rem;
-    padding-inline: 1rem;
-    border-radius: var(--radius-xl);
-    border: 1px solid var(--color-line);
-    background: var(--color-surface);
-    color: var(--color-ink);
-    font-size: 0.875rem;
-    font-family: var(--font-sans);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-  .input::placeholder { color: var(--color-faint); }
-  .input:focus {
-    outline: none;
-    border-color: var(--color-brand);
-    box-shadow: 0 0 0 3px rgba(43, 76, 63, 0.12);
-  }
-  textarea.input { height: auto; padding-block: 0.75rem; }
-
-  /* Typography helpers */
-  .text-gradient {
-    background: linear-gradient(135deg, var(--color-brand), var(--color-brand-soft));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-  }
-
-  /* Serif display heading */
-  .font-display { font-family: var(--font-serif); }
+/* Cotton-paper card — soft shadow, warm border, elegant hover */
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-2xl);
+  box-shadow:
+    0 1px 2px rgba(23, 23, 23, 0.03),
+    0 4px 16px -2px rgba(23, 23, 23, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.35s ease;
 }
+
+.card-hover:hover {
+  transform: translateY(-4px) scale(1.005);
+  box-shadow:
+    0 20px 40px -10px rgba(23, 23, 23, 0.08),
+    0 8px 20px -6px rgba(23, 23, 23, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border-color: #C5C5BD;
+}
+
+/* Matte card */
+.matte-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-2xl);
+  box-shadow:
+    0 1px 2px rgba(23, 23, 23, 0.02),
+    0 4px 16px -2px rgba(23, 23, 23, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.matte-card-hover {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.35s ease;
+}
+.matte-card-hover:hover {
+  transform: translateY(-4px) scale(1.005);
+  box-shadow:
+    0 20px 40px -10px rgba(23, 23, 23, 0.08),
+    0 8px 20px -6px rgba(23, 23, 23, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border-color: #C5C5BD;
+}
+
+/* Legacy .glass — mapped to flat warm white for backward compat */
+.glass {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 4px 24px -4px rgba(23, 23, 23, 0.02);
+}
+
+/* ─── Premium Banner (Smart CTA) ──────────────────────────────────── */
+
+.banner-premium {
+  background: linear-gradient(135deg, #1E362D 0%, #0F1C17 100%) !important;
+  border-left: 6px solid #C8DDD6 !important;
+  box-shadow:
+    0 16px 32px -12px rgba(30, 54, 45, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  border-top-left-radius: 0px !important;
+  border-bottom-left-radius: 0px !important;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────────── */
+
+.btn-editorial {
+  background-color: var(--color-ink-dark);
+  color: #ffffff;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.2s ease,
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-editorial:hover {
+  background-color: #262626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(23, 23, 23, 0.12);
+}
+.btn-editorial:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-brand {
+  background-color: var(--color-ink-dark);
+  color: #ffffff;
+}
+.btn-brand:hover { background-color: #2a2a2a; }
+
+/* ─── Form Inputs ──────────────────────────────────────────────────── */
+
+.input {
+  display: block;
+  width: 100%;
+  height: 2.75rem;
+  padding-inline: 1rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 0.875rem;
+  font-family: var(--font-sans);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.input::placeholder { color: var(--color-faint); }
+.input:focus {
+  outline: none;
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 3px rgba(43, 76, 63, 0.1);
+  background-color: #FFFFFF;
+}
+.input:hover:not(:focus) {
+  border-color: #D5D5CD;
+}
+textarea.input { height: auto; padding-block: 0.75rem; }
+
+/* ─── Typography Helpers ───────────────────────────────────────────── */
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-brand), var(--color-brand-soft));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.font-display { font-family: var(--font-serif); }
+
+/* ─── Frosted Navbar ───────────────────────────────────────────────── */
+
+.nav-frosted {
+  background-color: rgba(251, 251, 250, 0.82) !important;
+  backdrop-filter: blur(16px) saturate(1.6) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.6) !important;
+}
+
+/* ─── Auth Brand Panel ─────────────────────────────────────────────── */
+
+.auth-brand-panel {
+  background-color: #0C1810 !important;
+  background-image:
+    radial-gradient(circle at 20% 80%, rgba(43, 76, 63, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(61, 107, 89, 0.15) 0%, transparent 50%),
+    radial-gradient(#1A2E24 1px, transparent 1px) !important;
+  background-size: 100%, 100%, 20px 20px !important;
+}
+
+/* ─── Section Dividers ─────────────────────────────────────────────── */
+
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #EAEAE5 20%, #EAEAE5 80%, transparent 100%);
+  border: none;
+}
+
+/* ─── Metric Highlight ─────────────────────────────────────────────── */
+
+.metric-glow {
+  position: relative;
+}
+.metric-glow::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(43, 76, 63, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ─── Stagger animation delays for lists ───────────────────────────── */
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.10s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.20s; }
+.stagger-5 { animation-delay: 0.25s; }
 
 @layer utilities {
   /* Animations */
   @keyframes fade-up {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0); }
   }
-  .animate-fade-up { animation: fade-up 0.35s ease both; }
+  .animate-fade-up { animation: fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+  @keyframes fade-down {
+    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .animate-fade-down { animation: fade-down 0.25s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
   @keyframes fade-right {
     from { opacity: 0; transform: translateX(20px); }
     to   { opacity: 1; transform: translateX(0); }
   }
-  .animate-fade-right { animation: fade-right 0.3s ease both; }
+  .animate-fade-right { animation: fade-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+  @keyframes fade-scale {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .animate-fade-scale { animation: fade-scale 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
   @keyframes shimmer {
     100% { transform: translateX(100%); }
@@ -206,4 +356,11 @@
     75%, 100% { transform: scale(2); opacity: 0; }
   }
   .animate-ping { animation: ping 1.2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+
+  /* Score counter animation */
+  @keyframes count-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-count-up { animation: count-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both; }
 }

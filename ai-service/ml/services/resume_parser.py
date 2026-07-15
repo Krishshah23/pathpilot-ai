@@ -28,7 +28,7 @@ SECTION_HEADERS = {
 }
 
 EMAIL_RE = re.compile(r'[\w.+-]+@[\w-]+\.[\w.-]+')
-PHONE_RE = re.compile(r'(?:\+?\d[\s-]?){10,13}')
+PHONE_RE = re.compile(r'(?:\+?\d{1,4}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}|(?:\+?\d[\s-]?){10,14}')
 LINKEDIN_RE = re.compile(r'linkedin\.com/[\w/-]+', re.I)
 GITHUB_RE = re.compile(r'github\.com/[\w/-]+', re.I)
 
@@ -76,28 +76,148 @@ def _find_skills(text):
     return sorted(set(found))
 
 
+def _detect_section_header(line):
+    """
+    Detects if a line is a section header, returning the normalized key or None.
+    A line is a candidate if it is short (<= 40 chars), doesn't start with a bullet,
+    and matches one of our defined section header phrases exactly.
+    """
+    cleaned = line.strip()
+    if not cleaned or len(cleaned) > 40:
+        return None
+
+    # Bullets or list items are never section headers
+    if re.match(r'^[\-\*•●■▪◦□◇◆✓✔]|^\d+[\.\)]\s+', cleaned):
+        return None
+
+    # Normalize: strip out non-alphanumeric chars and collapse whitespace
+    norm = re.sub(r'[^a-z0-9 ]', '', cleaned.lower()).strip()
+    norm = re.sub(r'\s+', ' ', norm)
+    if not norm:
+        return None
+
+    SECTION_MAP = {
+        'summary': {
+            'summary', 'objective', 'about', 'about me', 'profile', 
+            'professional summary', 'career objective', 'summary of qualifications',
+            'executive summary', 'career profile', 'professional profile'
+        },
+        'skills': {
+            'skills', 'technical skills', 'technologies', 'tech stack', 
+            'skills abilities', 'skills and tools', 'core competencies', 
+            'key skills', 'expertise', 'tools', 'areas of expertise',
+            'technical expertise', 'technical skills and tools'
+        },
+        'education': {
+            'education', 'academic', 'academics', 'academic profile', 
+            'qualification', 'qualifications', 'academic background', 
+            'education history', 'educational qualification', 'educational qualifications'
+        },
+        'experience': {
+            'experience', 'work experience', 'employment', 'internship', 
+            'internships', 'employment history', 'work history', 
+            'professional experience', 'professional history', 'relevant experience',
+            'work experience history', 'career history', 'professional background'
+        },
+        'projects': {
+            'projects', 'personal projects', 'academic projects', 
+            'key projects', 'selected projects', 'technical projects', 
+            'portfolio', 'recent projects', 'academic and personal projects',
+            'featured projects', 'major projects'
+        },
+        'certifications': {
+            'certifications', 'certificates', 'courses', 'certification', 
+            'licenses certifications', 'licenses and certifications',
+            'certifications and courses', 'online courses'
+        },
+        'achievements': {
+            'achievements', 'awards', 'honors', 'accomplishments', 
+            'awards and achievements', 'extra curricular activities', 
+            'extracurriculars', 'co curricular activities', 'achievements and awards'
+        }
+    }
+
+    for key, val_set in SECTION_MAP.items():
+        if norm in val_set:
+            return key
+
+    return None
+
+
+def _looks_like_project_title(line, prev_line, idx, current_project):
+    # 0. Can't have two project titles in a row without any content
+    if current_project and not current_project['tech_stack'] and not current_project['bullets']:
+        return False
+
+    cleaned = line.strip()
+    # 1. Bullets or numbered lists are never project titles
+    if re.match(r'^[\-\*•●■▪◦□◇◆✓✔]|^\d+[\.\)]\s+', cleaned):
+        return False
+
+    lower_line = cleaned.lower()
+    starts_with_verb = any(lower_line.startswith(v) for v in ACTION_VERBS)
+    starts_with_continuation = any(lower_line.startswith(w) for w in [
+        'showcased', 'presented', 'featured', 'won', 'awarded', 'using', 'utilized', 
+        'technologies', 'tools', 'database', 'backend', 'frontend', 'under', 'by', 'at'
+    ])
+    if starts_with_verb or starts_with_continuation:
+        return False
+
+    # 2. First line of the section is always a title
+    if idx == 0:
+        return True
+
+    # Check if the line has title-like content
+    has_separator = any(sep in cleaned for sep in ['|', '·', ' - ', ' – ', '—', ':', 'github.com', 'gitlab.com'])
+    has_date = bool(re.search(r'\b(19|20)\d{2}\b|present|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec', lower_line))
+    starts_with_proj = any(lower_line.startswith(p) for p in ['project ', 'project:', 'personal project', 'academic project', 'github:', 'github link:'])
+    starts_with_num = bool(re.match(r'^\[?\d+\]?[\.\-:\s]', cleaned))
+    
+    is_short_title = len(cleaned) < 55 and cleaned and cleaned[0].isupper() and not cleaned.endswith('.')
+
+    has_title_indicators = has_separator or has_date or starts_with_proj or starts_with_num or is_short_title
+
+    # 3. If previous line was a bullet or a list item, and current line has title indicators
+    if prev_line and re.match(r'^[\-\*•●■▪◦□◇◆✓✔]|^\d+[\.\)]\s+', prev_line.strip()):
+        if has_title_indicators:
+            return True
+        return False
+
+    # 4. Fallback matches based on explicit indicators
+    if starts_with_proj or starts_with_num:
+        return True
+
+    # 5. Short capitalized line after a long description line or an action verb
+    if is_short_title:
+        if prev_line:
+            prev_lower = prev_line.lower()
+            prev_starts_with_verb = any(prev_lower.startswith(v) for v in ACTION_VERBS)
+            if prev_starts_with_verb or len(prev_line.strip()) > 80:
+                return True
+
+    # 6. Separator/date matches
+    if len(cleaned) < 100:
+        if has_date or has_separator:
+            return True
+
+    return False
+
+
 def _split_sections(text):
     """
     Split resume text into sections keyed by our normalized section names.
-    A line is treated as a header if, stripped, it matches a known header
-    (optionally followed by a colon) and is short.
+    A line is treated as a header if it is recognized by _detect_section_header.
     """
     lines = text.split('\n')
     sections = {}
     current = 'header'  # text before the first recognized section
     sections[current] = []
 
-    # Build lookup: header phrase -> normalized key
-    phrase_to_key = {}
-    for key, phrases in SECTION_HEADERS.items():
-        for p in phrases:
-            phrase_to_key[p] = key
-
     for raw in lines:
         line = raw.strip()
-        norm = re.sub(r'[^a-z ]', '', line.lower()).strip()
-        if line and len(line) <= 40 and norm in phrase_to_key:
-            current = phrase_to_key[norm]
+        detected = _detect_section_header(line)
+        if detected:
+            current = detected
             sections.setdefault(current, [])
         else:
             sections.setdefault(current, []).append(raw)
@@ -130,9 +250,7 @@ def _extract_education(sections):
 
 
 def _extract_projects(sections, links=None):
-    # More robust segmentation: detect a title line followed by a tech-stack
-    # line (contains separators like '·' or '|') and then bullets. This avoids
-    # splitting wrapped description lines into separate project entries.
+    # More robust segmentation using title-detection heuristic.
     raw = sections.get('projects', '') or ''
     # Tokenize non-empty lines first
     raw_lines = [l.rstrip() for l in raw.split('\n') if l.strip()]
@@ -150,10 +268,10 @@ def _extract_projects(sections, links=None):
         while i + 1 < len(raw_lines):
             nxt = raw_lines[i + 1].lstrip()
             # Do not merge if next line starts like a bullet or a numbered list
-            if re.match(r'^[\-\*•\d\.)]', nxt):
+            if re.match(r'^[\-\*•●■▪◦□◇◆✓✔]|^\d+[\.\)]\s+', nxt):
                 break
             # Do not merge if next line looks like a tech-stack separator (e.g. contains '·' or '|')
-            if re.search(r'[·|,]', nxt) and len(nxt.split()) <= 8:
+            if re.search(r'[·|]', nxt) and len(nxt.split()) <= 8:
                 break
             # Merge when current line does not end with sentence terminator
             # and next line starts with a lowercase letter (wrapped continuation)
@@ -169,46 +287,36 @@ def _extract_projects(sections, links=None):
     if not raw_lines:
         return []
 
-    BULLET_RE = re.compile(r'^[•\-\*]\s+')
-    TECH_STACK_RE = re.compile(r'.+[·|,].+')
-
     projects = []
     current = None
-    i = 0
-    while i < len(raw_lines):
-        line = raw_lines[i].strip()
-        next_line = raw_lines[i + 1].strip() if i + 1 < len(raw_lines) else ''
 
-        is_title_candidate = (
-            not BULLET_RE.match(line)
-            and not TECH_STACK_RE.match(line)
-            and TECH_STACK_RE.match(next_line)
-        )
+    for idx, line in enumerate(raw_lines):
+        prev_line = raw_lines[idx - 1] if idx > 0 else None
 
-        if is_title_candidate:
+        if _looks_like_project_title(line, prev_line, idx, current):
             if current:
                 projects.append(current)
-            current = {'title': line[:150], 'tech_stack': next_line, 'bullets': []}
-            i += 2
+            current = {'title': line[:150], 'tech_stack': '', 'bullets': []}
             continue
 
-        if BULLET_RE.match(line) and current:
-            current['bullets'].append(BULLET_RE.sub('', line))
-        elif current and current['bullets']:
-            # continuation of previous bullet (wrapped line already merged earlier)
-            current['bullets'][-1] += ' ' + line
+        if current is None:
+            current = {'title': line[:150], 'tech_stack': '', 'bullets': []}
+            continue
+
+        is_bullet = bool(re.match(r'^[\-\*•●■▪◦□◇◆✓✔]|^\d+[\.\)]\s+', line))
+        if is_bullet:
+            clean_bullet = re.sub(r'^[\s\-\*•●■▪◦□◇◆✓✔\d.)]+', '', line).strip()
+            if clean_bullet:
+                current['bullets'].append(clean_bullet)
         else:
-            # Fallback: treat an isolated non-bullet as a short description/title
-            if current is None:
-                current = {'title': line[:150], 'tech_stack': '', 'bullets': []}
+            # Check if this line looks like a tech stack or simple subtitle
+            has_separator = any(sep in line for sep in ['|', '·', ',', ' - ', ' – '])
+            starts_with_verb = any(line.lower().startswith(v) for v in ACTION_VERBS)
+            is_tech_stack_like = (has_separator or len(line) < 50) and not starts_with_verb
+            if not current['tech_stack'] and not current['bullets'] and is_tech_stack_like:
+                current['tech_stack'] = line
             else:
-                # attach to last bullet or as a loose description
-                if current['bullets']:
-                    current['bullets'][-1] += ' ' + line
-                else:
-                    # keep as a short description in bullets
-                    current['bullets'].append(line)
-        i += 1
+                current['bullets'].append(line)
 
     if current:
         projects.append(current)
@@ -228,34 +336,28 @@ def _extract_projects(sections, links=None):
 
     # ── URL truncation repair ─────────────────────────────────────────────────
     # pdf-parse sometimes drops glyph groups inside hyperlink annotation rects,
-    # leaving only a 1-3 char stub at the end of a URL like
-    #   "github.com/bhattyashwi/S"   (should be "github.com/bhattyashwi/SkillLink")
-    # The full URL is always available in the annotation link list extracted by
-    # pdf.js. We match each partial URL in description text against the annotation
-    # list using prefix matching, and substitute the full form when found.
+    # leaving only a 1-3 char stub at the end of a URL. We match each partial URL
+    # in description text against the annotation list and substitute full form.
     if links:
         # Build a set of full URLs for fast prefix lookups
         full_urls = [u for u in links if u and ('github.com' in u.lower() or 'linkedin.com' in u.lower())]
         PARTIAL_RE = re.compile(
-            # A github/linkedin path whose final segment is suspiciously short
-            # (1-3 chars) — the classic symptom of annotation-rect truncation.
             r'(https?://)?((github|linkedin)\.com/[\w./-]+?/[\w]{1,3})(?=[^\w/-]|$)',
             re.I
         )
         for item in items:
             def _replace_partial(m):
-                fragment = m.group(2)  # e.g. "github.com/bhattyashwi/S"
-                scheme   = m.group(1) or 'https://'  # scheme may be absent in text
+                fragment = m.group(2)
+                scheme   = m.group(1) or 'https://'
                 for full in full_urls:
                     # Normalize full URL to bare form for comparison
                     full_bare = re.sub(r'^https?://', '', full).rstrip('/')
                     fragment_norm = fragment.lower().rstrip('/')
                     full_norm = full_bare.lower()
-                    # Check if the full URL starts with the fragment (case-insensitive)
-                    # AND the fragment is shorter than the full URL (i.e. it's partial)
+                    # Check if full URL starts with fragment
                     if full_norm.startswith(fragment_norm) and len(full_bare) > len(fragment):
-                        return scheme + full_bare  # restore the complete URL
-                return m.group(0)  # no match found — leave as-is
+                        return scheme + full_bare
+                return m.group(0)
 
             item['description'] = PARTIAL_RE.sub(_replace_partial, item['description'])
             item['title'] = PARTIAL_RE.sub(_replace_partial, item['title'])

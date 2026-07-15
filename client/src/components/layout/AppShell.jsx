@@ -49,13 +49,13 @@ function TopNav({ user }) {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#FBFBFA] border-b border-[#EAEAE5]">
+    <header className="sticky top-0 z-40 nav-frosted border-b border-[#EAEAE5]/60">
       <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between gap-8">
 
         {/* Left: Logo */}
-        <a href="/dashboard" className="flex items-center gap-2.5 shrink-0">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#171717]">
-            <span className="text-white font-bold text-sm font-sans">PP</span>
+        <a href="/dashboard" className="flex items-center gap-2.5 shrink-0 group">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#171717] shadow-sm transition-transform duration-300 group-hover:scale-105">
+            <span className="text-white font-bold text-sm font-sans tracking-tight">PP</span>
           </span>
           <span className="font-serif font-bold text-[#171717] text-lg tracking-tight hidden sm:block">
             PathPilot
@@ -100,7 +100,7 @@ function TopNav({ user }) {
 
           {/* Account Dropdown Popover */}
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-[#EAEAE5] bg-white p-1.5 shadow-xl z-50 animate-fade-down origin-top-right">
+            <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-[#EAEAE5] bg-white p-1.5 shadow-xl z-50 animate-fade-down origin-top-right" style={{ boxShadow: '0 12px 40px -8px rgba(23, 23, 23, 0.12), 0 4px 12px -4px rgba(23, 23, 23, 0.06)' }}>
               {/* Account Header */}
               <div className="px-3 py-2 border-b border-[#F5F5F3] mb-1">
                 <p className="text-xs font-bold text-[#171717] leading-tight truncate">{user?.name}</p>
@@ -563,11 +563,12 @@ export function AppShell({ children }) {
       {user?.role !== 'admin' && (
         <button
           onClick={() => setCoachOpen(true)}
-          className="fixed bottom-6 right-6 z-40 flex h-13 w-13 items-center justify-center rounded-full bg-[#171717] text-white shadow-lg hover:bg-[#2a2a2a] transition-all hover:scale-105"
-          style={{ height: '52px', width: '52px' }}
+          className="fixed bottom-6 right-6 z-40 flex items-center justify-center rounded-full bg-[#171717] text-white transition-all duration-300 hover:scale-110 active:scale-95 group"
+          style={{ height: '56px', width: '56px', boxShadow: '0 8px 32px -4px rgba(23, 23, 23, 0.3), 0 2px 8px rgba(23, 23, 23, 0.1)' }}
           aria-label="Open AI Career Coach"
         >
-          <Icon.MessageSquare size={22} />
+          <span className="absolute inset-0 rounded-full border-2 border-[#2B4C3F]/30 animate-ping" />
+          <Icon.MessageSquare size={22} className="relative z-10" />
         </button>
       )}
 

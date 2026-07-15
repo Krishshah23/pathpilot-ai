@@ -29,9 +29,11 @@ export function Button({
     <button
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-colors duration-150',
+        'inline-flex items-center justify-center gap-2 rounded-xl font-semibold',
+        'transition-all duration-200 cubic-bezier(0.16, 1, 0.3, 1)',
+        'hover:-translate-y-[1px] active:scale-[0.98]',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2B4C3F]/40',
-        'disabled:cursor-not-allowed disabled:opacity-50',
+        'disabled:cursor-not-allowed disabled:opacity-50 disabled:transform-none',
         VARIANTS[variant],
         SIZES[size],
         className

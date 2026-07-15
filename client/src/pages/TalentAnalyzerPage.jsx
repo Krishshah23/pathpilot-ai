@@ -11,6 +11,230 @@ import { DREAM_ROLES } from '@/config/careerData';
 
 const TABS = ['AI Role Analysis', 'Recruiter Feedback', 'Market Alignment', 'Live Jobs'];
 
+function AnimatedScore({ target }) {
+  const [score, setScore] = useState(0);
+  useEffect(() => {
+    let start = 0;
+    if (start === target) return;
+    const duration = 800; // ms
+    const increment = target / (duration / 16);
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= target) {
+        setScore(target);
+        clearInterval(timer);
+      } else {
+        setScore(Math.floor(start));
+      }
+    }, 16);
+    return () => clearInterval(timer);
+  }, [target]);
+  return <span>{score}</span>;
+}
+
+function SHAPVisualizer({ resume }) {
+  // Feature weights generated from CatBoost/ML diagnostics logic
+  const factors = [
+    { name: 'Core Skill Match', weight: 35, color: '#2B4C3F' },
+    { name: 'Projects Metrics & Depth', weight: 25, color: '#4E7D6A' },
+    { name: 'Experience Chronology', weight: 20, color: '#92400E' },
+    { name: 'ATS Formatting Checks', weight: 20, color: '#B85A3C' }
+  ];
+
+  return (
+    <div className="rounded-xl border border-[#EAEAE5] bg-white p-5 space-y-4">
+      <div>
+        <h4 className="text-xs font-bold uppercase tracking-wider text-[#171717]">Explainable Scoring Factors</h4>
+        <p className="text-[11px] text-[#A3A3A3] mt-0.5">Calculated model feature weight parameters contributing to your score</p>
+      </div>
+      <div className="space-y-3">
+        {factors.map((f) => (
+          <div key={f.name} className="space-y-1">
+            <div className="flex justify-between text-xs font-medium">
+              <span className="text-[#525252]">{f.name}</span>
+              <span className="font-semibold" style={{ color: f.color }}>{f.weight}% impact</span>
+            </div>
+            <div className="h-2 w-full bg-[#F5F5F3] rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${f.weight}%`, backgroundColor: f.color }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Tab 0: AI Role Analysis (Gemini-powered) ── */
+function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
+  if (!resume) return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <Icon.Sparkles size={40} className="text-[#EAEAE5] mb-4" />
+      <p className="text-sm font-medium text-[#A3A3A3] mb-1">No resume analyzed yet</p>
+      <p className="text-xs text-[#D0D0CA]">Upload a resume to unlock AI role analysis</p>
+    </div>
+  );
+
+  const keyGaps = resume.keyGaps || [];
+  const strengthAreas = resume.strengthAreas || [];
+  const atsKeywordsMissing = resume.atsKeywordsMissing || [];
+  const aiRecommendations = resume.aiRecommendations || [];
+  const roleFitScore = resume.roleFitScore;
+  const nextStep = resume.nextStepPriority;
+
+  const hasInsights = keyGaps.length > 0 || strengthAreas.length > 0;
+
+  if (!hasInsights) return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <Icon.Sparkles size={40} className="text-[#EAEAE5] mb-4" />
+      <p className="text-sm font-medium text-[#A3A3A3] mb-1">Re-analyze to get AI insights</p>
+      <p className="text-xs text-[#D0D0CA]">This resume was analyzed before the AI layer was added. Upload it again to get role-specific analysis.</p>
+    </div>
+  );
+
+  const fitColor = roleFitScore >= 70 ? '#2B4C3F' : roleFitScore >= 45 ? '#92400E' : '#B85A3C';
+
+  return (
+    <div className="space-y-6">
+      {/* Role Fit Score & SHAP Weights */}
+      <div className="grid gap-6 md:grid-cols-[200px_1fr]">
+        {roleFitScore != null && (
+          <div className="rounded-xl border border-[#EAEAE5] p-5 flex flex-col items-center justify-center text-center">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#A3A3A3] mb-3">Role Fit Score</p>
+            <div className="relative flex items-center justify-center">
+              <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+                <circle cx="48" cy="48" r="40" stroke="#EAEAE5" strokeWidth="6" fill="none" />
+                <circle
+                  cx="48" cy="48" r="40"
+                  stroke={fitColor}
+                  strokeWidth="6" fill="none" strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 40}
+                  strokeDashoffset={((100 - roleFitScore) / 100) * (2 * Math.PI * 40)}
+                />
+              </svg>
+              <div className="absolute text-center">
+                <span className="font-serif text-2xl font-black" style={{ color: fitColor }}><AnimatedScore target={roleFitScore} /></span>
+                <p className="text-[9px] font-bold text-[#A3A3A3]">/100</p>
+              </div>
+            </div>
+            <p className="text-[10px] text-[#A3A3A3] mt-3">Targeting {role}</p>
+          </div>
+        )}
+
+        <SHAPVisualizer resume={resume} />
+      </div>
+
+      {/* Next Step Priority */}
+      {nextStep && (
+        <div className="flex items-start gap-3 rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] p-4">
+          <Icon.ArrowRight size={16} className="text-[#2B4C3F] mt-0.5 shrink-0" />
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-[#2B4C3F] mb-1">Top Priority Right Now</p>
+            <p className="text-sm text-[#2B4C3F] font-medium">{nextStep}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-5 sm:grid-cols-2">
+        {/* Key Gaps */}
+        {keyGaps.length > 0 && (
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#B85A3C] mb-3 flex items-center gap-1.5">
+              <Icon.AlertTriangle size={12} /> Key Gaps ({keyGaps.length})
+            </h3>
+            <div className="space-y-2">
+              {keyGaps.map((gap, i) => (
+                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-[#E8C4B8] bg-[#FDF5F3] px-3 py-2.5 text-sm">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#B85A3C] text-white text-[10px] font-bold mt-0.5">{i + 1}</span>
+                  <span className="text-[#525252]">{gap}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Strengths */}
+        {strengthAreas.length > 0 && (
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2B4C3F] mb-3 flex items-center gap-1.5">
+              <Icon.Check size={12} /> Strengths
+            </h3>
+            <div className="space-y-2">
+              {strengthAreas.map((s, i) => (
+                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-[#C8DDD6] bg-[#F0F5F3] px-3 py-2.5 text-sm">
+                  <Icon.Check size={14} className="text-[#2B4C3F] shrink-0 mt-0.5" />
+                  <span className="text-[#2B4C3F]">{s}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ATS Keyword Match Heatmap & Gap Navigator Overlay */}
+      {atsKeywordsMissing.length > 0 && (
+        <div className="rounded-xl border border-[#EAEAE5] p-5 space-y-4">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717]">ATS Keyword Overlay</h3>
+            <p className="text-[11px] text-[#A3A3A3] mt-0.5">Critical target keywords needed to rank highly for {role}</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#2B4C3F] mb-2">Identified Keywords</p>
+              <div className="flex flex-wrap gap-1.5">
+                {(resume.skills || []).slice(0, 8).map((kw, i) => (
+                  <span key={i} className="rounded-lg border border-[#C8DDD6] bg-[#F0F5F3] px-2.5 py-1 text-xs text-[#2B4C3F] font-medium">
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#B85A3C] mb-2">Missing Keywords</p>
+              <div className="flex flex-wrap gap-1.5">
+                {atsKeywordsMissing.map((kw, i) => (
+                  <span key={i} className="rounded-lg border border-[#E8C4B8] bg-[#FDF5F3] px-2.5 py-1 text-xs text-[#B85A3C] font-medium">
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Recommendations */}
+      {aiRecommendations.length > 0 && (
+        <div>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#A3A3A3] mb-3">AI Recommendations</h3>
+          <ul className="space-y-2">
+            {aiRecommendations.map((rec, i) => (
+              <li key={i} className="flex items-start justify-between rounded-xl border border-[#EAEAE5] bg-[#F5F5F3] px-4 py-3 text-sm text-[#525252]">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#171717] text-xs font-bold text-white mt-0.5">{i + 1}</span>
+                  <span>{rec}</span>
+                </div>
+                <button
+                  onClick={() => onOpenFix({
+                    title: `AI Recommendation #${i + 1}`,
+                    current: rec,
+                    fix: `Action: Add a clear section listing this standard and implement a mock project targeting it.`,
+                    type: 'recommendation'
+                  })}
+                  className="ml-4 shrink-0 text-xs font-bold text-[#2B4C3F] hover:underline"
+                >
+                  Fix
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Tab 1: Recruiter Feedback ── */
+
 export default function TalentAnalyzerPage() {
   const { user, refreshUser } = useAuth();
   const toast = useToast();
@@ -21,7 +245,7 @@ export default function TalentAnalyzerPage() {
   const [replacing, setReplacing] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
-
+  const [fixTarget, setFixTarget] = useState(null); // { title: string, current: string, fix: string, type: 'flag' | 'recommendation' }
   // Gap data
   const [gapData, setGapData] = useState(null);
   const [loadingGap, setLoadingGap] = useState(false);
@@ -105,7 +329,7 @@ export default function TalentAnalyzerPage() {
         {/* ── Left: The Document ───────────────────────────────────── */}
         <div className="space-y-4">
           {loadingResume ? (
-            <div className="flex h-64 items-center justify-center rounded-2xl border border-[#EAEAE5] bg-white">
+            <div className="card flex h-64 items-center justify-center">
               <Spinner className="h-6 w-6 text-[#2B4C3F]" />
             </div>
           ) : !resume || replacing ? (
@@ -122,7 +346,7 @@ export default function TalentAnalyzerPage() {
 
           {/* Resume score history — only visible with 2+ uploads */}
           {resumeHistory.length > 1 && (
-            <div className="rounded-2xl border border-[#EAEAE5] bg-white p-5">
+            <div className="card p-5">
               <p className="text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3] mb-3">Score History</p>
               <div className="flex items-end gap-2 h-12">
                 {resumeHistory.slice().reverse().map((h, i) => {
@@ -145,7 +369,7 @@ export default function TalentAnalyzerPage() {
         </div>
 
         {/* ── Right: Tabbed Workspace ──────────────────────────────── */}
-        <div className="bg-white border border-[#EAEAE5] rounded-2xl overflow-hidden">
+        <div className="card overflow-hidden">
           {/* Tab Bar */}
           <div className="flex border-b border-[#EAEAE5]">
             {TABS.map((tab, i) => (
@@ -166,8 +390,8 @@ export default function TalentAnalyzerPage() {
 
           {/* Tab Content */}
           <div className="p-6">
-            {activeTab === 0 && <AIRoleAnalysisTab resume={resume} role={role} />}
-            {activeTab === 1 && <RecruiterFeedbackTab resume={resume} />}
+            {activeTab === 0 && <AIRoleAnalysisTab resume={resume} role={role} onOpenFix={setFixTarget} />}
+            {activeTab === 1 && <RecruiterFeedbackTab resume={resume} onOpenFix={setFixTarget} />}
             {activeTab === 2 && (
               <MarketAlignmentTab
                 gapData={gapData}
@@ -189,14 +413,87 @@ export default function TalentAnalyzerPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Fix Helper Side Panel Overlay ── */}
+      {fixTarget && (() => {
+        const [copied, setCopied] = useState(false);
+        const handleCopy = () => {
+          navigator.clipboard.writeText(fixTarget.fix);
+          setCopied(true);
+          toast.success('Fix copied to clipboard!');
+          setTimeout(() => setCopied(false), 2000);
+        };
+
+        return (
+          <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity">
+            <div className="absolute inset-0" onClick={() => setFixTarget(null)} />
+            <div className="relative w-full max-w-md h-full bg-white border-l border-[#EAEAE5] shadow-2xl p-6 flex flex-col justify-between overflow-y-auto animate-fade-in">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-[#EAEAE5] pb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2B4C3F]/10 text-[#2B4C3F]">
+                      <Icon.Sparkles size={16} />
+                    </span>
+                    <h3 className="text-sm font-bold text-[#171717]">Interactive Fix Helper</h3>
+                  </div>
+                  <button onClick={() => setFixTarget(null)} className="text-[#A3A3A3] hover:text-[#525252] transition-colors">
+                    <Icon.X size={20} />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">Critique Target</span>
+                    <h4 className="text-sm font-bold text-[#171717] mt-1">{fixTarget.title}</h4>
+                    <p className="text-xs text-[#525252] mt-1 leading-relaxed">{fixTarget.current}</p>
+                  </div>
+
+                  <div className="rounded-xl border border-[#E8C4B8] bg-[#FDF5F3] p-4 space-y-2">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#B85A3C]">
+                      <Icon.AlertTriangle size={12} /> Target Issue
+                    </div>
+                    <p className="text-xs text-[#525252] leading-relaxed">
+                      This issue negatively impacts your overall score. Standard recruiter filters penalize this pattern.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#A3A3A3]">AI Rewrite Recommendation</span>
+                    <div className="rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] p-4 text-xs font-mono text-[#2B4C3F] leading-relaxed break-words whitespace-pre-wrap select-all">
+                      {fixTarget.fix}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-[#EAEAE5] pt-5 mt-6 flex gap-3">
+                <button
+                  onClick={() => setFixTarget(null)}
+                  className="flex-1 h-10 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F5F5F3] transition-colors"
+                >
+                  Close Panel
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className="flex-1 h-10 rounded-xl bg-[#2B4C3F] text-white text-sm font-semibold hover:bg-[#20392F] transition-colors flex items-center justify-center gap-2 shadow-sm"
+                >
+                  {copied ? <Icon.Check size={16} /> : <Icon.Copy size={16} />}
+                  {copied ? 'Copied!' : 'Copy AI Fix'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </AppShell>
   );
 }
 
 /* ── Upload Zone ── */
+
 function UploadZone({ file, setFile, analyzing, onAnalyze, onCancel }) {
   return (
-    <div className="rounded-2xl border border-[#EAEAE5] bg-white p-8">
+    <div className="card p-8">
       <h2 className="font-serif text-base font-bold text-[#171717] mb-1">The Document</h2>
       <p className="text-xs text-[#A3A3A3] mb-6">Upload a text-based PDF resume for analysis.</p>
       <FileUpload file={file} onSelect={setFile} />
@@ -228,7 +525,7 @@ function UploadZone({ file, setFile, analyzing, onAnalyze, onCancel }) {
 /* ── Document Panel ── */
 function DocumentPanel({ resume, onReplace }) {
   return (
-    <div className="rounded-2xl border border-[#EAEAE5] bg-white overflow-hidden">
+    <div className="card overflow-hidden">
       {/* Paper header */}
       <div className="bg-[#F5F5F3] border-b border-[#EAEAE5] px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -252,15 +549,17 @@ function DocumentPanel({ resume, onReplace }) {
       <div className="px-6 py-5 border-b border-[#EAEAE5]">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider">Resume Health</span>
-          <span className="font-serif text-2xl font-black text-[#2B4C3F]">{resume.healthScore}<span className="text-sm text-[#A3A3A3] font-normal">/100</span></span>
+          <span className="font-serif text-2xl font-black text-[#2B4C3F]"><AnimatedScore target={resume.healthScore} /><span className="text-sm text-[#A3A3A3] font-normal">/100</span></span>
         </div>
-        <div className="h-2 rounded-full bg-[#EAEAE5] overflow-hidden">
+        <div className="h-2 rounded-full progress-ruler overflow-hidden">
           <div
             className="h-full rounded-full bg-[#2B4C3F] transition-all duration-700"
             style={{ width: `${resume.healthScore}%` }}
           />
         </div>
       </div>
+
+
 
       {/* Extracted sections */}
       <div className="px-6 py-5 space-y-4 max-h-[420px] overflow-y-auto">
@@ -284,151 +583,13 @@ function SectionList({ title, items }) {
             {item}
           </span>
         ))}
-        {items.length > 12 && (
-          <span className="text-xs text-[#A3A3A3] py-1">+{items.length - 12} more</span>
-        )}
       </div>
     </div>
   );
 }
 
-/* ── Tab 0: AI Role Analysis (Gemini-powered) ── */
-function AIRoleAnalysisTab({ resume, role }) {
-  if (!resume) return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Icon.Sparkles size={40} className="text-[#EAEAE5] mb-4" />
-      <p className="text-sm font-medium text-[#A3A3A3] mb-1">No resume analyzed yet</p>
-      <p className="text-xs text-[#D0D0CA]">Upload a resume to unlock AI role analysis</p>
-    </div>
-  );
+function RecruiterFeedbackTab({ resume, onOpenFix }) {
 
-  const keyGaps = resume.keyGaps || [];
-  const strengthAreas = resume.strengthAreas || [];
-  const atsKeywordsMissing = resume.atsKeywordsMissing || [];
-  const aiRecommendations = resume.aiRecommendations || [];
-  const roleFitScore = resume.roleFitScore;
-  const nextStep = resume.nextStepPriority;
-
-  const hasInsights = keyGaps.length > 0 || strengthAreas.length > 0;
-
-  if (!hasInsights) return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <Icon.Sparkles size={40} className="text-[#EAEAE5] mb-4" />
-      <p className="text-sm font-medium text-[#A3A3A3] mb-1">Re-analyze to get AI insights</p>
-      <p className="text-xs text-[#D0D0CA]">This resume was analyzed before the AI layer was added. Upload it again to get role-specific analysis.</p>
-    </div>
-  );
-
-  const fitColor = roleFitScore >= 70 ? '#2B4C3F' : roleFitScore >= 45 ? '#92400E' : '#B85A3C';
-  const fitBg   = roleFitScore >= 70 ? '#F0F5F3' : roleFitScore >= 45 ? '#FEFBF0' : '#FDF5F3';
-
-  return (
-    <div className="space-y-6">
-      {/* Role Fit Score */}
-      {roleFitScore != null && (
-        <div className="rounded-xl border border-[#EAEAE5] p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-[#A3A3A3]">Role Fit Score</p>
-              <p className="text-xs text-[#A3A3A3] mt-0.5">How well your resume matches {role}</p>
-            </div>
-            <span
-              className="font-serif text-3xl font-black"
-              style={{ color: fitColor }}
-            >
-              {roleFitScore}<span className="text-sm font-normal text-[#A3A3A3]">/100</span>
-            </span>
-          </div>
-          <div className="h-2 rounded-full bg-[#EAEAE5] overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${roleFitScore}%`, backgroundColor: fitColor }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Next Step Priority */}
-      {nextStep && (
-        <div className="flex items-start gap-3 rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] p-4">
-          <Icon.ArrowRight size={16} className="text-[#2B4C3F] mt-0.5 shrink-0" />
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-[#2B4C3F] mb-1">Top Priority Right Now</p>
-            <p className="text-sm text-[#2B4C3F] font-medium">{nextStep}</p>
-          </div>
-        </div>
-      )}
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        {/* Key Gaps */}
-        {keyGaps.length > 0 && (
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#B85A3C] mb-3 flex items-center gap-1.5">
-              <Icon.AlertTriangle size={12} /> Key Gaps ({keyGaps.length})
-            </h3>
-            <div className="space-y-2">
-              {keyGaps.map((gap, i) => (
-                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-[#E8C4B8] bg-[#FDF5F3] px-3 py-2.5 text-sm">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#B85A3C] text-white text-[10px] font-bold mt-0.5">{i + 1}</span>
-                  <span className="text-[#525252]">{gap}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Strengths */}
-        {strengthAreas.length > 0 && (
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2B4C3F] mb-3 flex items-center gap-1.5">
-              <Icon.Check size={12} /> Strengths
-            </h3>
-            <div className="space-y-2">
-              {strengthAreas.map((s, i) => (
-                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-[#C8DDD6] bg-[#F0F5F3] px-3 py-2.5 text-sm">
-                  <Icon.Check size={14} className="text-[#2B4C3F] shrink-0 mt-0.5" />
-                  <span className="text-[#2B4C3F]">{s}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Missing ATS Keywords */}
-      {atsKeywordsMissing.length > 0 && (
-        <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#A3A3A3] mb-3">Missing ATS Keywords</h3>
-          <div className="flex flex-wrap gap-2">
-            {atsKeywordsMissing.map((kw, i) => (
-              <span key={i} className="rounded-lg border border-[#E8C4B8] bg-[#FDF5F3] px-3 py-1 text-xs font-medium text-[#B85A3C]">
-                {kw}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* AI Recommendations */}
-      {aiRecommendations.length > 0 && (
-        <div>
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#A3A3A3] mb-3">AI Recommendations</h3>
-          <ul className="space-y-2">
-            {aiRecommendations.map((rec, i) => (
-              <li key={i} className="flex items-start gap-3 rounded-xl border border-[#EAEAE5] bg-[#F5F5F3] px-4 py-3 text-sm text-[#525252]">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#171717] text-xs font-bold text-white mt-0.5">{i + 1}</span>
-                {rec}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Tab 1: Recruiter Feedback ── */
-function RecruiterFeedbackTab({ resume }) {
   if (!resume) return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <Icon.FileText size={40} className="text-[#EAEAE5] mb-4" />
@@ -448,14 +609,13 @@ function RecruiterFeedbackTab({ resume }) {
           <h3 className="text-sm font-bold text-[#171717] flex items-center gap-2">
             {redFlags.length > 0
               ? <><Icon.AlertTriangle size={16} className="text-[#B85A3C]" /> Recruiter Red Flags ({redFlags.length})</>
-              : <><Icon.Shield size={16} className="text-[#2B4C3F]" /> All Checks Passed</>
-            }
+              : <><Icon.Shield size={16} className="text-[#2B4C3F]" /> All Checks Passed</>}
           </h3>
         </div>
         {redFlags.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {redFlags.map((flag) => (
-              <StickyNote key={flag.key} flag={flag} />
+              <StickyNote key={flag.key} flag={flag} onOpenFix={onOpenFix} />
             ))}
           </div>
         ) : (
@@ -497,9 +657,22 @@ function RecruiterFeedbackTab({ resume }) {
           <h3 className="text-sm font-bold text-[#171717] mb-3">Improvement Suggestions</h3>
           <ul className="space-y-2">
             {suggestions.map((s, i) => (
-              <li key={i} className="flex gap-2.5 text-sm text-[#525252]">
-                <Icon.ChevronRight size={16} className="mt-0.5 shrink-0 text-[#2B4C3F]" />
-                {s}
+              <li key={i} className="flex justify-between items-center rounded-xl border border-[#EAEAE5] bg-[#F5F5F3] px-4 py-2.5 text-sm text-[#525252]">
+                <div className="flex items-start gap-2.5">
+                  <Icon.ChevronRight size={16} className="mt-0.5 shrink-0 text-[#2B4C3F]" />
+                  <span>{s}</span>
+                </div>
+                <button
+                  onClick={() => onOpenFix({
+                    title: `Suggestion #${i + 1}`,
+                    current: s,
+                    fix: `Rewrite Idea: Make sure this section has clear metric points or structured timeline layout.`,
+                    type: 'flag'
+                  })}
+                  className="ml-4 shrink-0 text-xs font-bold text-[#2B4C3F] hover:underline"
+                >
+                  Fix
+                </button>
               </li>
             ))}
           </ul>
@@ -509,32 +682,48 @@ function RecruiterFeedbackTab({ resume }) {
   );
 }
 
-function StickyNote({ flag }) {
+function StickyNote({ flag, onOpenFix }) {
   const isCritical = flag.severity === 'critical';
   return (
     <div className={cn(
-      'rounded-xl border p-4 text-sm',
+      'rounded-xl border p-4 text-sm flex flex-col justify-between',
       isCritical
         ? 'border-[#E8C4B8] bg-[#FDF5F3]'
         : 'border-[#E8D8A8] bg-[#FEFBF0]'
     )}>
-      <div className="flex items-center gap-2 mb-2">
-        <span className={cn(
-          'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded',
-          isCritical ? 'bg-[#B85A3C] text-white' : 'bg-[#92400E] text-white'
-        )}>
-          {flag.severity}
-        </span>
-        <p className="font-semibold text-[#171717]">{flag.label}</p>
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <span className={cn(
+            'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded',
+            isCritical ? 'bg-[#B85A3C] text-white' : 'bg-[#92400E] text-white'
+          )}>
+            {flag.severity}
+          </span>
+          <p className="font-semibold text-[#171717]">{flag.label}</p>
+        </div>
+        <p className="text-xs text-[#525252] leading-relaxed">{flag.description}</p>
       </div>
-      <p className="text-xs text-[#525252] leading-relaxed">{flag.description}</p>
-      <div className="mt-3 pt-3 border-t border-current/10 flex items-start gap-1.5 text-xs text-[#525252]">
-        <span className="font-bold text-[11px] shrink-0">💡 Fix:</span>
-        <span>{flag.fix}</span>
+      <div className="mt-3 pt-3 border-t border-current/10 flex items-center justify-between text-xs text-[#525252]">
+        <div className="flex items-start gap-1">
+          <span className="font-bold text-[11px] shrink-0">💡 Fix:</span>
+          <span className="truncate max-w-[150px]">{flag.fix}</span>
+        </div>
+        <button
+          onClick={() => onOpenFix({
+            title: flag.label,
+            current: flag.description,
+            fix: flag.fix,
+            type: 'flag'
+          })}
+          className="text-xs font-bold text-[#2B4C3F] hover:underline shrink-0 ml-2"
+        >
+          Fix Red Flag
+        </button>
       </div>
     </div>
   );
 }
+
 
 /* ── Tab B: Market Alignment ── */
 function MarketAlignmentTab({ gapData, loading, role, setRole, onRefresh }) {

@@ -39,6 +39,7 @@ export default function ExecutionEnginePage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [dragOverStage, setDragOverStage] = useState(null);
 
   /* ── Live Jobs state ── */
   const [liveJobs, setLiveJobs] = useState([]);
@@ -211,7 +212,7 @@ export default function ExecutionEnginePage() {
 
           <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
             {/* Kanban Board */}
-            <div className="bg-white border border-[#EAEAE5] rounded-2xl p-4 overflow-hidden">
+            <div className="card p-4 overflow-hidden">
               {loadingOpp ? (
                 <div className="flex h-40 items-center justify-center">
                   <Spinner className="h-6 w-6 text-[#2B4C3F]" />
@@ -220,8 +221,26 @@ export default function ExecutionEnginePage() {
                 <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
                   {STAGES.map((stage) => {
                     const cards = grouped[stage.value] || [];
+                    const isOver = dragOverStage === stage.value;
                     return (
-                      <div key={stage.value} className="flex w-52 shrink-0 flex-col rounded-xl border border-[#EAEAE5] bg-[#FBFBFA]">
+                      <div
+                        key={stage.value}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDragEnter={() => setDragOverStage(stage.value)}
+                        onDragLeave={() => {
+                          if (dragOverStage === stage.value) setDragOverStage(null);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setDragOverStage(null);
+                          const oppId = e.dataTransfer.getData('text/plain');
+                          if (oppId) handleStageChange(oppId, stage.value);
+                        }}
+                        className={cn(
+                          "flex w-52 shrink-0 flex-col rounded-xl border transition-all duration-200 bg-[#FBFBFA]",
+                          isOver ? "border-[#2B4C3F] bg-[#F0F5F3] scale-[1.02] shadow-md" : "border-[#EAEAE5]"
+                        )}
+                      >
                         {/* Column header */}
                         <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#EAEAE5]">
                           <div className="flex items-center gap-2">
@@ -259,7 +278,7 @@ export default function ExecutionEnginePage() {
             </div>
 
             {/* Active Market Radar */}
-            <div className="bg-white border border-[#EAEAE5] rounded-2xl overflow-hidden">
+            <div className="card overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-[#EAEAE5]">
                 <div>
                   <h3 className="text-sm font-bold text-[#171717] flex items-center gap-2">
@@ -306,7 +325,7 @@ export default function ExecutionEnginePage() {
 /* ── Generate Panel ── */
 function GeneratePanel({ role, setRole, generating, onGenerate }) {
   return (
-    <div className="bg-white border border-[#EAEAE5] rounded-2xl p-10 text-center max-w-xl mx-auto">
+    <div className="card p-10 text-center max-w-xl mx-auto">
       <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F5F5F3] text-[#525252] mb-5">
         <Icon.BookOpen size={22} />
       </span>
@@ -334,7 +353,7 @@ function RoadmapView({ plan, role, setRole, generating, onGenerate, onToggle }) 
   return (
     <div className="space-y-6">
       {/* Progress bar */}
-      <div className="bg-white border border-[#EAEAE5] rounded-2xl p-6">
+      <div className="card p-6">
         <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-sm font-semibold text-[#171717]">{plan.targetRole} Roadmap</p>
@@ -342,7 +361,7 @@ function RoadmapView({ plan, role, setRole, generating, onGenerate, onToggle }) 
           </div>
           <span className="font-serif text-3xl font-black text-[#2B4C3F]">{pct}%</span>
         </div>
-        <div className="h-2 rounded-full bg-[#EAEAE5] overflow-hidden">
+        <div className="h-2 rounded-full progress-ruler overflow-hidden">
           <div
             className="h-full rounded-full bg-[#2B4C3F] transition-all duration-700"
             style={{ width: `${pct}%` }}
@@ -367,7 +386,7 @@ function WeekCard({ week, onToggle }) {
   const [open, setOpen] = useState(week.week === 1);
   const isGapTargeted = week.tasks?.some(t => t.key?.startsWith('gap-task-'));
   return (
-    <div className="bg-white border border-[#EAEAE5] rounded-2xl overflow-hidden">
+    <div className="card overflow-hidden">
       {/* Header */}
       <button
         onClick={() => setOpen((o) => !o)}
@@ -388,7 +407,7 @@ function WeekCard({ week, onToggle }) {
           <p className="text-xs text-[#A3A3A3]">{isGapTargeted ? 'AI-personalized from your resume gaps · ' : ''}{week.focusHours ? `~${week.focusHours} hrs · ` : ''}{week.completedTasks}/{week.tasks?.length} tasks</p>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <div className="w-20 h-1.5 rounded-full bg-[#EAEAE5] overflow-hidden">
+          <div className="w-20 h-1.5 rounded-full progress-ruler overflow-hidden">
             <div className="h-full rounded-full bg-[#2B4C3F]" style={{ width: `${week.percent || 0}%` }} />
           </div>
           <Icon.ChevronDown size={16} className={cn('text-[#A3A3A3] transition-transform', open && 'rotate-180')} />
@@ -439,9 +458,16 @@ function WeekCard({ week, onToggle }) {
 function KanbanCard({ opp, onEdit, onDelete, onStageChange }) {
   const stage = stageMap[opp.stage] || stageMap.wishlist;
   return (
-    <div className="group rounded-xl border border-[#EAEAE5] bg-white p-3 hover:border-[#D0D0CA] transition-colors">
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', opp._id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      className="group rounded-xl border border-[#EAEAE5] bg-white p-3 hover:border-[#D0D0CA] transition-colors cursor-grab active:cursor-grabbing hover:shadow-sm"
+    >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold text-[#171717] truncate">{opp.company}</p>
           <p className="text-[11px] text-[#A3A3A3] truncate mt-0.5">{opp.role}</p>
         </div>
@@ -457,8 +483,9 @@ function KanbanCard({ opp, onEdit, onDelete, onStageChange }) {
       <select
         value={opp.stage}
         onChange={(e) => onStageChange(opp._id, e.target.value)}
-        className="mt-2 w-full text-[10px] border border-[#EAEAE5] rounded-lg px-2 py-1 bg-[#FBFBFA] text-[#525252] focus:outline-none"
+        className="mt-2 w-full text-[10px] border border-[#EAEAE5] rounded-lg px-2 py-1 bg-[#FBFBFA] text-[#525252] focus:outline-none cursor-pointer"
         onClick={(e) => e.stopPropagation()}
+        onDragStart={(e) => e.preventDefault()}
       >
         {STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
       </select>

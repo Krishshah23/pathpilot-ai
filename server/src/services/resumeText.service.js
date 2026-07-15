@@ -134,19 +134,128 @@ function extractUrlsFromText(text) {
 }
 
 // Extend fromPdf to also include text-scanned URLs when annotation links are absent
+// coordinate-aware text layout sorter
+async function extractPdfTextWithLayout(buffer) {
+  const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(buffer) });
+  const pdf = await loadingTask.promise;
+  let fullText = '';
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const textContent = await page.getTextContent();
+    const items = textContent.items.map(item => {
+      // transform: [scaleX, skewX, skewY, scaleY, translateX, translateY]
+      const tx = item.transform;
+      return {
+        str: item.str,
+        x: tx[4],
+        y: tx[5],
+        height: tx[3]
+      };
+    });
+
+    if (items.length === 0) continue;
+
+    // Detect if page has two columns.
+    // Find min/max X coordinates
+    let minX = Infinity;
+    let maxX = -Infinity;
+    items.forEach(it => {
+      if (it.str.trim()) {
+        if (it.x < minX) minX = it.x;
+        if (it.x > maxX) maxX = it.x;
+      }
+    });
+
+    const midX = minX + (maxX - minX) / 2;
+    // Check if items cluster into two columns: left (x < midX) and right (x > midX)
+    let leftCount = 0;
+    let rightCount = 0;
+    items.forEach(it => {
+      if (it.str.trim()) {
+        if (it.x < midX - 20) leftCount++;
+        if (it.x > midX + 20) rightCount++;
+      }
+    });
+
+    const isTwoColumn = leftCount > 20 && rightCount > 20;
+
+    let sortedItems = [];
+    if (isTwoColumn) {
+      // Two-column sorting: left column items, then right column items.
+      // Within each column, sort by y descending (top to bottom), then by x ascending.
+      const leftCol = items.filter(it => it.x < midX);
+      const rightCol = items.filter(it => it.x >= midX);
+
+      const sortByCoord = (a, b) => {
+        if (Math.abs(a.y - b.y) < 5) return a.x - b.x;
+        return b.y - a.y;
+      };
+
+      leftCol.sort(sortByCoord);
+      rightCol.sort(sortByCoord);
+
+      sortedItems = [...leftCol, ...rightCol];
+    } else {
+      // Single column sorting: sort by y descending, then by x ascending.
+      sortedItems = [...items].sort((a, b) => {
+        if (Math.abs(a.y - b.y) < 5) return a.x - b.x;
+        return b.y - a.y;
+      });
+    }
+
+    // Reconstruct lines
+    let pageText = '';
+    let currentY = -1;
+    for (const item of sortedItems) {
+      if (!item.str.trim() && item.str !== ' ') continue;
+      if (currentY === -1) {
+        pageText += item.str;
+        currentY = item.y;
+      } else if (Math.abs(item.y - currentY) < 5) {
+        // same line
+        pageText += (pageText.endsWith(' ') || item.str.startsWith(' ') ? '' : ' ') + item.str;
+      } else {
+        // new line
+        pageText += '\n' + item.str;
+        currentY = item.y;
+      }
+    }
+
+    fullText += pageText + '\n\n';
+  }
+
+  return fullText;
+}
+
+// Extend fromPdf to also include text-scanned URLs when annotation links are absent
 async function fromPdf(buffer) {
-  const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
-    const { text } = await parser.getText();
+    // Reconstruct text using coordinate-aware logic
+    const text = await extractPdfTextWithLayout(buffer);
     const cleaned = (text || '').replace(PAGE_MARKER, '\n');
+    
     // Also extract any URI link annotations from the PDF
     const annLinks = await extractPdfLinks(buffer);
     const textLinks = extractUrlsFromText(cleaned);
     const all = Array.from(new Set([...(annLinks || []), ...(textLinks || [])]));
+    
     return { text: cleaned, links: all };
-  } finally {
-    await parser.destroy?.();
+  } catch (err) {
+    // fallback to basic pdf-parse if coordinate extraction fails
+    const parser = new PDFParse({ data: new Uint8Array(buffer) });
+    try {
+      const { text } = await parser.getText();
+      const cleaned = (text || '').replace(PAGE_MARKER, '\n');
+      const annLinks = await extractPdfLinks(buffer);
+      const textLinks = extractUrlsFromText(cleaned);
+      const all = Array.from(new Set([...(annLinks || []), ...(textLinks || [])]));
+      return { text: cleaned, links: all };
+    } finally {
+      await parser.destroy?.();
+    }
   }
 }
 
 export { extractUrlsFromText };
+

@@ -198,29 +198,28 @@ export default function InterviewPrepPage() {
     <AppShell>
       <div className="space-y-8">
 
-        {/* ── Hero ── */}
-        <div className="relative rounded-2xl overflow-hidden min-h-[200px] flex items-end">
-          <img
-            src="https://images.unsplash.com/photo-1551836022-deb4988cc6c0?w=1400&q=80&fit=crop"
-            alt="Interview coaching"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#171717]/80 via-[#171717]/30 to-transparent" />
-          <div className="relative z-10 px-8 py-8">
-            <p className="text-xs font-bold uppercase tracking-widest text-white/60 mb-2">Interview Prep</p>
-            <h1 className="font-serif text-3xl font-black text-white">AI Coaching Session</h1>
-            <p className="mt-2 text-sm text-white/70">
-              Questions generated from your resume gaps · Gemini evaluation · Voice dictation
+        {/* ── Branded Premium Banner ── */}
+        <div className="banner-premium rounded-2xl p-8 text-white flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+          <div className="absolute -right-10 -bottom-10 w-44 h-44 bg-[#3D6B59] opacity-35 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#C8DDD6] mb-1.5">Interview Prep</p>
+            <h1 className="font-serif text-3xl font-black text-white">AI Mock Interview Coach</h1>
+            <p className="mt-2 text-sm text-[#C8DDD6]/90 max-w-xl">
+              Practice role-specific scenarios generated from your resume gaps. Get real-time Gemini evaluation and use voice dictation to answer.
             </p>
           </div>
-          {stage === 'active' && (
-            <div className="absolute top-5 right-5 z-10">
-              <span className="flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 px-3 py-1.5 text-sm font-mono font-bold text-white">
-                <span className="h-2 w-2 rounded-full bg-[#ef4444] animate-pulse" />
-                {fmt(secondsElapsed)}
-              </span>
-            </div>
-          )}
+          {stage === 'active' && (() => {
+            const timerColor = secondsElapsed < 30 ? '#92400E' : secondsElapsed <= 120 ? '#2B4C3F' : '#B85A3C';
+            return (
+              <div className="relative z-10 shrink-0">
+                <span className="flex items-center gap-2 rounded-xl bg-white/10 border border-white/20 px-4 py-2 text-sm font-mono font-bold text-white shadow-sm">
+                  <span className="h-2.5 w-2.5 rounded-full animate-ping" style={{ backgroundColor: timerColor }} />
+                  <span className="h-2.5 w-2.5 rounded-full absolute" style={{ backgroundColor: timerColor }} />
+                  <span className="ml-3">{fmt(secondsElapsed)}</span>
+                </span>
+              </div>
+            );
+          })()}
         </div>
 
         {error && (
@@ -232,7 +231,7 @@ export default function InterviewPrepPage() {
         {/* ── SETUP ── */}
         {stage === 'setup' && (
           <div className="max-w-2xl mx-auto">
-            <div className="bg-white border border-[#EAEAE5] rounded-2xl p-10 text-center">
+            <div className="card p-10 text-center">
               <h2 className="font-serif text-2xl font-bold text-[#171717]">Ready to practice?</h2>
               <p className="mt-3 text-sm text-[#525252] max-w-md mx-auto leading-relaxed">
                 Gemini will generate questions targeting your actual resume gaps for{' '}
@@ -296,7 +295,7 @@ export default function InterviewPrepPage() {
         {/* ── PAST SESSIONS ── */}
         {stage === 'setup' && !loadingSessions && pastSessions.length > 0 && (
           <div className="max-w-2xl mx-auto">
-            <div className="bg-white border border-[#EAEAE5] rounded-2xl p-6">
+            <div className="card p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Icon.History size={16} className="text-[#525252]" />
                 <h3 className="font-semibold text-sm text-[#171717]">Past Sessions</h3>
@@ -307,7 +306,7 @@ export default function InterviewPrepPage() {
                   const date = new Date(s.completedAt || s.createdAt).toLocaleDateString('en-IN', {
                     day: 'numeric', month: 'short', year: 'numeric'
                   });
-                  const scoreColor = s.averageScore >= 75 ? '#22c55e' : s.averageScore >= 50 ? '#f59e0b' : '#ef4444';
+                  const scoreColor = s.averageScore >= 75 ? '#2B4C3F' : s.averageScore >= 50 ? '#92400E' : '#B85A3C';
                   return (
                     <div key={s._id} className="flex items-center gap-4 rounded-xl border border-[#EAEAE5] bg-[#F9F9F8] px-4 py-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl shrink-0"
@@ -342,7 +341,7 @@ export default function InterviewPrepPage() {
         {stage === 'active' && questionData && (
           <div className="grid gap-6 lg:grid-cols-[1fr_1.3fr]">
             {/* Question card */}
-            <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8 space-y-5">
+            <div className="card p-8 space-y-5">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#2B4C3F] bg-[#F0F5F3] border border-[#C8DDD6] px-2.5 py-1 rounded-full">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#2B4C3F] animate-pulse" /> Live Question
@@ -372,7 +371,7 @@ export default function InterviewPrepPage() {
             </div>
 
             {/* Response console */}
-            <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8 flex flex-col">
+            <div className="card p-8 flex flex-col">
               <div className="flex items-center justify-between border-b border-[#EAEAE5] pb-4 mb-5">
                 <h3 className="text-sm font-bold text-[#171717]">Your Response</h3>
                 <div className="flex items-center gap-2">
@@ -430,99 +429,162 @@ export default function InterviewPrepPage() {
         )}
 
         {/* ── RESULT ── */}
-        {stage === 'result' && evaluation && (
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div className="grid gap-6 md:grid-cols-[200px_1fr]">
-              {/* Score gauge */}
-              <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8 flex flex-col items-center justify-center text-center">
-                <p className="text-xs font-bold uppercase tracking-wider text-[#A3A3A3] mb-4">Score</p>
-                <div className="relative flex items-center justify-center">
-                  <svg className="w-28 h-28 -rotate-90" viewBox="0 0 112 112">
-                    <circle cx="56" cy="56" r="48" stroke="#EAEAE5" strokeWidth="7" fill="none" />
-                    <circle
-                      cx="56" cy="56" r="48"
-                      stroke={evaluation.totalScore >= 80 ? '#2B4C3F' : evaluation.totalScore >= 60 ? '#92400E' : '#B85A3C'}
-                      strokeWidth="7" fill="none" strokeLinecap="round"
-                      strokeDasharray={2 * Math.PI * 48}
-                      strokeDashoffset={((100 - evaluation.totalScore) / 100) * (2 * Math.PI * 48)}
-                    />
-                  </svg>
-                  <div className="absolute text-center">
-                    <span className="font-serif text-3xl font-black text-[#171717]">{evaluation.totalScore}</span>
-                    <p className="text-[10px] font-bold text-[#A3A3A3]">/100</p>
+        {stage === 'result' && evaluation && (() => {
+          const wordCount = responseText.trim().split(/\s+/).filter(Boolean).length;
+          const timeTaken = secondsElapsed || 30; // fallback if 0
+          const wpm = Math.round((wordCount / timeTaken) * 60);
+          const fillers = (responseText.match(/\b(um|uh|like|basically|actually|so)\b/gi) || []).length;
+          const paceStatus = wpm >= 110 && wpm <= 160 ? 'Optimal' : wpm < 110 ? 'Too Slow' : 'Too Fast';
+          const paceColor = paceStatus === 'Optimal' ? '#2B4C3F' : '#92400E';
+
+          return (
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="grid gap-6 md:grid-cols-[250px_1fr]">
+                {/* Score gauge and speech metrics */}
+                <div className="space-y-6">
+                  <div className="card p-6 flex flex-col items-center justify-center text-center">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3] mb-4">Overall Score</p>
+                    <div className="relative flex items-center justify-center">
+                      <svg className="w-28 h-28 -rotate-90" viewBox="0 0 112 112">
+                        <circle cx="56" cy="56" r="48" stroke="#EAEAE5" strokeWidth="7" fill="none" />
+                        <circle
+                          cx="56" cy="56" r="48"
+                          stroke={evaluation.totalScore >= 80 ? '#2B4C3F' : evaluation.totalScore >= 60 ? '#92400E' : '#B85A3C'}
+                          strokeWidth="7" fill="none" strokeLinecap="round"
+                          strokeDasharray={2 * Math.PI * 48}
+                          strokeDashoffset={((100 - evaluation.totalScore) / 100) * (2 * Math.PI * 48)}
+                        />
+                      </svg>
+                      <div className="absolute text-center">
+                        <span className="font-serif text-3xl font-black text-[#171717]">{evaluation.totalScore}</span>
+                        <p className="text-[10px] font-bold text-[#A3A3A3]">/100</p>
+                      </div>
+                    </div>
+                    <span className={cn(
+                      'mt-4 px-3 py-1 rounded-full text-xs font-bold border',
+                      evaluation.totalScore >= 80 ? 'border-[#C8DDD6] text-[#2B4C3F] bg-[#F0F5F3]' :
+                      evaluation.totalScore >= 60 ? 'border-[#E8D8A8] text-[#92400E] bg-[#FEFBF0]' :
+                      'border-[#E8C4B8] text-[#B85A3C] bg-[#FDF5F3]'
+                    )}>
+                      {evaluation.grade}
+                    </span>
+                    {evaluation.encouragement && (
+                      <p className="mt-3 text-xs text-[#525252] leading-relaxed">{evaluation.encouragement}</p>
+                    )}
+                  </div>
+
+                  {/* Speech Fluency card */}
+                  <div className="card p-6 space-y-4">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
+                      <Icon.Mic size={14} className="text-[#2B4C3F]" /> Speech Fluency
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="rounded-xl border border-[#EAEAE5] bg-[#F9F9F8] p-3 flex justify-between items-center">
+                        <div>
+                          <p className="text-[10px] uppercase font-bold text-[#A3A3A3]">Speaking Pace</p>
+                          <p className="text-sm font-semibold text-[#171717] mt-0.5">{wpm} WPM</p>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{ backgroundColor: `${paceColor}15`, color: paceColor }}>
+                          {paceStatus}
+                        </span>
+                      </div>
+                      <div className="rounded-xl border border-[#EAEAE5] bg-[#F9F9F8] p-3 flex justify-between items-center">
+                        <div>
+                          <p className="text-[10px] uppercase font-bold text-[#A3A3A3]">Filler Words</p>
+                          <p className="text-sm font-semibold text-[#171717] mt-0.5">{fillers} detected</p>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{ backgroundColor: fillers > 3 ? '#B85A3C15' : '#2B4C3F15', color: fillers > 3 ? '#B85A3C' : '#2B4C3F' }}>
+                          {fillers > 3 ? 'High' : 'Optimal'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <span className={cn(
-                  'mt-4 px-3 py-1 rounded-full text-xs font-bold border',
-                  evaluation.totalScore >= 80 ? 'border-[#C8DDD6] text-[#2B4C3F] bg-[#F0F5F3]' :
-                  evaluation.totalScore >= 60 ? 'border-[#E8D8A8] text-[#92400E] bg-[#FEFBF0]' :
-                  'border-[#E8C4B8] text-[#B85A3C] bg-[#FDF5F3]'
-                )}>
-                  {evaluation.grade}
-                </span>
-                {evaluation.encouragement && (
-                  <p className="mt-3 text-xs text-[#525252] leading-relaxed">{evaluation.encouragement}</p>
-                )}
+
+                {/* Detailed feedback + Rubric table */}
+                <div className="card p-8 space-y-6">
+                  <h3 className="text-sm font-bold text-[#171717] flex items-center gap-2">
+                    <Icon.Shield size={16} className="text-[#2B4C3F]" /> AI Evaluation Report
+                  </h3>
+
+                  {/* Rubric Table */}
+                  <div className="overflow-hidden rounded-xl border border-[#EAEAE5]">
+                    <table className="min-w-full divide-y divide-[#EAEAE5]">
+                      <thead className="bg-[#F9F9F8]">
+                        <tr>
+                          <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3]">Evaluated Metric</th>
+                          <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3]">Score</th>
+                          <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3]">Max</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#EAEAE5] bg-white text-xs">
+                        {Object.entries(evaluation.scores || {}).map(([metric, score]) => {
+                          const maxVal = metric === 'depth' ? 40 : 30;
+                          return (
+                            <tr key={metric}>
+                              <td className="px-4 py-2.5 font-medium text-[#171717] capitalize">{metric}</td>
+                              <td className="px-4 py-2.5 text-right font-bold text-[#2B4C3F]">{score}</td>
+                              <td className="px-4 py-2.5 text-right text-[#A3A3A3]">{maxVal}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {evaluation.strengths?.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#2B4C3F] mb-2">What you did well</p>
+                      <ul className="space-y-1.5">
+                        {evaluation.strengths.map((s, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-[#525252]">
+                            <Icon.Check size={14} className="text-[#2B4C3F] shrink-0 mt-0.5" /> {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {evaluation.improvements?.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#B85A3C] mb-2">What to improve</p>
+                      <ul className="space-y-1.5">
+                        {evaluation.improvements.map((s, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-[#525252]">
+                            <Icon.ArrowRight size={14} className="text-[#B85A3C] shrink-0 mt-0.5" /> {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {evaluation.modelAnswer && (
+                    <div className="rounded-lg border border-[#EAEAE5] bg-[#F5F5F3] p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3] mb-2">Model Answer Approach</p>
+                      <p className="text-xs text-[#525252] leading-relaxed">{evaluation.modelAnswer}</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Detailed feedback */}
-              <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8 space-y-5">
-                <h3 className="text-sm font-bold text-[#171717] flex items-center gap-2">
-                  <Icon.Shield size={16} className="text-[#2B4C3F]" /> AI Evaluation Report
-                </h3>
-
-                {evaluation.strengths?.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#2B4C3F] mb-2">What you did well</p>
-                    <ul className="space-y-1.5">
-                      {evaluation.strengths.map((s, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-[#525252]">
-                          <Icon.Check size={14} className="text-[#2B4C3F] shrink-0 mt-0.5" /> {s}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {evaluation.improvements?.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#B85A3C] mb-2">What to improve</p>
-                    <ul className="space-y-1.5">
-                      {evaluation.improvements.map((s, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-[#525252]">
-                          <Icon.ArrowRight size={14} className="text-[#B85A3C] shrink-0 mt-0.5" /> {s}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {evaluation.modelAnswer && (
-                  <div className="rounded-lg border border-[#EAEAE5] bg-[#F5F5F3] p-4">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3] mb-2">Model Answer Approach</p>
-                    <p className="text-xs text-[#525252] leading-relaxed">{evaluation.modelAnswer}</p>
-                  </div>
-                )}
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 card px-6 py-5">
+                <button
+                  onClick={endSession}
+                  className="w-full sm:w-auto h-10 px-6 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F5F5F3] transition-colors"
+                >
+                  End Session
+                </button>
+                <button
+                  onClick={nextQuestion}
+                  className="w-full sm:w-auto h-10 px-6 rounded-xl bg-[#171717] text-white text-sm font-semibold hover:bg-[#2a2a2a] transition-colors flex items-center justify-center gap-2"
+                >
+                  <Icon.ArrowRight size={15} /> Next Question
+                </button>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white border border-[#EAEAE5] rounded-2xl px-6 py-5">
-              <button
-                onClick={endSession}
-                className="w-full sm:w-auto h-10 px-6 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F5F5F3] transition-colors"
-              >
-                End Session
-              </button>
-              <button
-                onClick={nextQuestion}
-                className="w-full sm:w-auto h-10 px-6 rounded-xl bg-[#171717] text-white text-sm font-semibold hover:bg-[#2a2a2a] transition-colors flex items-center justify-center gap-2"
-              >
-                <Icon.ArrowRight size={15} /> Next Question
-              </button>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── SAVING ── */}
         {savingSession && (
@@ -535,14 +597,14 @@ export default function InterviewPrepPage() {
         {/* ── SESSION COMPLETE ── */}
         {stage === 'complete' && !savingSession && (
           <div className="max-w-2xl mx-auto">
-            <div className="bg-[#171717] rounded-2xl p-10 text-white text-center relative overflow-hidden">
-              <div className="absolute -top-20 -right-20 w-56 h-56 bg-[#2B4C3F] opacity-30 rounded-full blur-3xl pointer-events-none" />
+            <div className="auth-brand-panel border border-[#1A2E24] rounded-2xl p-10 text-white text-center relative overflow-hidden">
+              <div className="absolute -top-20 -right-20 w-56 h-56 bg-[#2B4C3F] opacity-40 rounded-full blur-3xl pointer-events-none" />
               <div className="relative z-10">
-                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2B4C3F] mx-auto mb-6">
-                  <Icon.Shield size={28} className="text-white" />
+                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2B4C3F]/60 border border-[#2B4C3F]/80 mx-auto mb-6">
+                  <Icon.Shield size={28} className="text-[#C8DDD6]" />
                 </span>
                 <h2 className="font-serif text-3xl font-black text-white mb-2">Session Complete</h2>
-                <p className="text-sm text-white/70 mb-8">Great work, {user?.name?.split(' ')[0]}. Your results have been saved.</p>
+                <p className="text-sm text-[#8A9B93] mb-8">Great work, {user?.name?.split(' ')[0]}. Your results have been saved.</p>
 
                 <div className="grid grid-cols-3 gap-4 mb-8">
                   {[
@@ -550,9 +612,9 @@ export default function InterviewPrepPage() {
                     { label: 'Questions', value: sessionLog.length },
                     { label: 'Gaps Covered', value: [...new Set(sessionLog.map(q => q.gapAddressed).filter(Boolean))].length },
                   ].map(({ label, value }) => (
-                    <div key={label} className="rounded-xl bg-white/10 px-4 py-4">
+                    <div key={label} className="rounded-xl bg-white/5 border border-white/10 px-4 py-4">
                       <p className="font-serif text-2xl font-black text-white">{value}</p>
-                      <p className="text-xs text-white/60 mt-1">{label}</p>
+                      <p className="text-xs text-[#8A9B93] mt-1">{label}</p>
                     </div>
                   ))}
                 </div>
@@ -568,7 +630,7 @@ export default function InterviewPrepPage() {
                     href="/execution-engine"
                     className="h-10 px-6 rounded-xl bg-white text-sm font-bold text-[#171717] hover:bg-[#F5F5F3] transition-colors flex items-center justify-center gap-2"
                   >
-                    <Icon.Map size={15} /> View My Roadmap
+                    <Icon.Route size={15} /> View My Roadmap
                   </a>
                 </div>
               </div>

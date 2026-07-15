@@ -56,21 +56,8 @@ export default function OverviewPage() {
     })();
   }, [user?.profile?.resumeUrl]);
 
-  const handleExportPDF = async () => {
-    setExporting(true);
-    try {
-      const res = await api.get('/report/generate', { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'career-audit.pdf';
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      navigate('/report');
-    } finally {
-      setExporting(false);
-    }
+  const handleExportPDF = () => {
+    navigate('/report');
   };
 
   if (loading) {
@@ -141,7 +128,7 @@ export default function OverviewPage() {
         desc: 'Build a personalized weekly plan targeting your exact resume gaps.',
         btn: 'Build Roadmap',
         link: '/execution-engine',
-        icon: <Icon.Map size={20} />
+        icon: <Icon.Route size={20} />
       };
     } else {
       smartCta = {
@@ -194,18 +181,14 @@ export default function OverviewPage() {
 
           <button
             onClick={handleExportPDF}
-            disabled={exporting}
-            className="shrink-0 inline-flex items-center gap-2 h-10 px-5 rounded-xl border border-[#EAEAE5] bg-white text-sm font-semibold text-[#171717] hover:bg-[#F5F5F3] disabled:opacity-50 transition-colors"
+            className="shrink-0 inline-flex items-center gap-2 h-10 px-5 rounded-xl border border-[#EAEAE5] bg-white text-sm font-semibold text-[#171717] hover:bg-[#F5F5F3] transition-colors"
           >
-            {exporting
-              ? <><Spinner className="h-4 w-4" /> Generating…</>
-              : <><Icon.Download size={16} /> Export Career Audit</>
-            }
+            <Icon.Download size={16} /> Export Career Audit
           </button>
         </div>
 
         {/* ── Smart Action Card ────────────────────────────────────── */}
-        <div className="bg-[#2B4C3F] rounded-2xl p-6 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-xl shadow-[#2B4C3F]/10">
+        <div className="banner-premium rounded-2xl p-6 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#C8DDD6]">
               {smartCta.icon}
@@ -218,7 +201,7 @@ export default function OverviewPage() {
           </div>
           <button
             onClick={() => navigate(smartCta.link)}
-            className="shrink-0 h-10 px-6 rounded-xl bg-white text-sm font-bold text-[#171717] hover:bg-[#F5F5F3] transition-colors"
+            className="shrink-0 h-10 px-6 bg-white text-sm font-bold text-[#171717] rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm hover:shadow"
           >
             {smartCta.btn}
           </button>
@@ -227,7 +210,7 @@ export default function OverviewPage() {
         {/* ── Path Score + Factor Bars ──────────────────────────────── */}
         <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
           {/* Score Display */}
-          <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8 flex flex-col items-center text-center">
+          <div className="card card-hover p-8 flex flex-col items-center text-center">
             <p className="text-xs font-bold uppercase tracking-widest text-[#A3A3A3] mb-4">Path Score</p>
             <div className="relative flex items-center justify-center">
               <svg className="w-40 h-40 -rotate-90" viewBox="0 0 120 120">
@@ -258,7 +241,7 @@ export default function OverviewPage() {
           </div>
 
           {/* Factor Progress Bars */}
-          <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8">
+          <div className="card p-8">
             <h2 className="font-serif text-lg font-bold text-[#171717] mb-6">Score Breakdown</h2>
             <div className="space-y-5">
               {factors.length > 0 ? factors.map((f) => (
@@ -336,7 +319,7 @@ export default function OverviewPage() {
         {/* ── Live Market Alignment ────────────────────── */}
         <div className="grid gap-6">
           {blendedBenchmark?.available && (
-            <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8">
+            <div className="card p-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="font-serif text-base font-bold text-[#171717]">Live Market Alignment</h2>
@@ -381,7 +364,7 @@ export default function OverviewPage() {
         {/* ── Profile Completion + Skills ───────────────────────────── */}
         <div className="grid gap-6 md:grid-cols-2">
           {pathScore?.profileCompletion && (
-            <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8">
+            <div className="card p-8">
               <h2 className="font-serif text-base font-bold text-[#171717] mb-5">Profile Completion</h2>
               <div className="grid gap-2 sm:grid-cols-2">
                 {pathScore.profileCompletion.checks?.map((check) => (
@@ -402,7 +385,7 @@ export default function OverviewPage() {
           )}
 
           {pathScore?.skills?.length > 0 && (
-            <div className="bg-white border border-[#EAEAE5] rounded-2xl p-8">
+            <div className="card p-8">
               <h2 className="font-serif text-base font-bold text-[#171717] mb-5">Skills in Your Profile</h2>
               <div className="flex flex-wrap gap-2">
                 {pathScore.skills.map((skill) => (
@@ -436,7 +419,7 @@ function FactorBar({ factor }) {
           {factor.score}/{factor.max}
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-[#EAEAE5] overflow-hidden">
+      <div className="h-1.5 rounded-full progress-ruler overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-700"
           style={{ width: `${factor.percent}%`, backgroundColor: color }}
@@ -449,7 +432,7 @@ function FactorBar({ factor }) {
 
 function PredCard({ label, value, sub, subColor, icon }) {
   return (
-    <div className="bg-white border border-[#EAEAE5] rounded-2xl p-6">
+    <div className="card card-hover p-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-wider text-[#A3A3A3]">{label}</p>

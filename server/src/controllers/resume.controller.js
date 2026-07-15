@@ -8,7 +8,7 @@ import { publicUrl } from '../middleware/upload.middleware.js';
 import { extractResumeText } from '../services/resumeText.service.js';
 import { aiService } from '../services/ai.service.js';
 import { detectRedFlags } from '../services/resumeRedFlags.js';
-import { geminiAnalyzeResume, geminiExplainScore } from '../services/gemini.service.js';
+import { geminiAnalyzeResume, geminiExplainScore, geminiParseFallback } from '../services/gemini.service.js';
 import { buildPathScore } from '../services/pathScore.service.js';
 
 /**
@@ -32,17 +32,20 @@ export const analyzeResume = asyncHandler(async (req, res) => {
   const links = extracted.links || [];
 
   // 3. call Django ML service (include links so Django can detect anchor-style URLs)
-  const aiResponse = await aiService.parseResume({ text, links });
-  const parsed = aiResponse?.data;
+  let aiResponse = await aiService.parseResume({ text, links });
+  let parsed = aiResponse?.data;
+
+  // Fallback to Gemini if text length is low or parsing returns lowText/low quality
+  if (!parsed || parsed.lowText || (parsed.skills?.length === 0 && parsed.projects?.length === 0)) {
+    console.log('[Fallback Parser] Django parsing returned low quality or low text. Invoking Gemini Fallback Parser...');
+    const fallbackParsed = await geminiParseFallback(text);
+    if (fallbackParsed) {
+      parsed = fallbackParsed;
+    }
+  }
+
   if (!parsed) {
-    // A response without `data` means Django is running outdated code (the old
-    // Phase-1 stub). Surface an actionable message instead of a bare 502.
-    throw new ApiError(
-      502,
-      aiResponse?.implemented === false
-        ? 'The AI service is running outdated code. Please restart the Django service.'
-        : 'AI service returned no analysis'
-    );
+    throw new ApiError(502, 'AI service returned no analysis and fallback parsing failed.');
   }
 
   // 4. persist

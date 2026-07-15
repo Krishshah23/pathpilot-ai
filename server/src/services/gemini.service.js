@@ -412,3 +412,62 @@ function getLocalResumeFallback(parsedData, targetRole) {
     nextStepPriority: `Add a comprehensive capstone project explicitly showcasing ${expectedSkills.slice(0, 2).join(' and ').toUpperCase()}.`
   };
 }
+
+/**
+ * Fallback parser using Gemini when the local extraction/Django parses less than 30 words.
+ * Returns standard structured parsed resume fields.
+ */
+export async function geminiParseFallback(rawText) {
+  const prompt = `You are a high-fidelity resume extraction parser. 
+Analyze the raw, potentially noisy or OCR-scanned text of a resume below, and extract the structured content into the specified JSON format.
+If certain fields are missing, provide clean empty arrays/objects. Keep descriptions clean and impact-oriented.
+
+RAW RESUME TEXT:
+"""
+${rawText}
+"""
+
+Return ONLY a JSON object of this structure:
+{
+  "skills": ["<canonical skill 1>", "<canonical skill 2>"],
+  "education": ["<Degree, Major - Institution (Grad Year or Dates)>"],
+  "projects": [
+    {
+      "title": "<Project Name>",
+      "description": "<Concise description of what was built, stack used, and bulleted metrics if any>"
+    }
+  ],
+  "experience": ["<Job Title - Company, Location (Dates) - bullet points of achievements>"],
+  "certifications": ["<Certification name - Provider>"],
+  "contact": {
+    "email": "<extracted email or empty string>",
+    "phone": "<extracted phone number or empty string>",
+    "linkedin": "<extracted linkedin url/handle or empty string>",
+    "github": "<extracted github url/handle or empty string>"
+  },
+  "health": {
+    "score": 60,
+    "breakdown": [
+      { "label": "Contact & links", "score": 10, "max": 15, "status": "warn", "tip": "Improve links" }
+    ]
+  },
+  "suggestions": ["Add missing GitHub links", "Quantify project metrics"],
+  "wordCount": 100,
+  "lowText": false
+}`;
+
+  try {
+    const parsed = await generateJson(prompt);
+    // Add default structures if missing
+    if (!parsed.skills) parsed.skills = [];
+    if (!parsed.projects) parsed.projects = [];
+    if (!parsed.contact) parsed.contact = { email: '', phone: '', linkedin: '', github: '' };
+    if (!parsed.health) parsed.health = { score: 60, breakdown: [] };
+    if (!parsed.suggestions) parsed.suggestions = [];
+    return parsed;
+  } catch (err) {
+    console.error('[Gemini Fallback Parser] Failed:', err);
+    return null;
+  }
+}
+

@@ -19,6 +19,7 @@ const InterviewPrepPage  = lazy(() => import('@/pages/InterviewPrepPage'));
 const AdminPage          = lazy(() => import('@/pages/AdminPage'));
 const PublicProfilePage  = lazy(() => import('@/pages/PublicProfilePage'));
 const ProfilePage        = lazy(() => import('@/pages/ProfilePage'));
+const CareerReportPage   = lazy(() => import('@/pages/CareerReportPage'));
 const NotFoundPage       = lazy(() => import('@/pages/NotFoundPage'));
 
 export default function App() {
@@ -49,6 +50,7 @@ export default function App() {
                 <Route path="/talent-analyzer"  element={<TalentAnalyzerPage />} />
                 <Route path="/execution-engine" element={<ExecutionEnginePage />} />
                 <Route path="/interview-prep"   element={<InterviewPrepPage />} />
+                <Route path="/report"           element={<CareerReportPage />} />
 
                 {/* ── Legacy redirect map (old routes → new hubs) ── */}
                 <Route path="/resume"        element={<Navigate to="/talent-analyzer"  replace />} />
@@ -57,7 +59,6 @@ export default function App() {
                 <Route path="/opportunities" element={<Navigate to="/execution-engine" replace />} />
                 <Route path="/path-score"    element={<Navigate to="/dashboard"        replace />} />
                 <Route path="/insights"      element={<Navigate to="/dashboard"        replace />} />
-                <Route path="/report"        element={<Navigate to="/dashboard"        replace />} />
                 <Route path="/interview"     element={<Navigate to="/interview-prep"   replace />} />
                 <Route path="/profile"       element={<ProfilePage />} />
               </Route>
