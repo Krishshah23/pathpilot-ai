@@ -48,7 +48,7 @@ export default function RegisterPage() {
         <Input
           label="Full name"
           name="name"
-          placeholder="Ada Lovelace"
+          placeholder="Enter your full name"
           value={form.name}
           onChange={onChange}
           error={errors.name}
@@ -59,7 +59,7 @@ export default function RegisterPage() {
           name="email"
           type="email"
           autoComplete="email"
-          placeholder="you@college.edu"
+          placeholder="Enter your email"
           value={form.email}
           onChange={onChange}
           error={errors.email}

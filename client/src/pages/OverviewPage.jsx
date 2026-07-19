@@ -5,11 +5,12 @@ import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
 import { ScoreGauge } from '@/components/charts/ScoreGauge';
 import { useAuth } from '@/context/AuthContext';
+import { DREAM_ROLES } from '@/config/careerData';
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
 
 export default function OverviewPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [pathScore, setPathScore] = useState(null);
   const [marketSalary, setMarketSalary] = useState(null);
@@ -22,6 +23,9 @@ export default function OverviewPage() {
 
   const [editingRole, setEditingRole] = useState(false);
   const [selectedRole, setSelectedRole] = useState(user?.profile?.dreamRole || 'your target role');
+
+  // Always include the user's current role even if it's a custom value not in DREAM_ROLES
+  const roleOptions = [...new Set([selectedRole, ...(DREAM_ROLES || [])])];
 
   const fetchAiExplanation = () => {
     if (!user?.profile?.resumeUrl) return;
@@ -80,6 +84,8 @@ export default function OverviewPage() {
     setEditingRole(false);
     try {
       await api.patch('/profile', { profile: { dreamRole: newRole } });
+      // Sync React auth context so user.profile.dreamRole is fresh everywhere
+      await refreshUser();
       // Soft re-fetch — no reload, no flash
       setLoading(true);
       setAiExplanation(null); // Will trigger fresh Gemini call for new role
@@ -162,7 +168,7 @@ export default function OverviewPage() {
                   onBlur={() => setEditingRole(false)}
                   className="bg-transparent font-semibold text-[#2B4C3F] border-b-2 border-[#2B4C3F] outline-none"
                 >
-                  {['Software Engineer', 'Full Stack Developer', 'Frontend Developer', 'Backend Developer', 'Data Scientist', 'Product Manager'].map(r => (
+                  {roleOptions.map(r => (
                     <option key={r} value={r}>{r}</option>
                   ))}
                 </select>
@@ -172,7 +178,7 @@ export default function OverviewPage() {
                   className="font-semibold text-[#2B4C3F] cursor-pointer hover:underline underline-offset-4 decoration-2 decoration-[#C8DDD6]"
                   title="Click to change target role"
                 >
-                  {dreamRole} <Icon.Edit size={14} className="inline-block mb-1 text-[#A3A3A3] hover:text-[#2B4C3F]" />
+                  {selectedRole} <Icon.Edit size={14} className="inline-block mb-1 text-[#A3A3A3] hover:text-[#2B4C3F]" />
                 </span>
               )}.
               {readiness?.summary && ` ${readiness.summary}`}

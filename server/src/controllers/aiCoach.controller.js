@@ -112,9 +112,10 @@ export const chat = asyncHandler(async (req, res) => {
  * If resume has keyGaps, uses those. Otherwise generates based on role.
  */
 export const generateInterviewQuestion = asyncHandler(async (req, res) => {
-  const { previousQuestions = [], difficulty = 'mid', gapIndex = 0 } = req.body;
+  const { previousQuestions = [], difficulty = 'mid', gapIndex = 0, targetRole: clientRole } = req.body;
   const user = req.user;
-  const dreamRole = user.profile.dreamRole || 'Software Engineer';
+  // Prefer the role the client explicitly selected; fall back to profile
+  const dreamRole = clientRole || user.profile.dreamRole || 'Software Engineer';
 
   const resume = await Resume.findOne({ user: user._id }).sort({ createdAt: -1 });
   const keyGaps = resume?.keyGaps || [];

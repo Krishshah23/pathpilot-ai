@@ -37,26 +37,33 @@ export const generateGrowthPlan = asyncHandler(async (req, res) => {
   let weeks = preserveCompletion(roadmapToWeeks(roadmap), existing);
 
   // -- Phase 5 Connection: Inject Gemini Gap Weeks --
-  const gaps = resume?.keyGaps || [];
+  // Only inject gap weeks when the roadmap role matches the profile's dreamRole
+  // (the role the resume was analyzed against). If different, the gaps are role-mismatched.
+  const profileRole = req.user.profile?.dreamRole;
+  const rolesMatch = !profileRole || profileRole.trim().toLowerCase() === targetRole.trim().toLowerCase();
+  const gaps = rolesMatch ? (resume?.keyGaps || []) : [];
+
   if (gaps.length > 0) {
     try {
       const gapWeeks = await geminiGenerateGapRoadmap({ gaps, targetRole });
       if (gapWeeks && gapWeeks.length > 0) {
         const formattedGapWeeks = gapWeeks.map((w) => ({
-          topic: w.topic,
-          focus: w.focus,
+          title: w.topic,           // schema field is `title`, not `topic`
+          focusHours: null,
           tasks: w.tasks.map(t => ({
             key: `gap-task-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-            name: t.name,
-            hours: t.hours,
+            title: t.name,                  // schema uses `title`, not `name`
+            estimatedHours: t.hours || 0,   // schema uses `estimatedHours`, not `hours`
+            difficulty: 'Intermediate',
+            priority: 'core',
             completed: false,
             completedAt: null
           }))
         }));
 
-        // Merge and re-index ALL weeks sequentially to prevent weekNumber collisions
+        // Merge and re-index ALL weeks sequentially — `week` is the schema field, not `weekNumber`
         const merged = [...formattedGapWeeks, ...weeks];
-        weeks = merged.map((w, idx) => ({ ...w, weekNumber: idx + 1 }));
+        weeks = merged.map((w, idx) => ({ ...w, week: idx + 1 }));
       }
     } catch (err) {
       console.error('Failed to generate gap roadmap', err);

@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
 import { api, errorMessage } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { DREAM_ROLES } from '@/config/careerData';
 import { cn } from '@/lib/cn';
 
 export default function InterviewPrepPage() {
@@ -34,7 +35,11 @@ export default function InterviewPrepPage() {
   const timerRef = useRef(null);
 
   const targetRole = user?.profile?.dreamRole || 'Software Engineer';
+  const [selectedRole, setSelectedRole] = useState(targetRole);
   const keyGaps = resume?.keyGaps || [];
+
+  // Always include the user's current role even if it's a custom value not in DREAM_ROLES
+  const roleOptions = [...new Set([targetRole, ...(DREAM_ROLES || [])])];
 
   /* ── Load latest resume (for gaps) ── */
   useEffect(() => {
@@ -104,6 +109,7 @@ export default function InterviewPrepPage() {
         gapIndex: idx,
         previousQuestions: questionsAsked,
         difficulty: 'mid',
+        targetRole: selectedRole,   // pass the chosen role to the backend
       });
       setQuestionData(data.data);
       setQuestionsAsked((prev) => [...prev, data.data.question]);
@@ -235,8 +241,22 @@ export default function InterviewPrepPage() {
               <h2 className="font-serif text-2xl font-bold text-[#171717]">Ready to practice?</h2>
               <p className="mt-3 text-sm text-[#525252] max-w-md mx-auto leading-relaxed">
                 Gemini will generate questions targeting your actual resume gaps for{' '}
-                <span className="font-semibold text-[#171717]">{targetRole}</span>.
+                <span className="font-semibold text-[#171717]">{selectedRole}</span>.
               </p>
+
+              {/* Role selector */}
+              <div className="mt-5 max-w-xs mx-auto">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3] mb-1.5">Target Role</label>
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="w-full input text-sm h-10"
+                >
+                  {roleOptions.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
 
               {/* Gap preview */}
               {loadingResume ? (
@@ -265,7 +285,7 @@ export default function InterviewPrepPage() {
 
               <div className="mt-6 grid sm:grid-cols-3 gap-3 text-left max-w-md mx-auto">
                 {[
-                  { label: 'Target Role', value: targetRole },
+                  { label: 'Target Role', value: selectedRole },
                   { label: 'Evaluation', value: 'Gemini AI' },
                   { label: 'Questions', value: keyGaps.length > 0 ? 'Gap-targeted' : 'Role-based' },
                 ].map(({ label, value }) => (

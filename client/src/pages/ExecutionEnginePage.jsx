@@ -32,6 +32,11 @@ export default function ExecutionEnginePage() {
   const [planRole, setPlanRole] = useState(user?.profile?.dreamRole || (DREAM_ROLES?.[0] ?? 'Full Stack Developer'));
   const [generating, setGenerating] = useState(false);
 
+  // Always include both the saved plan role AND the user's profile role,
+  // even if either is a custom value not in DREAM_ROLES
+  const profileDreamRole = user?.profile?.dreamRole;
+  const roleOptions = [...new Set([planRole, profileDreamRole, ...(DREAM_ROLES || [])].filter(Boolean))];
+
   /* ── Kanban state ── */
   const [opportunities, setOpportunities] = useState([]);
   const [stats, setStats] = useState(null);
@@ -173,7 +178,7 @@ export default function ExecutionEnginePage() {
                   onChange={(e) => setPlanRole(e.target.value)} 
                   className="input h-9 py-0 text-sm w-48"
                 >
-                  {DREAM_ROLES?.map((r) => <option key={r} value={r}>{r}</option>)}
+                  {roleOptions.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <button
                   onClick={generatePlan}
@@ -192,9 +197,9 @@ export default function ExecutionEnginePage() {
               <Spinner className="h-6 w-6 text-[#2B4C3F]" />
             </div>
           ) : !plan ? (
-            <GeneratePanel role={planRole} setRole={setPlanRole} generating={generating} onGenerate={generatePlan} />
+            <GeneratePanel role={planRole} setRole={setPlanRole} roleOptions={roleOptions} generating={generating} onGenerate={generatePlan} />
           ) : (
-            <RoadmapView plan={plan} role={planRole} setRole={setPlanRole} generating={generating} onGenerate={generatePlan} onToggle={toggleTask} />
+            <RoadmapView plan={plan} role={planRole} setRole={setPlanRole} roleOptions={roleOptions} generating={generating} onGenerate={generatePlan} onToggle={toggleTask} />
           )}
         </section>
 
@@ -323,7 +328,7 @@ export default function ExecutionEnginePage() {
 }
 
 /* ── Generate Panel ── */
-function GeneratePanel({ role, setRole, generating, onGenerate }) {
+function GeneratePanel({ role, setRole, roleOptions, generating, onGenerate }) {
   return (
     <div className="card p-10 text-center max-w-xl mx-auto">
       <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F5F5F3] text-[#525252] mb-5">
@@ -333,7 +338,7 @@ function GeneratePanel({ role, setRole, generating, onGenerate }) {
       <p className="mt-2 text-sm text-[#525252]">Turn your skill gap into a focused week-by-week learning plan.</p>
       <div className="mt-8 space-y-4 text-left max-w-sm mx-auto">
         <select value={role} onChange={(e) => setRole(e.target.value)} className="input w-full text-sm">
-          {DREAM_ROLES?.map((r) => <option key={r} value={r}>{r}</option>)}
+          {(roleOptions || DREAM_ROLES)?.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
         <button
           onClick={onGenerate}
@@ -393,11 +398,11 @@ function WeekCard({ week, onToggle }) {
         className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-[#FBFBFA] transition-colors"
       >
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#171717] text-white text-sm font-bold">
-          {week.week}
+          {week.week ?? '?'}
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-semibold text-[#171717]">{week.title}</p>
+            <p className="text-sm font-semibold text-[#171717]">{week.title || week.topic || 'Untitled Week'}</p>
             {isGapTargeted && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-[#C8DDD6] text-[#2B4C3F] bg-[#F0F5F3]">
                 ⚡ Gap-targeted

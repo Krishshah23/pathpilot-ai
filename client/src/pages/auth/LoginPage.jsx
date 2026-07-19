@@ -41,7 +41,7 @@ export default function LoginPage() {
           name="email"
           type="email"
           autoComplete="email"
-          placeholder="you@college.edu"
+          placeholder="Enter your registered email"
           value={form.email}
           onChange={onChange}
           required
@@ -51,7 +51,7 @@ export default function LoginPage() {
             label="Password"
             name="password"
             autoComplete="current-password"
-            placeholder="••••••••"
+            placeholder="Enter your password"
             value={form.password}
             onChange={onChange}
             required
