@@ -1,3 +1,16 @@
+/**
+ * pages/ExecutionEnginePage.jsx — Skill Roadmap & Job Kanban Execution Engine Hub Page (/execution-engine)
+ *
+ * ARCHITECTURAL ROLE:
+ * Action-oriented hub combining week-by-week learning roadmap execution with a 7-stage job application Kanban pipeline.
+ *
+ * FEATURES:
+ * 1. Skill Roadmap Engine: Interactive week-by-week task checklist with hour tracking and progress bar calculations.
+ *    Supports progress preservation across regenerations and Gemini AI gap week injection.
+ * 2. Application Kanban Pipeline: 7-stage drag-and-drop opportunity cards (Wishlist -> Applied -> OA -> Interview -> HR -> Offer -> Rejected).
+ * 3. Live Job Openings Feed: TheirStack API integration rendering role-specific active job openings with 1-click application tracking.
+ */
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/ui/icons';

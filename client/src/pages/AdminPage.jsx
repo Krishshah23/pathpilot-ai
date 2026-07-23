@@ -1,3 +1,13 @@
+/**
+ * pages/AdminPage.jsx — Admin Dashboard & User Management Console Page (/admin)
+ *
+ * ARCHITECTURAL ROLE:
+ * Admin management portal accessible exclusively to users with `role === 'admin'`:
+ * 1. Platform Metrics: Total user accounts, student/admin breakdown, verified count, and active resumes.
+ * 2. User Table & Search: Paginated, searchable user directory with role mutation and user deletion controls.
+ * 3. Market & Cache Admin Controls: Admin-triggered Adzuna market refresh and TheirStack job cache invalidation.
+ */
+
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card } from '@/components/ui/Card';

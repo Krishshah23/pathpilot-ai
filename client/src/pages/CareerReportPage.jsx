@@ -1,3 +1,15 @@
+/**
+ * pages/CareerReportPage.jsx — Printable Career Report Hub Page (/report)
+ *
+ * ARCHITECTURAL ROLE:
+ * Aggregates candidate readiness metrics into a clean, print-formatted PDF report:
+ * 1. Candidate Header: Displays student name, target role, college, and profile details.
+ * 2. Path Score Summary: Renders canonical Path Score and 4 factor progress bars.
+ * 3. Resume & ATS Insights: Details resume health score, detected skills, and Gemini AI key gaps.
+ * 4. Growth Roadmap Status: Summarizes learning progress, completed tasks, and total estimated hours.
+ * 5. PDF Export: Invokes browser `window.print()` with custom print media stylesheet rules.
+ */
+
 import { useEffect, useRef, useState } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/ui/icons';

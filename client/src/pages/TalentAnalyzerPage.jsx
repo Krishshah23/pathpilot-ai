@@ -1,3 +1,17 @@
+/**
+ * pages/TalentAnalyzerPage.jsx — Resume Strategy & Talent Analyzer Hub Page (/talent-analyzer)
+ *
+ * ARCHITECTURAL ROLE:
+ * Unified hub combining multi-stage Resume Analysis, Skill Gap Analysis, Recruiter Red Flag Feedback,
+ * Market Demand Alignment, and Real-Time Job Search.
+ *
+ * 4 HUB TABS:
+ * 1. AI Role Analysis: Role fit score, key gaps, ATS keywords missing, and SHAP-like signal breakdown.
+ * 2. Recruiter Feedback: 5 rule-based red flag checks (contact info, clichés, metrics ratio, date formats, gaps).
+ * 3. Market Alignment: Skill demand frequency percentages sourced from live Adzuna data.
+ * 4. Live Jobs: Real-time job search listings powered by TheirStack API with 2-layer caching.
+ */
+
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';

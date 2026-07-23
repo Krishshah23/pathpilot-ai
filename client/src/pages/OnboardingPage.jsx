@@ -1,3 +1,14 @@
+/**
+ * pages/OnboardingPage.jsx — Candidate Onboarding Setup Wizard Page (/onboarding)
+ *
+ * ARCHITECTURAL ROLE:
+ * Streamlined 2-step setup wizard required before accessing candidate features:
+ *   - Step 1: Goal Selection (`dreamRole`) — Drives Path Score calculation, Skill Roadmap, and Interview Prep.
+ *   - Step 2: Skill Seeding (`skills`) — Pre-populates baseline candidate skills array for gap analysis.
+ *
+ * Stores payload via `PUT /api/onboarding` and marks `user.onboardingCompleted = true`.
+ */
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';

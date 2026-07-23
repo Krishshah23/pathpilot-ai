@@ -1,3 +1,20 @@
+/**
+ * pages/OverviewPage.jsx — Candidate Command Center Dashboard (/dashboard)
+ *
+ * ARCHITECTURAL ROLE:
+ * The primary dashboard landing page for authenticated candidates.
+ *
+ * DASHBOARD CARDS & WIDGETS:
+ * 1. Greeting & Smart Action Header: Welcomes student, displays target role, and provides a dynamic
+ *    smart call-to-action button based on progress (Upload Resume -> Build Roadmap -> Start Practice).
+ * 2. Path Score Gauge: Displays canonical weighted Path Score (0-100), readiness tier badge,
+ *    and 4 factor score breakdowns (Resume Quality, Skills, Projects, Profile Completion).
+ * 3. AI Score Audit Card: Rendered only when an analyzed resume is present. Displays pre-generated
+ *    Gemini coaching narrative explaining exact strengths and score blockers.
+ * 4. Salary Projection Card: Displays live market salary range (in INR LPA) sourced from Adzuna data.
+ * 5. Quick Hub Shortcuts: Cards linking to Talent Analyzer, Execution Engine, and Interview Prep.
+ */
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
@@ -21,8 +38,6 @@ export default function OverviewPage() {
   const [aiExplanation, setAiExplanation] = useState(null);
   const [loadingAi, setLoadingAi] = useState(false);
 
-
-
   const fetchAiExplanation = () => {
     if (!user?.profile?.resumeUrl) return;
     setLoadingAi(true);
@@ -39,15 +54,14 @@ export default function OverviewPage() {
       try {
         const [scoreRes, growthRes] = await Promise.all([
           api.get('/path-score'),
-          api.get('/growth').catch(() => ({ data: { data: { plan: null } } })) // Handle 404s gracefully
+          api.get('/growth').catch(() => ({ data: { data: { plan: null } } }))
         ]);
-        
+
         setPathScore(scoreRes.data.data.pathScore || {});
         setMarketSalary(scoreRes.data.data.marketSalary || null);
         setBlendedBenchmark(scoreRes.data.data.blendedBenchmark || null);
         setGrowthPlan(growthRes.data?.data?.plan || null);
-        
-        // If they have a resume, fetch the true Gemini explanation
+
         if (user?.profile?.resumeUrl) {
           fetchAiExplanation();
         }
@@ -74,8 +88,6 @@ export default function OverviewPage() {
   const dreamRole = user?.profile?.dreamRole || 'your target role';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  
-
 
   const score = pathScore?.displayScore ?? Math.round(pathScore?.score || 0);
   const readiness = pathScore?.readiness;
@@ -83,11 +95,8 @@ export default function OverviewPage() {
   const peerBenchmark = pathScore?.peerBenchmark;
   const factors = pathScore?.factors || [];
   const explanations = predictions?.explanations;
-  // Only show AI diagnostics when the user has an analyzed resume.
-  // Without one the ML models run on all-zero inputs and produce nonsense.
   const hasResume = !!(user?.profile?.resumeUrl);
 
-  // Determine Smart CTA State
   let smartCta = {
     title: 'Upload your resume',
     desc: 'Unlock your AI career audit, gap analysis, and path score.',
@@ -95,314 +104,148 @@ export default function OverviewPage() {
     link: '/talent-analyzer',
     icon: <Icon.FileText size={20} />
   };
-  
+
   if (hasResume) {
     if (!growthPlan) {
       smartCta = {
         title: 'Generate your skill roadmap',
-        desc: 'Build a personalized weekly plan targeting your exact resume gaps.',
+        desc: 'Turn your gap analysis into a customized week-by-week plan.',
         btn: 'Build Roadmap',
         link: '/execution-engine',
-        icon: <Icon.Route size={20} />
+        icon: <Icon.Target size={20} />
       };
     } else {
       smartCta = {
-        title: 'Practice your weak points',
-        desc: 'Start an AI mock interview focused on the gaps we identified.',
-        btn: 'Start Interview',
+        title: 'Practice mock interview',
+        desc: 'Test your gap coverage with role-specific AI interview questions.',
+        btn: 'Start Practice',
         link: '/interview-prep',
-        icon: <Icon.Mic size={20} />
+        icon: <Icon.Award size={20} />
       };
     }
   }
 
   return (
     <AppShell>
-      <div className="space-y-10">
-
-        {/* ── Hero Bar ─────────────────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6 pb-8 border-b border-[#EAEAE5]">
+      <div className="space-y-8">
+        {/* Header section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#EAEAE5] pb-6">
           <div>
-            <p className="text-sm font-medium text-[#A3A3A3] mb-2">{greeting}</p>
-            <h1 className="font-serif text-4xl font-bold text-[#171717] leading-tight">
-              {firstName}.
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F5F5F3] text-xs font-semibold text-[#525252] mb-2 border border-[#EAEAE5]">
+              Target Role: <strong className="text-[#171717]">{dreamRole}</strong>
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#171717]">
+              {greeting}, {firstName} 👋
             </h1>
-            <p className="mt-3 text-base text-[#525252] max-w-xl leading-relaxed">
-              Here's your career readiness snapshot for{' '}
-              <span className="font-semibold text-[#2B4C3F]">{dreamRole}</span>.
-              {readiness?.summary && ` ${readiness.summary}`}
+            <p className="text-sm text-[#525252] mt-1">
+              Here is your career readiness overview and recommended action items.
             </p>
           </div>
-
           <button
             onClick={handleExportPDF}
-            className="shrink-0 inline-flex items-center gap-2 h-10 px-5 rounded-xl border border-[#EAEAE5] bg-white text-sm font-semibold text-[#171717] hover:bg-[#F5F5F3] transition-colors"
+            disabled={exporting}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-[#EAEAE5] text-xs font-bold text-[#171717] hover:bg-[#F5F5F3] transition-colors shadow-sm self-start md:self-auto"
           >
-            <Icon.Download size={16} /> Export Career Audit
+            <Icon.Download size={15} />
+            Export Career Report
           </button>
         </div>
 
-        {/* ── Smart Action Card ────────────────────────────────────── */}
-        <div className="banner-premium rounded-2xl p-6 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#C8DDD6]">
+        {/* Smart CTA Banner */}
+        <div className="rounded-2xl border border-[#EAEAE5] bg-white p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F5F5F3] text-[#171717] border border-[#EAEAE5]">
               {smartCta.icon}
-            </span>
+            </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-[#C8DDD6] mb-1">Next Best Action</p>
-              <h2 className="font-serif text-lg font-bold text-white">{smartCta.title}</h2>
-              <p className="text-sm text-white/80">{smartCta.desc}</p>
+              <h3 className="text-base font-bold text-[#171717]">{smartCta.title}</h3>
+              <p className="text-xs text-[#525252] mt-1">{smartCta.desc}</p>
             </div>
           </div>
           <button
             onClick={() => navigate(smartCta.link)}
-            className="shrink-0 h-10 px-6 bg-white text-sm font-bold text-[#171717] rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm hover:shadow"
+            className="px-5 py-2.5 rounded-xl bg-[#171717] text-white text-xs font-bold hover:bg-[#2a2a2a] transition-colors shrink-0"
           >
-            {smartCta.btn}
+            {smartCta.btn} →
           </button>
         </div>
 
-        {/* ── Path Score + Factor Bars ──────────────────────────────── */}
-        <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-          {/* Score Display */}
-          <div className="matte-card matte-card-hover p-8 flex flex-col items-center text-center animate-fade-up stagger-1">
-            <p className="text-xs font-bold uppercase tracking-widest text-[#A3A3A3] mb-4">Path Score</p>
-            <ScoreGauge score={score} size={180} label={readiness?.level || readiness?.label} />
-            <button
-              className="mt-4 text-xs font-semibold text-[#525252] hover:text-[#171717] underline underline-offset-2"
-              onClick={() => window.dispatchEvent(new CustomEvent('open-ai-coach', { detail: { type: 'pathScore' } }))}
-            >
-              Ask AI why →
-            </button>
+        {/* Main Grid: Path Score & Factor Breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Path Score Card */}
+          <div className="rounded-2xl border border-[#EAEAE5] bg-white p-6 shadow-sm flex flex-col items-center justify-center text-center">
+            <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-4">Path Score</h3>
+            <ScoreGauge score={score} label={readiness?.label} />
+            <p className="text-xs text-[#525252] mt-4 max-w-xs leading-relaxed">
+              {readiness?.summary}
+            </p>
           </div>
 
-          {/* Factor Progress Bars */}
-          <div className="card p-8 animate-fade-up stagger-2">
-            <h2 className="font-serif text-lg font-bold text-[#171717] mb-6">Score Breakdown</h2>
-            <div className="space-y-5">
-              {factors.length > 0 ? factors.map((f) => (
-                <FactorBar key={f.key} factor={f} />
-              )) : (
-                <p className="text-sm text-[#A3A3A3]">Analyze a resume to see factor breakdown.</p>
-              )}
+          {/* Factor Breakdown */}
+          <div className="lg:col-span-2 rounded-2xl border border-[#EAEAE5] bg-white p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-4">Readiness Factors</h3>
+              <div className="space-y-4">
+                {factors.map((f) => (
+                  <div key={f.key}>
+                    <div className="flex justify-between text-xs mb-1.5">
+                      <span className="font-semibold text-[#171717]">{f.label}</span>
+                      <span className="text-[#525252] font-mono">{f.score} / {f.max}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-[#F5F5F3] overflow-hidden border border-[#EAEAE5]">
+                      <div
+                        className={cn(
+                          'h-full rounded-full transition-all duration-500',
+                          f.status === 'good' ? 'bg-[#2B4C3F]' : f.status === 'warn' ? 'bg-amber-600' : 'bg-[#B85A3C]'
+                        )}
+                        style={{ width: `${f.percent}%` }}
+                      />
+                    </div>
+                    {f.tip && <p className="text-[10px] text-[#A3A3A3] mt-1">{f.tip}</p>}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-
-        {/* ── AI Career Audit Narrative (Replaces SHAP) ── */}
-        {hasResume ? (
-          <div className="bg-[#171717] rounded-2xl p-8 text-white relative overflow-hidden">
-            {/* Background flair */}
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#2B4C3F] opacity-30 rounded-full blur-3xl pointer-events-none" />
-            
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2a2a2a]">
-                  <Icon.Sparkles size={18} className="text-[#C8DDD6]" />
-                </span>
-                <div>
-                  <h2 className="font-serif text-lg font-bold">PathPilot AI Analysis</h2>
-                  <p className="text-xs text-[#A3A3A3]">Personalized career audit for {dreamRole}</p>
-                </div>
+        {/* AI Score Audit Card */}
+        {hasResume && (
+          <div className="rounded-2xl border border-[#EAEAE5] bg-white p-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#F5F5F3] text-[#171717]">
+                <Icon.MessageSquare size={16} />
+              </span>
+              <h3 className="text-sm font-bold text-[#171717]">AI Career Audit Narrative</h3>
+            </div>
+            {loadingAi ? (
+              <div className="py-6 flex items-center justify-center">
+                <Spinner className="h-6 w-6 text-[#2B4C3F]" />
               </div>
-
-              {loadingAi ? (
-                <div className="flex items-center gap-3 py-6">
-                  <Spinner className="h-5 w-5 text-[#C8DDD6]" />
-                  <span className="text-sm text-[#A3A3A3]">AI is writing your career narrative...</span>
-                </div>
-              ) : aiExplanation ? (
-                <div className="prose prose-sm prose-invert max-w-none">
-                  {/* Safely map paragraphs (Gemini returns a string) */}
-                  <div className="space-y-4 text-[#D0D0CA] leading-relaxed text-sm">
-                    {aiExplanation.split('\n').filter(p => p.trim()).map((paragraph, i) => (
-                      <p key={i}>{paragraph}</p>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="py-2">
-                  <p className="text-sm text-[#A3A3A3] mb-4">Could not load AI explanation.</p>
-                  <button
-                    onClick={fetchAiExplanation}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#2a2a2a] px-4 py-2 text-xs font-semibold text-white hover:bg-[#3a3a3a] transition-colors border border-[#333]"
-                  >
-                    <Icon.RotateCw size={13} /> Retry Audit
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (
-          /* No resume yet — show prompt instead of garbage predictions */
-          <div className="rounded-2xl border border-dashed border-[#EAEAE5] bg-[#F5F5F3] p-10 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white border border-[#EAEAE5] mx-auto mb-4">
-              <Icon.FileText size={24} className="text-[#A3A3A3]" />
-            </div>
-            <h3 className="font-serif text-base font-bold text-[#171717] mb-1">No resume analyzed yet</h3>
-            <p className="text-sm text-[#A3A3A3] max-w-sm mx-auto mb-5">
-              Upload and analyze your resume to unlock your AI-powered career audit and actionable feedback.
-            </p>
-            <a
-              href="/talent-analyzer"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#171717] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#2a2a2a] transition-colors"
-            >
-              <Icon.Upload size={15} /> Analyze Resume
-            </a>
+            ) : (
+              <div className="prose prose-sm max-w-none text-[#525252] text-xs leading-relaxed space-y-3 whitespace-pre-line">
+                {aiExplanation || 'Your AI audit is being generated...'}
+              </div>
+            )}
           </div>
         )}
 
-        {/* ── Live Market Alignment ────────────────────── */}
-        <div className="grid gap-6">
-          {blendedBenchmark?.available && (
-            <div className="card p-8">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="font-serif text-base font-bold text-[#171717]">Live Market Alignment</h2>
-                  <p className="text-xs text-[#A3A3A3] mt-1">Skill coverage vs. current market requirements</p>
-                </div>
-                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#2B4C3F] bg-[#F0F5F3] border border-[#C8DDD6] px-2 py-1 rounded-full">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#2B4C3F] animate-pulse" />
-                  Live
-                </span>
-              </div>
-              <div className="flex items-center gap-6 mb-5">
-                <div className="text-center">
-                  <p className="font-serif text-3xl font-black text-[#2B4C3F] animate-count-up">{blendedBenchmark.matchRate}%</p>
-                  <p className="text-xs text-[#A3A3A3]">Skill match</p>
-                </div>
-                <div className="h-12 w-px bg-[#EAEAE5]" />
-                <div className="text-center">
-                  <p className="font-serif text-3xl font-black text-[#171717] animate-count-up">{blendedBenchmark.sampleSize}</p>
-                  <p className="text-xs text-[#A3A3A3]">Listings analyzed</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {blendedBenchmark.skills?.slice(0, 4).map((item) => (
-                  <div key={item.skill} className="flex items-center justify-between rounded-xl border border-[#EAEAE5] bg-[#F5F5F3] px-3.5 py-2 text-xs">
-                    <div>
-                      <p className="font-semibold text-[#171717]">{item.skill}</p>
-                      <p className="text-[#A3A3A3]">Demand: {item.demand}%</p>
-                    </div>
-                    <span className={cn(
-                      'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider',
-                      item.matched ? 'bg-[#F0F5F3] text-[#2B4C3F] border border-[#C8DDD6]' : 'bg-[#FDF5F3] text-[#B85A3C] border border-[#E8C4B8]'
-                    )}>
-                      <span className={cn('h-1.5 w-1.5 rounded-full', item.matched ? 'bg-[#2B4C3F]' : 'bg-[#B85A3C]')} />
-                      {item.matched ? 'Matched' : 'Missing'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
+        {/* Market Salary Card */}
+        {marketSalary?.available && (
+          <div className="rounded-2xl border border-[#EAEAE5] bg-white p-6 shadow-sm flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-wider">Live Market Benchmark</span>
+              <h4 className="text-base font-bold text-[#171717] mt-0.5">{dreamRole} Salary Range</h4>
             </div>
-          )}
-        </div>
-
-        {/* ── Profile Completion + Skills ───────────────────────────── */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {pathScore?.profileCompletion && (
-            <div className="card p-8">
-              <h2 className="font-serif text-base font-bold text-[#171717] mb-5">Profile Completion</h2>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {pathScore.profileCompletion.checks?.map((check) => (
-                  <div key={check.label} className="flex items-center gap-2.5 rounded-lg border border-[#EAEAE5] px-3 py-2.5">
-                    <span className={cn(
-                      'flex h-5 w-5 shrink-0 items-center justify-center rounded-full',
-                      check.complete ? 'bg-[#2B4C3F] text-white' : 'bg-[#F5F5F3] text-[#D0D0CA]'
-                    )}>
-                      <Icon.Check size={11} />
-                    </span>
-                    <span className={cn('text-sm', check.complete ? 'text-[#171717]' : 'text-[#A3A3A3]')}>
-                      {check.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
+            <div className="text-right">
+              <span className="text-xl font-bold font-mono text-[#2B4C3F]">
+                ₹{marketSalary.min} - ₹{marketSalary.max} LPA
+              </span>
+              <p className="text-[10px] text-[#A3A3A3] mt-0.5">Based on live job posting analysis</p>
             </div>
-          )}
-
-          {pathScore?.skills?.length > 0 && (
-            <div className="card p-8">
-              <h2 className="font-serif text-base font-bold text-[#171717] mb-5">Skills in Your Profile</h2>
-              <div className="flex flex-wrap gap-2">
-                {pathScore.skills.map((skill) => (
-                  <span key={skill} className="rounded-lg border border-[#EAEAE5] bg-[#F5F5F3] px-3 py-1.5 text-xs font-medium text-[#525252]">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </AppShell>
   );
-}
-
-/* ── Sub-components ── */
-
-function FactorBar({ factor }) {
-  const colors = { good: '#2B4C3F', warn: '#92400E', bad: '#B85A3C' };
-  const bgColors = { good: '#F0F5F3', warn: '#FEF3C7', bad: '#FDF5F3' };
-  const color = colors[factor.status] || '#A3A3A3';
-  return (
-    <div>
-      <div className="flex items-start justify-between gap-4 text-sm mb-2">
-        <div>
-          <p className="font-medium text-[#171717]">{factor.label}</p>
-          {factor.detail && <p className="text-xs text-[#A3A3A3] mt-0.5">{factor.detail}</p>}
-        </div>
-        <span className="shrink-0 text-xs font-bold" style={{ color }}>
-          {factor.score}/{factor.max}
-        </span>
-      </div>
-      <div className="h-1.5 rounded-full progress-ruler overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${factor.percent}%`, backgroundColor: color }}
-        />
-      </div>
-      {factor.tip && <p className="mt-1.5 text-[11px] text-[#A3A3A3]">{factor.tip}</p>}
-    </div>
-  );
-}
-
-function PredCard({ label, value, sub, subColor, icon }) {
-  return (
-    <div className="card card-hover p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#A3A3A3]">{label}</p>
-          <p className="mt-2 font-serif text-2xl font-black text-[#171717] leading-tight">{value}</p>
-          {sub && (
-            <p className="mt-1.5 text-xs text-[#525252]" style={subColor ? { color: subColor } : {}}>
-              {sub}
-            </p>
-          )}
-        </div>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F5F5F3] text-[#525252]">
-          {icon}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function formatFeatureName(name) {
-  const map = {
-    education: 'Education Level', cgpa: 'CGPA', projects: 'Project Count',
-    internships: 'Internship Experience', experience: 'Work Experience',
-    skills_count: 'Total Skills', frontend_skills: 'Frontend Skills',
-    backend_skills: 'Backend Skills', database_skills: 'Database Skills',
-    cloud_skills: 'Cloud / DevOps Skills', ml_skills: 'ML Skills',
-    has_github: 'GitHub Profile', has_linkedin: 'LinkedIn Profile',
-    resume_length: 'Resume Length', certifications: 'Certifications',
-    achievements: 'Achievements', ats_keywords: 'ATS Keywords',
-    action_verbs: 'Action Verbs', leadership: 'Leadership Signals',
-    open_source: 'Open Source', has_contact: 'Contact Info',
-    has_sections: 'Resume Sections', formatting_score: 'Layout Score',
-  };
-  return map[name] || name.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }

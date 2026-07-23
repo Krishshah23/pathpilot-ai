@@ -1,3 +1,13 @@
+/**
+ * pages/PublicProfilePage.jsx — Public Career Card View Page (/profile/:publicCardId)
+ *
+ * ARCHITECTURAL ROLE:
+ * Unauthenticated public view for sharing a candidate's career card:
+ * 1. Open Graph Meta Updates: Dynamically sets `document.title` and `og:title` / `og:description` for social link previews (LinkedIn/Twitter).
+ * 2. Shareable Profile Card: Displays candidate name, avatar, target role, skills badges, Path Score gauge, and factor scores.
+ * 3. Privacy Guard: If `isPublicCardEnabled` is false or profile is missing, renders a clean 404/private state.
+ */
+
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Icon } from '@/components/ui/icons';

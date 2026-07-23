@@ -1,3 +1,18 @@
+/**
+ * components/layout/AppShell.jsx — Master Layout Shell Component
+ *
+ * ARCHITECTURAL ROLE:
+ * Serves as the outer layout wrapper for all authenticated student and admin pages.
+ *
+ * LAYOUT STRUCTURE:
+ * 1. `TopNav`: Sticky frosted navbar featuring logo, primary navigation links, notification drawer,
+ *    and user profile avatar dropdown.
+ * 2. `NotificationBell`: Polling drawer (every 30s) rendering real-time notifications.
+ * 3. `AICoachFab` & `AICoachDrawer`: Floating action button and slide-over Gemini AI chat drawer.
+ *    Supports custom event dispatch (`open-ai-coach`) for auto-explaining Path Score cards.
+ * 4. `<main>` Container: Centered max-w-7xl content container wrapped in smooth entrance animations.
+ */
+
 import { useEffect, useState, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/cn';
@@ -481,9 +496,7 @@ function AICoachDrawer({ onClose, explainType, clearExplainType, messages, setMe
                   key={prompt}
                   onClick={() => {
                     setInput(prompt);
-                    // Trigger send with slight delay so input state updates
                     setTimeout(() => {
-                      const fakeEvent = { preventDefault: () => {} };
                       setMessages((prev) => [...prev, { role: 'user', content: prompt }]);
                       setInput('');
                       setLoading(true);
@@ -527,17 +540,11 @@ function AICoachDrawer({ onClose, explainType, clearExplainType, messages, setMe
 
 /* ─── App Shell ───────────────────────────────────────────────────── */
 
-/**
- * Authenticated app shell.
- * Renders the horizontal TopNav, optional ProfileDrawer, AI Coach button/drawer,
- * and a max-w-7xl centered main content area.
- */
 export function AppShell({ children }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [coachOpen, setCoachOpen] = useState(false);
   const [explainType, setExplainType] = useState(null);
-  // Lifted here so chat history persists when drawer is closed/reopened
   const [chatMessages, setChatMessages] = useState([
     { role: 'assistant', content: "Hi! I'm your AI Career Coach. Ask me anything about your resume, skill gaps, or career readiness." }
   ]);

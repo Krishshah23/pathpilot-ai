@@ -1,3 +1,15 @@
+/**
+ * pages/InterviewPrepPage.jsx — AI Mock Interview Simulator Hub Page (/interview-prep)
+ *
+ * ARCHITECTURAL ROLE:
+ * Real-time AI mock interview practice environment:
+ * 1. Gap-Targeted Questions: Generates interview questions dynamically targeting candidate key gaps via Gemini.
+ * 2. Speech-to-Text Voice Transcription: Uses browser `webkitSpeechRecognition` for hands-free answer dictation.
+ * 3. Countdown Response Timer: Tracks response duration in seconds.
+ * 4. Multi-Dimensional Rubric Evaluation: Evaluates answers on Relevance (30%), Depth (40%), and Communication (30%).
+ * 5. Session History & Scoring Trends: Persists completed sessions in MongoDB for score progression analysis.
+ */
+
 import { useState, useEffect, useRef } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/ui/icons';

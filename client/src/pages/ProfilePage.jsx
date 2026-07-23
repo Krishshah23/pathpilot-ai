@@ -1,3 +1,14 @@
+/**
+ * pages/ProfilePage.jsx — Candidate Profile Settings Page (/profile)
+ *
+ * ARCHITECTURAL ROLE:
+ * Manages candidate profile fields, security credentials, avatar uploads, and public career card controls:
+ * 1. Personal Details Form: Name, email, target role (`dreamRole`), skills array, and college details.
+ * 2. Avatar Upload: File picker updating `avatarUrl` via `POST /api/profile/avatar`.
+ * 3. Security Form: Password modification via `PATCH /api/profile/password`.
+ * 4. Public Career Card Controls: Toggles public sharing on/off and provides 1-click URL copy link.
+ */
+
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShell, Field, SkillTagInput } from '@/components/layout/AppShell';
