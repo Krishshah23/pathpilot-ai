@@ -1,3 +1,20 @@
+/**
+ * controllers/opportunity.controller.js — Job Application Kanban Controller
+ *
+ * ARCHITECTURAL ROLE:
+ * Manages candidate job opportunities moving through a 7-stage hiring pipeline:
+ * wishlist -> applied -> oa -> interview -> hr -> offer -> rejected.
+ *
+ * FEATURES:
+ * 1. FIT SCORE ESTIMATION (`calculateOpportunityFit`):
+ *    Calls Django ML service to compute a weighted match score combining role fit (30%),
+ *    ATS probability (35%), and predicted interview success (35%).
+ * 2. TIMELINE AUDIT TRAIL:
+ *    Pushes stage change entries into `opportunity.timeline[]` with timestamps and notes.
+ * 3. AGGREGATED PIPELINE STATS (`stats`):
+ *    Runs a MongoDB aggregation query returning per-stage card counts.
+ */
+
 import { Opportunity, OPPORTUNITY_STAGES } from '../models/Opportunity.js';
 import { ApiError } from '../utils/ApiError.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
@@ -7,10 +24,11 @@ import { collectStudentSkills } from '../services/pathScore.service.js';
 import { Resume } from '../models/Resume.js';
 import { Notification } from '../models/Notification.js';
 
+/** Extracts feature payload for ML model inference. */
 function getProfilePayload(user, latestResume) {
   const profile = user.profile || {};
   const skills = collectStudentSkills(user);
-  
+
   return {
     education: profile.education ?? 1,
     cgpa: profile.cgpa ?? 0,
@@ -30,37 +48,38 @@ function getProfilePayload(user, latestResume) {
   };
 }
 
+/** Computes fit score for a specific job application using ML diagnostics. */
 async function calculateOpportunityFit(user, targetRole) {
   try {
     const latestResume = await Resume.findOne({ user: user._id }).sort({ createdAt: -1 });
     const currentSkills = collectStudentSkills(user);
     const features = getProfilePayload(user, latestResume);
-    
+
     const response = await aiService.predict({
       features,
       current_skills: currentSkills,
       target_role: targetRole,
     });
-    
+
     if (response && response.data) {
       const data = response.data;
-      
       const roleFit = data.recommendedRole?.roleFitScore ?? 0.0;
       const atsPass = data.atsProbability ?? 50.0;
       const interviewSuccess = data.interviewProbability ?? 50.0;
-      
-      const score = Math.round((roleFit * 0.3) + (atsPass * 0.35) + (interviewSuccess * 0.35));
-      
+
+      const score = Math.round(roleFit * 0.3 + atsPass * 0.35 + interviewSuccess * 0.35);
+
       const confScore = Math.round(
         ((data.recommendedRole?.confidenceTag?.score ?? 50) +
-         (data.atsConfidence?.score ?? 50) +
-         (data.interviewConfidence?.score ?? 50)) / 3
+          (data.atsConfidence?.score ?? 50) +
+          (data.interviewConfidence?.score ?? 50)) /
+          3
       );
-      
+
       let tier = 'moderate';
       if (confScore >= 70) tier = 'high';
       else if (confScore < 40) tier = 'low';
-      
+
       return {
         score: Math.max(10, Math.min(100, score)),
         roleFit: Math.round(roleFit),
@@ -74,9 +93,10 @@ async function calculateOpportunityFit(user, targetRole) {
       };
     }
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.error('Failed to calculate opportunity fit:', err.message);
   }
-  
+
   return {
     score: 50,
     roleFit: 50,
@@ -92,7 +112,7 @@ async function calculateOpportunityFit(user, targetRole) {
 
 /**
  * GET /api/opportunities
- * List all opportunities for the authenticated user, newest first.
+ * Lists all application cards for the authenticated user.
  */
 export const list = asyncHandler(async (req, res) => {
   const opportunities = await Opportunity.find({ user: req.user._id }).sort({
@@ -103,7 +123,7 @@ export const list = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/opportunities/stats
- * Aggregate counts per stage for the authenticated user.
+ * Aggregates count of opportunity cards per pipeline stage.
  */
 export const stats = asyncHandler(async (req, res) => {
   const pipeline = [
@@ -112,7 +132,6 @@ export const stats = asyncHandler(async (req, res) => {
   ];
   const raw = await Opportunity.aggregate(pipeline);
 
-  // Build a map with every stage present (default 0).
   const byStage = {};
   for (const s of OPPORTUNITY_STAGES) byStage[s] = 0;
   for (const r of raw) byStage[r._id] = r.count;
@@ -124,7 +143,7 @@ export const stats = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/opportunities
- * Create a new opportunity. First timeline entry is auto-pushed.
+ * Creates a new job application opportunity card and calculates initial fit score.
  */
 export const create = asyncHandler(async (req, res) => {
   const { company, role, stage, url, notes, salary, location } = req.body;
@@ -164,7 +183,7 @@ export const create = asyncHandler(async (req, res) => {
 
 /**
  * PATCH /api/opportunities/:id
- * Update an opportunity. If the stage changed, push a timeline entry.
+ * Updates application stage, notes, or role, recording timeline audit entries.
  */
 export const update = asyncHandler(async (req, res) => {
   const opp = await Opportunity.findOne({ _id: req.params.id, user: req.user._id });
@@ -184,7 +203,6 @@ export const update = asyncHandler(async (req, res) => {
     opp.fitScore = await calculateOpportunityFit(req.user, opp.role);
   }
 
-  // Stage transition — record in timeline.
   if (stage && stage !== opp.stage) {
     if (!OPPORTUNITY_STAGES.includes(stage)) {
       throw ApiError.badRequest(`Invalid stage: ${stage}`);
@@ -192,7 +210,6 @@ export const update = asyncHandler(async (req, res) => {
     opp.stage = stage;
     opp.timeline.push({ stage, date: new Date(), note: req.body.timelineNote || '' });
 
-    // Auto-set appliedAt on first transition to 'applied'.
     if (stage === 'applied' && !opp.appliedAt) {
       opp.appliedAt = new Date();
     }
@@ -204,7 +221,7 @@ export const update = asyncHandler(async (req, res) => {
 
 /**
  * DELETE /api/opportunities/:id
- * Remove an opportunity belonging to the authenticated user.
+ * Removes an opportunity card.
  */
 export const remove = asyncHandler(async (req, res) => {
   const opp = await Opportunity.findOneAndDelete({

@@ -1,3 +1,13 @@
+/**
+ * controllers/jobMarket.controller.js — Market Intelligence Controller
+ *
+ * ARCHITECTURAL ROLE:
+ * Serves skill frequency demand percentages and salary range metrics queried from Adzuna job listings:
+ * 1. `getMarketData`: Returns top skill demand percentages for a target role.
+ * 2. `getMarketSalary`: Returns aggregate salary range (in INR LPA).
+ * 3. `triggerRefresh`: Admin-only endpoint triggering immediate market data refresh.
+ */
+
 import {
   getMarketDataForRole,
   getMarketSalaryForRole,
@@ -10,7 +20,7 @@ import { sendSuccess } from '../utils/ApiResponse.js';
 
 /**
  * GET /api/job-market/:role
- * Returns the latest week's skill-frequency data and salary range for a role.
+ * Returns market skill frequency demand percentages for a target role.
  */
 export const getMarketData = asyncHandler(async (req, res) => {
   const { role } = req.params;
@@ -28,7 +38,7 @@ export const getMarketData = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/job-market/:role/salary
- * Returns the aggregate market salary range for a role.
+ * Returns aggregate market salary range (in INR LPA) for a role.
  */
 export const getMarketSalary = asyncHandler(async (req, res) => {
   const { role } = req.params;
@@ -40,8 +50,8 @@ export const getMarketSalary = asyncHandler(async (req, res) => {
 });
 
 /**
- * POST /api/job-market/refresh   (admin-only)
- * Manually triggers a full market data refresh.
+ * POST /api/job-market/refresh (admin-only)
+ * Manually triggers a full market data refresh across all 12 tracked roles.
  */
 export const triggerRefresh = asyncHandler(async (_req, res) => {
   const count = await refreshAllRoles();

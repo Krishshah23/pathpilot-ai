@@ -1,9 +1,16 @@
+/**
+ * routes/ml.routes.js — Pass-through Proxy Router for Django ML Models
+ *
+ * ENDPOINTS:
+ * - POST /api/ml/predict → Unified endpoint forwarding request to Django ML service
+ *   (runs all 7 CatBoost/XGBoost models + SHAP TreeExplainer drivers)
+ */
+
 import { Router } from 'express';
 import { predict } from '../controllers/ml.controller.js';
 
 const router = Router();
 
-// POST /api/ml/predict — unified ML predictions from all 7 trained models
 router.post('/predict', predict);
 
 export default router;

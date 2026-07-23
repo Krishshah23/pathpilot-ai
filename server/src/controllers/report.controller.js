@@ -1,3 +1,18 @@
+/**
+ * controllers/report.controller.js — Career Report Aggregator Controller
+ *
+ * ARCHITECTURAL ROLE:
+ * Aggregates candidate data from every module into a single unified report payload:
+ * - Student profile metadata
+ * - Path Score breakdown & factors
+ * - Latest Resume analysis & Gemini AI insights
+ * - Growth Roadmap summary
+ * - Skill category distribution
+ * - Opportunity application stage counts
+ *
+ * The compiled report payload is rendered by the frontend as a printable / PDF-exportable career report.
+ */
+
 import { User } from '../models/User.js';
 import { Resume } from '../models/Resume.js';
 import { GrowthPlan } from '../models/GrowthPlan.js';
@@ -11,13 +26,12 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 
 /**
  * GET /api/report
- * Aggregates data from every module into a single report payload that the
- * frontend renders as a printable career report.
+ * Compiles and returns full candidate career report object.
  */
 export const generate = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
-  // Fetch all data in parallel for speed.
+  // Execute database queries in parallel for optimal response speed
   const [user, resumes, growthPlan, opportunities] = await Promise.all([
     User.findById(userId),
     Resume.find({ user: userId }).sort({ createdAt: -1 }),
@@ -26,16 +40,12 @@ export const generate = asyncHandler(async (req, res) => {
   ]);
 
   const latestResume = resumes.length ? resumes[0] : null;
-
-  // Reuse the same scoring logic used across the app.
   const pathScore = buildPathScore(user, latestResume);
   const skills = collectStudentSkills(user, latestResume);
   const distribution = skillDistribution(skills);
 
-  // Growth progress summary.
   const planData = withProgress(growthPlan);
 
-  // Opportunity stage summary.
   const oppStats = {};
   for (const o of opportunities) {
     oppStats[o.stage] = (oppStats[o.stage] || 0) + 1;
@@ -72,7 +82,6 @@ export const generate = asyncHandler(async (req, res) => {
           healthBreakdown: latestResume.healthBreakdown,
           suggestions: latestResume.suggestions,
           versions: resumes.length,
-          // Gemini AI Intelligence fields
           roleFitScore: latestResume.roleFitScore,
           keyGaps: latestResume.keyGaps,
           strengthAreas: latestResume.strengthAreas,
@@ -105,10 +114,7 @@ export const generate = asyncHandler(async (req, res) => {
     },
   };
 
-  // LEGACY — kept for ML model demonstration during academic review.
-  // Django predictions (atsProbability, salaryLPA, etc.) are synthetic and
-  // no longer surfaced in the main UI. Gemini AI insights on the resume
-  // document are the source of truth for all user-facing analysis.
+  // Legacy ML prediction demo attachment
   try {
     if (latestResume) {
       const payload = {
@@ -132,13 +138,14 @@ export const generate = asyncHandler(async (req, res) => {
         currentSkills: skills,
         targetRole: user.profile?.dreamRole || '',
       };
-      
-      const mlResponse = await aiService.predict(payload); /* LEGACY — model demo */
+
+      const mlResponse = await aiService.predict(payload);
       if (mlResponse?.data) {
-        report.pathScore.predictions = mlResponse.data; // Only added for professor demo
+        report.pathScore.predictions = mlResponse.data;
       }
     }
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.error('Error fetching ML predictions for report (non-critical):', err);
   }
 

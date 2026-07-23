@@ -1,3 +1,15 @@
+/**
+ * controllers/pathScore.controller.js — Path Score & Readiness Controller
+ *
+ * ARCHITECTURAL ROLE:
+ * Calculates the canonical Path Score, pulls legacy ML model predictions, and blends live
+ * market demand benchmarks:
+ * 1. Computes weighted 4-factor Path Score (`buildPathScore`).
+ * 2. Optionally fetches legacy CatBoost/XGBoost predictions from Django (`aiService.predict`).
+ * 3. Enforces score preservation: ML level summaries are attached without altering the canonical score.
+ * 4. Merges live market salary range (`getMarketSalaryForRole`) and skill match benchmarks (`getMarketDataForRole`).
+ */
+
 import { Resume } from '../models/Resume.js';
 import { aiService } from '../services/ai.service.js';
 import { buildPathScore, collectStudentSkills } from '../services/pathScore.service.js';
@@ -5,32 +17,10 @@ import { getMarketSalaryForRole, getMarketDataForRole } from '../services/jobMar
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 
-function profilePayload(user) {
-  const profile = user.profile || {};
-  return {
-    college: profile.college,
-    branch: profile.branch,
-    semester: profile.semester,
-    dreamRole: profile.dreamRole,
-    skills: profile.skills || [],
-    resumeUrl: profile.resumeUrl,
-  };
-}
-
-function resumePayload(resume) {
-  if (!resume) return null;
-  return {
-    fileUrl: resume.fileUrl,
-    healthScore: resume.healthScore,
-    skills: resume.skills || [],
-    projects: resume.projects || [],
-    education: resume.education || [],
-    experience: resume.experience || [],
-    certifications: resume.certifications || [],
-  };
-}
-
-// GET /api/path-score
+/**
+ * GET /api/path-score
+ * Computes canonical Path Score breakdown, fetches ML predictions, and returns blended market benchmarks.
+ */
 export const getPathScore = asyncHandler(async (req, res) => {
   const resume = await Resume.findOne({ user: req.user._id }).sort({ createdAt: -1 });
   const pathScore = buildPathScore(req.user, resume);
@@ -59,21 +49,12 @@ export const getPathScore = asyncHandler(async (req, res) => {
       targetRole: req.user.profile?.dreamRole || '',
     };
 
-    // LEGACY — Django Python ML pipeline (kept for academic model demonstration).
-    // These models (CatBoost, XGBoost) were trained on synthetic student data and
-    // provide feature-engineered scoring. The main UI now uses Gemini AI insights
-    // instead, but this pipeline remains active for professor demo purposes.
-    const mlResponse = await aiService.predict(payload); /* LEGACY — model demo */
+    // Legacy ML pipeline prediction (demonstration feature)
+    const mlResponse = await aiService.predict(payload);
     if (mlResponse?.data) {
       const mlData = mlResponse.data;
-      // Store ML predictions as supplementary data without overwriting
-      // the factor-based score. The factor bars must always match the
-      // displayed total — overwriting score without recalculating factors
-      // caused visual contradictions on the dashboard.
       pathScore.predictions = mlData;
 
-      // Use ML readiness level/summary if it provides one, but keep
-      // the factor-derived score as the canonical number.
       if (mlData.careerReadiness?.level) {
         pathScore.readiness = {
           ...pathScore.readiness,
@@ -89,13 +70,11 @@ export const getPathScore = asyncHandler(async (req, res) => {
       }
     }
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.error('Error fetching ML predictions:', err);
-    // Keep fallback pathScore available if Django AI service is down
   }
 
-  // Defensive: ensure `predictions.explanations` exists so the frontend
-  // can render the SHAP/XAI section even when the ML service fails or
-  // returns incomplete data.
+  // Defensive fallback for SHAP explanation UI rendering
   pathScore.predictions = pathScore.predictions || {};
   pathScore.predictions.explanations = pathScore.predictions.explanations || {
     topPositive: [],
@@ -103,26 +82,26 @@ export const getPathScore = asyncHandler(async (req, res) => {
     shapRaw: [],
   };
 
-  // Fetch live market salary range for the user's dream role.
+  // Live market salary and benchmark blending
   let marketSalary = { available: false };
   let blendedBenchmark = { available: false };
   try {
     const dreamRole = req.user.profile?.dreamRole;
     if (dreamRole) {
       marketSalary = await getMarketSalaryForRole(dreamRole);
-      
+
       const marketData = await getMarketDataForRole(dreamRole);
       if (marketData && marketData.available && marketData.skills?.length > 0) {
         const topMarketSkills = marketData.skills.slice(0, 10);
-        const studentSkillsLower = new Set(currentSkills.map(s => String(s).toLowerCase()));
-        
-        const skillMatches = topMarketSkills.map(s => ({
+        const studentSkillsLower = new Set(currentSkills.map((s) => String(s).toLowerCase()));
+
+        const skillMatches = topMarketSkills.map((s) => ({
           skill: s.skill,
           demand: s.frequency,
-          matched: studentSkillsLower.has(s.skill.toLowerCase())
+          matched: studentSkillsLower.has(s.skill.toLowerCase()),
         }));
-        
-        const matchedCount = skillMatches.filter(s => s.matched).length;
+
+        const matchedCount = skillMatches.filter((s) => s.matched).length;
         const matchRate = Math.round((matchedCount / Math.max(1, topMarketSkills.length)) * 100);
         const avgMarketDemand = Math.round(
           topMarketSkills.reduce((sum, s) => sum + s.frequency, 0) / Math.max(1, topMarketSkills.length)
@@ -134,14 +113,14 @@ export const getPathScore = asyncHandler(async (req, res) => {
           avgMarketDemand,
           skills: skillMatches,
           sampleSize: marketData.sampleSize,
-          lastUpdated: marketData.lastUpdated
+          lastUpdated: marketData.lastUpdated,
         };
       }
     }
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.error('Error fetching market salary/data:', err);
   }
 
   return sendSuccess(res, { data: { pathScore, marketSalary, blendedBenchmark } });
 });
-

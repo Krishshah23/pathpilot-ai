@@ -1,3 +1,13 @@
+/**
+ * controllers/notification.controller.js — Candidate Notification Drawer Controller
+ *
+ * ARCHITECTURAL ROLE:
+ * Handles candidate notifications listing and read state mutation.
+ * Features a LAZY WEEKLY CHECK-IN TRIGGER:
+ * On `GET /api/notifications`, checks if the candidate hasn't received a check-in reminder
+ * or updated their profile in the last 7 days; if so, lazily creates a weekly check-in notification.
+ */
+
 import { Notification } from '../models/Notification.js';
 import { Opportunity } from '../models/Opportunity.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -6,17 +16,16 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 
 /**
  * GET /api/notifications
- * Get all notifications for the user. Runs lazy weekly check-in check first.
+ * Returns candidate notifications list and unread count. Runs lazy weekly check-in trigger.
  */
 export const list = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
-  // Lazy check: Weekly check-in trigger
+  // Lazy weekly check-in trigger
   try {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    // Check if they already received a weekly check-in in the last 7 days
     const recentReminder = await Notification.findOne({
       user: userId,
       title: 'Weekly Check-in',
@@ -24,7 +33,6 @@ export const list = asyncHandler(async (req, res) => {
     });
 
     if (!recentReminder) {
-      // Check if they recently updated profile or created/updated opportunities
       const userRecentlyUpdated = req.user.updatedAt >= sevenDaysAgo;
       const recentOpp = await Opportunity.findOne({
         user: userId,
@@ -41,6 +49,7 @@ export const list = asyncHandler(async (req, res) => {
       }
     }
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.error('Lazy weekly notification check failed:', err.message);
   }
 
@@ -52,7 +61,7 @@ export const list = asyncHandler(async (req, res) => {
 
 /**
  * PATCH /api/notifications/:id
- * Mark a single notification as read.
+ * Marks a single notification as read.
  */
 export const markAsRead = asyncHandler(async (req, res) => {
   const notif = await Notification.findOneAndUpdate(
@@ -68,7 +77,7 @@ export const markAsRead = asyncHandler(async (req, res) => {
 
 /**
  * PATCH /api/notifications/mark-all
- * Mark all user notifications as read.
+ * Marks all candidate notifications as read.
  */
 export const markAllAsRead = asyncHandler(async (req, res) => {
   await Notification.updateMany({ user: req.user._id, read: false }, { read: true });

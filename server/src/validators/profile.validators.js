@@ -1,16 +1,26 @@
+/**
+ * validators/profile.validators.js — Zod Schemas for Profile & Onboarding
+ *
+ * ARCHITECTURAL PURPOSE:
+ * Enforces field length limits, semester bounds (1-12), type coercion for form numbers,
+ * and refinement checks ensuring profile updates contain at least one field.
+ */
+
 import { z } from 'zod';
 
-// Shared profile fields. All optional on update; onboarding requires a subset.
+// Reusable skills array schema (max 50 skills)
 const skills = z
   .array(z.string().trim().min(1).max(40))
   .max(50, 'Too many skills (max 50)')
   .optional();
 
+/** Schema for PUT /api/onboarding */
 export const onboardingSchema = z.object({
   dreamRole: z.string().trim().min(2, 'Please pick a target role').max(80),
   skills: z.array(z.string().trim().min(1).max(40)).max(50).default([]),
 });
 
+/** Schema for PATCH /api/profile */
 export const updateProfileSchema = z
   .object({
     name: z.string().trim().min(2).max(80).optional(),
@@ -24,6 +34,7 @@ export const updateProfileSchema = z
     message: 'No fields to update',
   });
 
+/** Schema for PATCH /api/profile/password */
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
   newPassword: z.string().min(8, 'New password must be at least 8 characters').max(72),

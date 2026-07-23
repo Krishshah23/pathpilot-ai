@@ -1,3 +1,15 @@
+/**
+ * controllers/profile.controller.js — Candidate Profile & Public Card Controller
+ *
+ * ARCHITECTURAL ROLE:
+ * Manages candidate profile updates, password modifications, avatar/resume uploads,
+ * and shareable public career card state:
+ * 1. `updateProfile`: Updates profile fields. Invalidates `aiNarrative` on active resume if `dreamRole` changes.
+ * 2. `uploadAvatar` / `uploadResume`: Saves file uploaded via Multer and cleans up previous file on disk (`removeLocalFile`).
+ * 3. `getPublicCard`: Unauthenticated public endpoint returning card data if `isPublicCardEnabled` is true.
+ * 4. `togglePublicCard`: Enables/disables public career card sharing.
+ */
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -8,25 +20,31 @@ import { User } from '../models/User.js';
 import { Resume } from '../models/Resume.js';
 import { buildPathScore, collectStudentSkills } from '../services/pathScore.service.js';
 
-/** Deletes a previously-uploaded local file (best effort, ignores misses). */
+/** Removes a previously stored local file on disk. */
 function removeLocalFile(publicPath) {
   if (!publicPath || !publicPath.startsWith('/uploads/')) return;
   const abs = path.join(process.cwd(), publicPath.replace(/^\//, ''));
   fs.promises.unlink(abs).catch(() => {});
 }
 
-// GET /api/profile
+/**
+ * GET /api/profile
+ * Returns authenticated candidate profile payload.
+ */
 export const getProfile = asyncHandler(async (req, res) => {
   return sendSuccess(res, { data: { user: req.user.toSafeJSON() } });
 });
 
-// PATCH /api/profile
+/**
+ * PATCH /api/profile
+ * Updates candidate profile data. Invalidates resume `aiNarrative` if `dreamRole` changes.
+ */
 export const updateProfile = asyncHandler(async (req, res) => {
   const user = req.user;
   const { name, email, college, branch, semester, dreamRole, skills } = req.body;
 
   if (name !== undefined) user.name = name;
-  
+
   if (email !== undefined && email.toLowerCase() !== user.email) {
     const exists = await User.findOne({ email: email.toLowerCase() });
     if (exists) throw ApiError.conflict('An account with this email already exists');
@@ -39,10 +57,16 @@ export const updateProfile = asyncHandler(async (req, res) => {
   if (semester !== undefined) user.profile.semester = semester;
   if (dreamRole !== undefined && dreamRole !== user.profile.dreamRole) {
     user.profile.dreamRole = dreamRole;
-    // Clear cached AI narrative on active resume so Overview page generates fresh audit narrative for new role
-    Resume.findOne({ user: user._id }).sort({ createdAt: -1 }).then((r) => {
-      if (r && r.aiNarrative) { r.aiNarrative = ''; r.save().catch(() => {}); }
-    }).catch(() => {});
+    // Clear cached AI narrative on active resume so Overview page generates fresh narrative for new role
+    Resume.findOne({ user: user._id })
+      .sort({ createdAt: -1 })
+      .then((r) => {
+        if (r && r.aiNarrative) {
+          r.aiNarrative = '';
+          r.save().catch(() => {});
+        }
+      })
+      .catch(() => {});
   } else if (dreamRole !== undefined) {
     user.profile.dreamRole = dreamRole;
   }
@@ -56,11 +80,14 @@ export const updateProfile = asyncHandler(async (req, res) => {
   });
 });
 
-// POST /api/profile/avatar  (multipart: field "file")
+/**
+ * POST /api/profile/avatar
+ * Uploads candidate avatar image and removes previous image.
+ */
 export const uploadAvatar = asyncHandler(async (req, res) => {
   if (!req.file) throw ApiError.badRequest('No image uploaded');
 
-  removeLocalFile(req.user.profile.avatarUrl); // clean up previous avatar
+  removeLocalFile(req.user.profile.avatarUrl);
   req.user.profile.avatarUrl = publicUrl('avatar', req.file.filename);
   await req.user.save();
 
@@ -70,7 +97,10 @@ export const uploadAvatar = asyncHandler(async (req, res) => {
   });
 });
 
-// POST /api/profile/resume  (multipart: field "file")
+/**
+ * POST /api/profile/resume
+ * Updates active resume URL pointer and removes previous file from disk.
+ */
 export const uploadResume = asyncHandler(async (req, res) => {
   if (!req.file) throw ApiError.badRequest('No resume uploaded');
 
@@ -78,29 +108,33 @@ export const uploadResume = asyncHandler(async (req, res) => {
   req.user.profile.resumeUrl = publicUrl('resume', req.file.filename);
   await req.user.save();
 
-  // Note: parsing / resume-intelligence happens in Phase 3 (Django service).
   return sendSuccess(res, {
     message: 'Resume uploaded',
     data: { resumeUrl: req.user.profile.resumeUrl, user: req.user.toSafeJSON() },
   });
 });
 
-// PATCH /api/profile/password
+/**
+ * PATCH /api/profile/password
+ * Changes candidate password after verifying current password hash.
+ */
 export const changePassword = asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
-  // req.user was loaded without the password field; re-fetch with it.
   const user = await req.user.constructor.findById(req.user._id).select('+password');
   const ok = await user.comparePassword(currentPassword);
   if (!ok) throw ApiError.badRequest('Current password is incorrect');
 
-  user.password = newPassword; // hashed by pre-save hook
+  user.password = newPassword;
   await user.save();
 
   return sendSuccess(res, { message: 'Password changed successfully' });
 });
 
-// GET /api/profile/public/:publicCardId
+/**
+ * GET /api/profile/public/:publicCardId
+ * Unauthenticated public endpoint returning candidate career card if sharing is enabled.
+ */
 export const getPublicCard = asyncHandler(async (req, res) => {
   const { publicCardId } = req.params;
 
@@ -130,7 +164,10 @@ export const getPublicCard = asyncHandler(async (req, res) => {
   });
 });
 
-// PATCH /api/profile/public-card
+/**
+ * PATCH /api/profile/public-card
+ * Toggles public card shareability on or off.
+ */
 export const togglePublicCard = asyncHandler(async (req, res) => {
   const { isPublicCardEnabled } = req.body;
 

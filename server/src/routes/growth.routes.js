@@ -1,3 +1,12 @@
+/**
+ * routes/growth.routes.js — Growth Roadmap Router
+ *
+ * ENDPOINTS:
+ * - GET   /api/growth           → Get active learning plan with progress stats
+ * - POST  /api/growth/generate  → Generate new week-by-week roadmap via Django / Gemini
+ * - PATCH /api/growth/tasks/:key → Toggle task completion state by stable task key
+ */
+
 import { Router } from 'express';
 import {
   getGrowthPlan,

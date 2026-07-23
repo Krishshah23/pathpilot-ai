@@ -1,3 +1,14 @@
+/**
+ * controllers/growth.controller.js — Learning Roadmap Controller
+ *
+ * ARCHITECTURAL ROLE:
+ * Generates and manages the candidate's week-by-week learning roadmap (`GrowthPlan`):
+ * 1. Fetches baseline roadmap from Django ML service (`aiService.recommendRoadmap`).
+ * 2. Preserves completion state across regenerations by matching task `key` strings (`preserveCompletion`).
+ * 3. Injects Gemini AI gap weeks when the roadmap target role matches the candidate's dreamRole (`geminiGenerateGapRoadmap`).
+ * 4. Provides task toggle endpoint (`toggleTask`) updating completed status and timestamps.
+ */
+
 import { GrowthPlan } from '../models/GrowthPlan.js';
 import { Resume } from '../models/Resume.js';
 import { aiService } from '../services/ai.service.js';
@@ -8,13 +19,19 @@ import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 
-// GET /api/growth  — the student's active plan (or null)
+/**
+ * GET /api/growth
+ * Returns active candidate growth plan with progress stats.
+ */
 export const getGrowthPlan = asyncHandler(async (req, res) => {
   const plan = await GrowthPlan.findOne({ user: req.user._id });
   return sendSuccess(res, { data: { plan: withProgress(plan) } });
 });
 
-// POST /api/growth/generate  — build/replace the plan, preserving progress
+/**
+ * POST /api/growth/generate
+ * Builds or regenerates the growth plan, preserving completed task states.
+ */
 export const generateGrowthPlan = asyncHandler(async (req, res) => {
   const targetRole = req.body.targetRole || req.user.profile?.dreamRole;
   if (!targetRole) throw ApiError.badRequest('Choose a target role to build your roadmap');
@@ -36,36 +53,34 @@ export const generateGrowthPlan = asyncHandler(async (req, res) => {
   const existing = await GrowthPlan.findOne({ user: req.user._id });
   let weeks = preserveCompletion(roadmapToWeeks(roadmap), existing);
 
-  // -- Phase 5 Connection: Inject Gemini Gap Weeks --
-  // Only inject gap weeks when the roadmap role matches the profile's dreamRole
-  // (the role the resume was analyzed against). If different, the gaps are role-mismatched.
+  // Inject Gemini AI Gap Weeks if roadmap role matches profile dreamRole
   const profileRole = req.user.profile?.dreamRole;
   const rolesMatch = !profileRole || profileRole.trim().toLowerCase() === targetRole.trim().toLowerCase();
-  const gaps = rolesMatch ? (resume?.keyGaps || []) : [];
+  const gaps = rolesMatch ? resume?.keyGaps || [] : [];
 
   if (gaps.length > 0) {
     try {
       const gapWeeks = await geminiGenerateGapRoadmap({ gaps, targetRole });
       if (gapWeeks && gapWeeks.length > 0) {
         const formattedGapWeeks = gapWeeks.map((w) => ({
-          title: w.topic,           // schema field is `title`, not `topic`
+          title: w.topic,
           focusHours: null,
-          tasks: w.tasks.map(t => ({
+          tasks: w.tasks.map((t) => ({
             key: `gap-task-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-            title: t.name,                  // schema uses `title`, not `name`
-            estimatedHours: t.hours || 0,   // schema uses `estimatedHours`, not `hours`
+            title: t.name,
+            estimatedHours: t.hours || 0,
             difficulty: 'Intermediate',
             priority: 'core',
             completed: false,
-            completedAt: null
-          }))
+            completedAt: null,
+          })),
         }));
 
-        // Merge and re-index ALL weeks sequentially — `week` is the schema field, not `weekNumber`
         const merged = [...formattedGapWeeks, ...weeks];
         weeks = merged.map((w, idx) => ({ ...w, week: idx + 1 }));
       }
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Failed to generate gap roadmap', err);
     }
   }
@@ -95,7 +110,10 @@ export const generateGrowthPlan = asyncHandler(async (req, res) => {
   });
 });
 
-// PATCH /api/growth/tasks/:key  — toggle a task's completion
+/**
+ * PATCH /api/growth/tasks/:key
+ * Toggles completion status of a roadmap task.
+ */
 export const toggleTask = asyncHandler(async (req, res) => {
   const { key } = req.params;
   const { completed } = req.body;

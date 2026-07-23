@@ -1,7 +1,20 @@
+/**
+ * controllers/aiCoach.controller.js — Gemini AI Coach & Interview Prep Controller
+ *
+ * ARCHITECTURAL ROLE:
+ * Handles AI career coaching chat, pre-generated Path Score audit narrative explanations,
+ * mock interview question generation, answer evaluation, and session persistence:
+ * 1. `explainScore`: Pre-generates Gemini score explanation narrative and caches it on the active `Resume` document.
+ * 2. `chat`: Context-aware career coach chat with full user profile + resume + roadmap context injected.
+ * 3. `generateInterviewQuestion`: Creates targeted role-specific interview question for identified gap.
+ * 4. `evaluateInterviewAnswer`: Evaluates candidate answer against multi-dimensional rubric (relevance, depth, communication).
+ * 5. `saveInterviewSession` / `getInterviewSessions`: Persists and retrieves mock interview session history.
+ */
+
 import { Resume } from '../models/Resume.js';
 import { GrowthPlan } from '../models/GrowthPlan.js';
 import { InterviewSession } from '../models/InterviewSession.js';
-import { buildPathScore, collectStudentSkills } from '../services/pathScore.service.js';
+import { buildPathScore } from '../services/pathScore.service.js';
 import { ApiError } from '../utils/ApiError.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
@@ -12,14 +25,15 @@ import {
   geminiEvaluateAnswer,
 } from '../services/gemini.service.js';
 
+/** Fallback narrative builder if Gemini API fails during score explanation. */
 function buildFallbackNarrative({ user, resume, pathScore }) {
   const firstName = user.name ? user.name.split(' ')[0] : 'there';
   const dreamRole = user.profile?.dreamRole || 'Software Engineer';
   const score = pathScore.displayScore;
   const readiness = pathScore.readiness?.label || 'Building momentum';
 
-  const goodFactors = (pathScore.factors || []).filter(f => f.status === 'good').map(f => f.label.toLowerCase());
-  const badFactors = (pathScore.factors || []).filter(f => f.status !== 'good').map(f => f.label.toLowerCase());
+  const goodFactors = (pathScore.factors || []).filter((f) => f.status === 'good').map((f) => f.label.toLowerCase());
+  const badFactors = (pathScore.factors || []).filter((f) => f.status !== 'good').map((f) => f.label.toLowerCase());
 
   let narrative = `Hi ${firstName}! Reaching a score of ${score}/100 and achieving "${readiness}" status is a solid starting point for your journey toward becoming a ${dreamRole}. 
 
@@ -40,14 +54,13 @@ This evaluation is calculated across several readiness factors. Your profile is 
 
 /**
  * POST /api/ai-coach/explain
- * Gemini-powered score explanation — replaces the fake "synthetic SHAP" narrative.
+ * Generates and caches Gemini Path Score explanation narrative.
  */
 export const explainScore = asyncHandler(async (req, res) => {
   const user = req.user;
   const resume = await Resume.findOne({ user: user._id }).sort({ createdAt: -1 });
   const pathScore = buildPathScore(user, resume);
 
-  // Return cached narrative if available — avoids re-calling Gemini on every page load
   if (resume?.aiNarrative) {
     const metrics = pathScore.factors.map((f) => ({
       name: f.label,
@@ -62,11 +75,11 @@ export const explainScore = asyncHandler(async (req, res) => {
   try {
     explanation = await geminiExplainScore({ user, resume, pathScore });
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.warn('Gemini explainScore failed, using personalized fallback narrative:', err.message);
     explanation = buildFallbackNarrative({ user, resume, pathScore });
   }
 
-  // Persist the narrative so future calls skip the Gemini API entirely
   if (resume && explanation) {
     await Resume.findByIdAndUpdate(resume._id, { aiNarrative: explanation });
   }
@@ -83,8 +96,7 @@ export const explainScore = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/ai-coach/chat
- * Real AI chat — Gemini with full user context injected every call.
- * Replaces ~250 lines of hardcoded if/else keyword matching.
+ * Context-injected interactive career coach chat.
  */
 export const chat = asyncHandler(async (req, res) => {
   const { message, history } = req.body;
@@ -99,6 +111,7 @@ export const chat = asyncHandler(async (req, res) => {
   try {
     response = await geminiChat({ user, resume, roadmap, history, message });
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.warn('Gemini chat failed, using fallback coach response:', err.message);
     response = `I'm sorry, I'm experiencing high traffic right now and couldn't process that message. Please try asking again in a few seconds! If you have specific questions about your Path Score or roadmap, I will be ready to help shortly.`;
   }
@@ -108,21 +121,17 @@ export const chat = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/ai-coach/interview/question
- * Generates a role-specific interview question targeting a known gap.
- * If resume has keyGaps, uses those. Otherwise generates based on role.
+ * Generates targeted mock interview question.
  */
 export const generateInterviewQuestion = asyncHandler(async (req, res) => {
   const { previousQuestions = [], difficulty = 'mid', gapIndex = 0, targetRole: clientRole } = req.body;
   const user = req.user;
-  // Prefer the role the client explicitly selected; fall back to profile
   const dreamRole = clientRole || user.profile.dreamRole || 'Software Engineer';
 
   const resume = await Resume.findOne({ user: user._id }).sort({ createdAt: -1 });
   const keyGaps = resume?.keyGaps || [];
 
-  // Target the specific gap if available, else use a general role gap
-  const targetGap = keyGaps[gapIndex]
-    || `General ${dreamRole} competency`;
+  const targetGap = keyGaps[gapIndex] || `General ${dreamRole} competency`;
 
   let questionData;
   try {
@@ -133,6 +142,7 @@ export const generateInterviewQuestion = asyncHandler(async (req, res) => {
       difficulty,
     });
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.warn('Gemini generateQuestion failed, using fallback question:', err.message);
     questionData = {
       question: `Describe a time when you had to work with or implement a feature involving: ${targetGap}. How did you handle it and what was the outcome?`,
@@ -141,14 +151,14 @@ export const generateInterviewQuestion = asyncHandler(async (req, res) => {
       goodAnswerShouldContain: [
         'Clear context and explanation of the technology',
         'Your specific responsibilities and actions taken',
-        'The final result and any lessons learned'
+        'The final result and any lessons learned',
       ],
       rubric: {
         relevance: 30,
         depth: 40,
-        communication: 30
+        communication: 30,
       },
-      hint: 'Focus on explaining the challenge clearly, your specific thought process, and what you achieved.'
+      hint: 'Focus on explaining the challenge clearly, your specific thought process, and what you achieved.',
     };
   }
 
@@ -164,7 +174,7 @@ export const generateInterviewQuestion = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/ai-coach/interview/evaluate
- * Evaluates an interview answer using Gemini with a role-specific rubric.
+ * Evaluates candidate interview response using Gemini scoring rubric.
  */
 export const evaluateInterviewAnswer = asyncHandler(async (req, res) => {
   const { question, answer, rubric, questionType } = req.body;
@@ -185,26 +195,37 @@ export const evaluateInterviewAnswer = asyncHandler(async (req, res) => {
       questionType,
     });
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.warn('Gemini evaluateAnswer failed, using fallback evaluation:', err.message);
     const wordCount = answer.split(/\s+/).filter(Boolean).length;
     const depthScore = Math.min(Math.round(wordCount / 5), 40);
     const relevanceScore = wordCount > 10 ? 25 : 10;
     const communicationScore = wordCount > 15 ? 25 : 10;
     const totalScore = relevanceScore + depthScore + communicationScore;
-    const grade = totalScore >= 80 ? 'Excellent' : totalScore >= 60 ? 'Good' : totalScore >= 40 ? 'Average' : 'Needs Work';
+    const grade =
+      totalScore >= 80
+        ? 'Excellent'
+        : totalScore >= 60
+        ? 'Good'
+        : totalScore >= 40
+        ? 'Average'
+        : 'Needs Work';
 
     evaluation = {
       scores: {
         relevance: relevanceScore,
         depth: depthScore,
-        communication: communicationScore
+        communication: communicationScore,
       },
       totalScore,
       grade,
       strengths: ['You provided a detailed answer showing good initial understanding of the context.'],
-      improvements: ['Consider elaborating more on your specific hands-on experience and implementation details.'],
-      modelAnswer: 'A strong answer would follow the STAR framework (Situation, Task, Action, Result) to clearly articulate the problem, action, and results.',
-      encouragement: 'Great effort! Keep practicing structured interview answers.'
+      improvements: [
+        'Consider elaborating more on your specific hands-on experience and implementation details.',
+      ],
+      modelAnswer:
+        'A strong answer would follow the STAR framework (Situation, Task, Action, Result) to clearly articulate the problem, action, and results.',
+      encouragement: 'Great effort! Keep practicing structured interview answers.',
     };
   }
 
@@ -213,7 +234,7 @@ export const evaluateInterviewAnswer = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/ai-coach/interview/save-session
- * Persists a completed interview session to MongoDB for historical tracking.
+ * Persists completed interview session to MongoDB.
  */
 export const saveInterviewSession = asyncHandler(async (req, res) => {
   const { questions, gapsAddressed } = req.body;
@@ -245,7 +266,7 @@ export const saveInterviewSession = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/ai-coach/interview/sessions
- * Returns the user's past interview sessions (most recent first).
+ * Retrieves past interview session history for the candidate.
  */
 export const getInterviewSessions = asyncHandler(async (req, res) => {
   const sessions = await InterviewSession.find({ user: req.user._id })

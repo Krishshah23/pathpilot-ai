@@ -1,3 +1,15 @@
+/**
+ * controllers/admin.controller.js — Admin Panel Management Controller
+ *
+ * ARCHITECTURAL ROLE:
+ * Provides system-wide statistics, paginated user management, and cascade user deletion for platform administrators:
+ * 1. `getStats`: Aggregates platform counts (users, students, admins, resumes, plans, opportunities).
+ * 2. `listUsers`: Searchable, paginated user list sorted by `createdAt` desc.
+ * 3. `getUser`: Detailed user breakdown with related record counts.
+ * 4. `updateUser`: Updates user role (prevents self-demotion).
+ * 5. `deleteUser`: Cascades deletion across `Resume`, `GrowthPlan`, `Opportunity`, and `User` collections (prevents self-deletion).
+ */
+
 import { User } from '../models/User.js';
 import { Resume } from '../models/Resume.js';
 import { GrowthPlan } from '../models/GrowthPlan.js';
@@ -8,7 +20,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 
 /**
  * GET /api/admin/stats
- * Platform-wide aggregate statistics for the admin overview.
+ * Platform-wide aggregate statistics for admin dashboard metrics.
  */
 export const getStats = asyncHandler(async (_req, res) => {
   const [
@@ -31,11 +43,9 @@ export const getStats = asyncHandler(async (_req, res) => {
     Opportunity.countDocuments(),
   ]);
 
-  // Recent sign-ups (last 7 days).
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const recentSignups = await User.countDocuments({ createdAt: { $gte: weekAgo } });
 
-  // Opportunity stage breakdown across all users.
   const oppByStage = await Opportunity.aggregate([
     { $group: { _id: '$stage', count: { $sum: 1 } } },
   ]);
@@ -62,8 +72,7 @@ export const getStats = asyncHandler(async (_req, res) => {
 
 /**
  * GET /api/admin/users
- * Paginated, searchable user list.
- * Query params: page, limit, search, role
+ * Paginated, searchable user listing for admin console.
  */
 export const listUsers = asyncHandler(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -106,7 +115,7 @@ export const listUsers = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/admin/users/:id
- * Detailed single-user view for admin.
+ * Fetches single user record and related document counts.
  */
 export const getUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id)
@@ -115,7 +124,6 @@ export const getUser = asyncHandler(async (req, res) => {
 
   if (!user) throw ApiError.notFound('User not found');
 
-  // Fetch related data counts.
   const [resumeCount, growthPlan, oppCount] = await Promise.all([
     Resume.countDocuments({ user: user._id }),
     GrowthPlan.findOne({ user: user._id }).select('targetRole totalTasks totalHours').lean(),
@@ -132,14 +140,13 @@ export const getUser = asyncHandler(async (req, res) => {
 
 /**
  * PATCH /api/admin/users/:id
- * Admin can update a user's role.
+ * Updates user role (prevents admin self-demotion).
  */
 export const updateUser = asyncHandler(async (req, res) => {
   const { role } = req.body;
   const user = await User.findById(req.params.id);
   if (!user) throw ApiError.notFound('User not found');
 
-  // Prevent admin from demoting themselves.
   if (user._id.equals(req.user._id) && role !== 'admin') {
     throw ApiError.badRequest('You cannot demote yourself');
   }
@@ -154,18 +161,17 @@ export const updateUser = asyncHandler(async (req, res) => {
 
 /**
  * DELETE /api/admin/users/:id
- * Remove a user and all their related data.
+ * Deletes user and cascades deletion across all associated documents.
  */
 export const deleteUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) throw ApiError.notFound('User not found');
 
-  // Prevent admin from deleting themselves.
   if (user._id.equals(req.user._id)) {
     throw ApiError.badRequest('You cannot delete your own account');
   }
 
-  // Cascade: remove related documents.
+  // Cascade deletion across all user documents
   await Promise.all([
     Resume.deleteMany({ user: user._id }),
     GrowthPlan.deleteMany({ user: user._id }),

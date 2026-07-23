@@ -1,3 +1,22 @@
+/**
+ * routes/auth.routes.js — Authentication Endpoints Router
+ *
+ * SECURITY FEATURES:
+ * Includes rate limiting (`express-rate-limit`) on sensitive routes (login, register, forgot-password)
+ * to prevent brute-force attacks.
+ *
+ * ENDPOINTS:
+ * - POST /api/auth/register            → Account registration + verification email
+ * - POST /api/auth/login               → Credential authentication → Access token + HttpOnly cookie
+ * - POST /api/auth/refresh             → Silent access token rotation via refresh cookie
+ * - POST /api/auth/logout              → Cookie clearing
+ * - GET  /api/auth/me                  → Authenticated user payload restoration
+ * - POST /api/auth/verify-email        → Email confirmation token submission
+ * - POST /api/auth/resend-verification → Re-send verification link
+ * - POST /api/auth/forgot-password     → Send password reset email
+ * - POST /api/auth/reset-password      → Reset password via token
+ */
+
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import {
@@ -23,7 +42,7 @@ import {
 
 const router = Router();
 
-// Throttle sensitive auth endpoints to slow down brute-force attempts.
+// Throttle sensitive authentication endpoints to 20 requests per 15 minutes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
