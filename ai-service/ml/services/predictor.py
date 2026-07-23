@@ -1,8 +1,16 @@
 """
-ML Prediction Service — loads trained models and runs inference.
+ml/services/predictor.py — Unified ML Model Inference Engine
 
-Loaded ONCE at Django startup. All endpoints call these functions
-for real-time predictions. No retraining at runtime.
+ARCHITECTURAL ROLE:
+Loads joblib model artifacts (`model.pkl`, `scaler.pkl`, `features.pkl`) ONCE at Django startup
+into memory cache (`_cache`) and runs real-time predictions across 7 CatBoost/XGBoost models:
+1. `resume_score`: CatBoost Regressor estimating resume health score (0-100).
+2. `ats`: CatBoost Classifier calculating ATS screening pass probability %.
+3. `career`: XGBoost Classifier categorizing career readiness level (Beginner, Emerging, Job-Ready, Top Candidate).
+4. `role`: CatBoost Multi-class Classifier predicting top 3 role match probabilities.
+5. `salary`: CatBoost Regressor projecting salary range (min-max INR LPA).
+6. `interview`: CatBoost Regressor predicting mock interview success score.
+7. `explainer`: SHAP TreeExplainer calculating exact feature importance drivers (`topPositive`, `topNegative`).
 """
 
 import logging

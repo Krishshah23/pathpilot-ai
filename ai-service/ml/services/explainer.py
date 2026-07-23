@@ -1,8 +1,14 @@
 """
-SHAP Explanation Service — computes feature contributions for individual predictions.
+ml/services/explainer.py — SHAP Feature Attribution & Model Explainability Engine
 
-Uses SHAP (SHapley Additive exPlanations) to explain predictions in real-time,
-identifying which features drove a score up or down.
+ARCHITECTURAL ROLE:
+Calculates SHAP (SHapley Additive exPlanations) feature attributions for model predictions.
+
+SHAP ENGINE:
+1. `TreeExplainer`: Fast exact feature contribution calculation for CatBoost and XGBoost models.
+2. `topPositive` / `topNegative`: Sorts feature contributions to identify key positive drivers (e.g. CGPA, Cloud skills)
+   and negative score blockers (e.g. missing GitHub, low project count).
+3. Graceful Fallback: Returns rule-based feature heuristics if SHAP binaries fail to load.
 """
 
 import logging

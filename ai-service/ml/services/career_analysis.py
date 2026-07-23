@@ -1,8 +1,12 @@
-"""Deterministic career analysis helpers for Phase 4.
+"""
+ml/services/career_analysis.py — Skill Normalization & Gap Analysis Engine
 
-These functions are not statistical ML yet. They provide transparent, stable
-analysis contracts for Path Score and Gap Navigator while the Phase 8 model
-work remains separate.
+ARCHITECTURAL ROLE:
+Provides deterministic skill gap analysis and skill normalization contracts for the target role:
+1. `normalize_skills`: Maps raw skill strings to canonical names using `SKILL_ALIASES` lookup dictionary.
+2. `analyze_skill_gap`: Compares student's current skill set against `ROLE_REQUIREMENTS[target_role]`, categorizing
+   missing skills into Core, Recommended, and Supporting priorities with effort hour estimations.
+3. `predict_readiness`: Calculates readiness score percentage and tier label (Job-Ready, Strong Prospect, Developing, Early Explorer).
 """
 
 import math

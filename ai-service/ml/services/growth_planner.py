@@ -1,9 +1,14 @@
-"""Deterministic week-wise Growth Path recommender for Phase 5.
+"""
+ml/services/growth_planner.py — Deterministic Skill Roadmap Builder Engine
 
-Given a target role and the student's current skills, this builds a stable,
-explainable learning roadmap by reusing the Phase 4 gap analysis and packing the
-missing skills into weekly blocks of roughly equal effort. No randomness — the
-same inputs always yield the same plan so progress tracking stays consistent.
+ARCHITECTURAL ROLE:
+Generates week-by-week learning roadmap payloads based on target role skill gap analysis.
+
+ROADMAP ENGINE:
+1. `analyze_skill_gap`: Calculates missing core, recommended, and supporting skills for the target role.
+2. Effort Packing (`WEEKLY_HOURS = 8`): Packs missing skills into week blocks targeting ~8 hours of study effort per week.
+3. Deterministic Task Generation: Assigns unique task keys (`_slug`) and difficulty tiers (Beginner, Intermediate, Advanced).
+4. Capstone Fallback: Provides a Capstone Project week fallback if the student already possesses all required skills.
 """
 
 import re

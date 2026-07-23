@@ -1,15 +1,20 @@
 """
-Resume parsing & health analysis.
+ml/services/resume_parser.py — Deterministic Resume Entity & Health Parser Engine
 
-Given the raw text of a resume, this extracts structured information (skills,
-education, projects, experience, certifications, contact details) and computes
-an EXPLAINABLE resume-health score with a per-factor breakdown and actionable
-suggestions.
+ARCHITECTURAL ROLE:
+Parses raw resume text and extracts structured section entities (skills, education, projects, experience, contact details).
 
-This is a deterministic, rule-based implementation (regex + curated
-dictionaries + section detection). It is intentionally transparent so the score
-can always be explained to the student. ML enhancements can layer on later
-without changing this contract.
+PARSING & SCORING PIPELINE:
+1. Section Boundary Detection: Identifies section headers (`skills`, `education`, `experience`, `projects`, `certifications`).
+2. Truncated URL Reconstruction: Resolves partial PDF text runs for LinkedIn and GitHub profile links (`PARTIAL_URL_RE`).
+3. Skill Extraction (`SKILL_ALIASES`): Maps raw skill text tokens to canonical skill names.
+4. Health Score Calculation (100 pts): Computes 6 factor scores:
+   - Contact completeness (15 pts)
+   - Skills section depth (25 pts)
+   - Project count & quality (25 pts)
+   - Education section (15 pts)
+   - Experience section (10 pts)
+   - Word count & action verbs density (10 pts)
 """
 
 import re

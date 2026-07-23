@@ -1,6 +1,19 @@
 """
-Master training script — trains all 7 ML models sequentially.
-Run: python -m ml.training.train_all
+ml/training/train_all.py — Master Model Training Pipeline Orchestrator
+
+ARCHITECTURAL ROLE:
+Executes the sequential training pipeline across all 7 ML model training modules:
+1. `train_resume()`: Trains CatBoost Regressor for resume quality scoring.
+2. `train_ats()`: Trains CatBoost Classifier for ATS screening pass probability %.
+3. `train_career()`: Trains XGBoost Classifier for career readiness level categorization.
+4. `train_role()`: Trains CatBoost Multi-class Classifier for target role match probabilities.
+5. `train_interview()`: Trains CatBoost Regressor for mock interview score prediction.
+6. `train_salary()`: Trains CatBoost Regressor for salary range projections.
+7. `train_learning()`: Trains CatBoost Regressor for learning curve velocity prediction.
+8. `generate_benchmarks()`: Computes peer benchmark distribution thresholds.
+
+Execution:
+  python -m ml.training.train_all
 """
 
 import sys

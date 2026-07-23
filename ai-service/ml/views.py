@@ -1,9 +1,19 @@
 """
-ML service endpoints. Consumed exclusively by the Node backend.
+ml/views.py — Django DRF Machine Learning Microservice Endpoints
 
-Provides resume parsing, skill-gap analysis, career-readiness prediction,
-roadmap recommendation, and the unified ML predict endpoint that runs all
-7 trained models.
+ARCHITECTURAL ROLE:
+Serves HTTP microservice endpoints consumed exclusively by the Node.js backend.
+
+SECURITY & INTEGRITY:
+Enforces `require_internal_key` decorator verifying `X-Internal-Key` header against `INTERNAL_API_KEY`.
+
+ENDPOINTS:
+1. `GET /api/ml/health`: Microservice health check returning 200 OK.
+2. `POST /api/ml/predict`: Runs unified 7-model inference pipeline (Resume Score, ATS Pass %,
+   Career Readiness, Role Match, Salary Projection, Interview Success, SHAP Feature Attribution).
+3. `POST /api/ml/parse-resume`: Text extraction & regex section entity extractor.
+4. `POST /api/ml/skill-gap`: Multi-dimensional role skill gap matcher.
+5. `POST /api/ml/roadmap`: Custom week-by-week learning roadmap builder.
 """
 
 from functools import wraps
