@@ -52,7 +52,7 @@ export default function CareerReportPage() {
   }
 
   const { pathScore, growthPlan, resume } = data || {};
-  const score = pathScore?.score ?? pathScore?.displayScore ?? 0;
+  const score = pathScore?.displayScore ?? Math.round(pathScore?.score || 0);
   const factors = pathScore?.factors || [];
   const skills = user?.profile?.skills || [];
   const dreamRole = user?.profile?.dreamRole || 'Software Engineer';

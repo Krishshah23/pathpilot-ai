@@ -37,7 +37,15 @@ export const updateProfile = asyncHandler(async (req, res) => {
   if (college !== undefined) user.profile.college = college;
   if (branch !== undefined) user.profile.branch = branch;
   if (semester !== undefined) user.profile.semester = semester;
-  if (dreamRole !== undefined) user.profile.dreamRole = dreamRole;
+  if (dreamRole !== undefined && dreamRole !== user.profile.dreamRole) {
+    user.profile.dreamRole = dreamRole;
+    // Clear cached AI narrative on active resume so Overview page generates fresh audit narrative for new role
+    Resume.findOne({ user: user._id }).sort({ createdAt: -1 }).then((r) => {
+      if (r && r.aiNarrative) { r.aiNarrative = ''; r.save().catch(() => {}); }
+    }).catch(() => {});
+  } else if (dreamRole !== undefined) {
+    user.profile.dreamRole = dreamRole;
+  }
   if (skills !== undefined) user.profile.skills = skills;
 
   await user.save();
@@ -113,7 +121,7 @@ export const getPublicCard = asyncHandler(async (req, res) => {
       semester: user.profile.semester,
       dreamRole: user.profile.dreamRole,
       skills,
-      pathScore: pathScore.score,
+      pathScore: pathScore.displayScore ?? Math.round(pathScore.score || 0),
       readinessLabel: pathScore.readiness?.label || pathScore.label || 'Exploring',
       readinessSummary: pathScore.readiness?.summary || pathScore.summary || '',
       avatarUrl: user.profile.avatarUrl,

@@ -23,7 +23,7 @@ const STAGES = [
 const stageMap = Object.fromEntries(STAGES.map((s) => [s.value, s]));
 
 export default function ExecutionEnginePage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const toast = useToast();
 
   /* ── Roadmap state ── */
@@ -68,9 +68,21 @@ export default function ExecutionEnginePage() {
     finally { setLoadingPlan(false); }
   };
 
+  /* ── Commit role change to profile + trigger Gemini re-analysis ── */
+  const commitRoleIfChanged = async (role) => {
+    if (role === user?.profile?.dreamRole) return; // nothing to do
+    try {
+      await api.patch('/profile', { dreamRole: role });
+      await refreshUser();
+      // Re-run Gemini resume analysis against the new role (fire-and-forget, don't block roadmap)
+      api.post('/resume/reanalyze', { targetRole: role }).catch(() => {});
+    } catch { /* silent */ }
+  };
+
   const generatePlan = async () => {
     setGenerating(true);
     try {
+      await commitRoleIfChanged(planRole);
       const { data } = await api.post('/growth/generate', { targetRole: planRole });
       setPlan(data.data.plan);
       toast.success('Roadmap ready!');

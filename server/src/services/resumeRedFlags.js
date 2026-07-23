@@ -68,14 +68,30 @@ export function detectRedFlags(rawText, parsedData) {
   // 3. Bullet points with no quantifiable metrics
   // Parse bullet points from experience descriptions and projects
   const bulletLines = [];
+  const bulletSplitRe = /[•●■▪◦□◇◆✓✔\n]|\s[-–—]\s/;
   experience.forEach((exp) => {
     if (typeof exp === 'string') {
-      bulletLines.push(...exp.split(/[•\n]/).map(line => line.trim()).filter(line => line.length > 15));
+      // Split on bullet markers, newlines, and dash separators
+      const lines = exp.split(bulletSplitRe).map(line => line.trim()).filter(line => line.length > 15);
+      if (lines.length === 0) {
+        // Fallback: split paragraph-style text into sentences
+        const sentences = exp.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 15);
+        bulletLines.push(...sentences);
+      } else {
+        bulletLines.push(...lines);
+      }
     }
   });
   projects.forEach((proj) => {
-    if (proj && typeof proj.description === 'string') {
-      bulletLines.push(...proj.description.split(/[•\n]/).map(line => line.trim()).filter(line => line.length > 15));
+    const desc = proj?.description || (typeof proj === 'string' ? proj : '');
+    if (desc) {
+      const lines = desc.split(bulletSplitRe).map(line => line.trim()).filter(line => line.length > 15);
+      if (lines.length === 0) {
+        const sentences = desc.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 15);
+        bulletLines.push(...sentences);
+      } else {
+        bulletLines.push(...lines);
+      }
     }
   });
 
@@ -85,16 +101,17 @@ export function detectRedFlags(rawText, parsedData) {
     const linesWithMetrics = bulletLines.filter(line => metricRegex.test(line));
     const metricsRatio = linesWithMetrics.length / bulletLines.length;
 
-    if (metricsRatio < 0.35) {
+    if (metricsRatio < 0.25) {
       redFlags.push({
         key: 'no_metrics',
         label: 'Lack of Quantifiable Metrics',
-        description: `Only ${Math.round(metricsRatio * 100)}% of your experience/project descriptions contain numbers or percentages.`,
+        description: `Only ${Math.round(metricsRatio * 100)}% of your experience/project descriptions contain numbers or percentages (${linesWithMetrics.length} of ${bulletLines.length} items).`,
         fix: "Quantify your achievements (e.g., 'improved loading speed by 30%' or 'collaborated with a team of 4 developers').",
         severity: 'warning',
       });
     }
   }
+
 
   // 4. Inconsistent Date Formatting
   // Regexes for common date formats

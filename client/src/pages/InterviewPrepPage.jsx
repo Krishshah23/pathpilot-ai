@@ -8,7 +8,7 @@ import { DREAM_ROLES } from '@/config/careerData';
 import { cn } from '@/lib/cn';
 
 export default function InterviewPrepPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [stage, setStage] = useState('setup'); // setup | loading | active | evaluating | result | complete
   const [resume, setResume] = useState(null);
   const [loadingResume, setLoadingResume] = useState(true);
@@ -40,6 +40,13 @@ export default function InterviewPrepPage() {
 
   // Always include the user's current role even if it's a custom value not in DREAM_ROLES
   const roleOptions = [...new Set([targetRole, ...(DREAM_ROLES || [])])];
+
+  useEffect(() => {
+    if (user?.profile?.dreamRole) {
+      setSelectedRole(user.profile.dreamRole);
+    }
+  }, [user?.profile?.dreamRole]);
+
 
   /* ── Load latest resume (for gaps) ── */
   useEffect(() => {
@@ -121,8 +128,23 @@ export default function InterviewPrepPage() {
     }
   };
 
-  const startSession = () => {
+  /* ── Commit role change to profile + trigger Gemini re-analysis ── */
+  const commitRoleIfChanged = async (role) => {
+    if (role === user?.profile?.dreamRole) return; // nothing to do
+    try {
+      // 1. Persist the new role to the user profile (top-level body, not nested)
+      await api.patch('/profile', { dreamRole: role });
+      await refreshUser();
+      // 2. Re-run Gemini analysis against the new role so gaps/fit score are fresh
+      const { data } = await api.post('/resume/reanalyze', { targetRole: role });
+      // 3. Update local resume state with newly analysed data
+      if (data?.data?.resume) setResume(data.data.resume);
+    } catch { /* silent — don't block session start */ }
+  };
+
+  const startSession = async () => {
     setQuestionsAsked([]); setSessionScores([]); setSessionLog([]); setGapIndex(0);
+    await commitRoleIfChanged(selectedRole);
     fetchQuestion(0);
   };
 

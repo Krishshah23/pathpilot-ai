@@ -134,3 +134,60 @@ export const getResumeHistory = asyncHandler(async (req, res) => {
     .select('healthScore createdAt originalName');
   return sendSuccess(res, { data: { history } });
 });
+
+// POST /api/resume/reanalyze  — re-run Gemini role analysis for a new targetRole
+// Body: { targetRole: string }
+// Does NOT require a new file upload — uses the existing resume on disk.
+export const reanalyzeForRole = asyncHandler(async (req, res) => {
+  const { targetRole } = req.body;
+  if (!targetRole?.trim()) throw ApiError.badRequest('targetRole is required');
+
+  // Find the latest resume document for this user
+  const resume = await Resume.findOne({ user: req.user._id }).sort({ createdAt: -1 });
+  if (!resume) throw new ApiError(404, 'No resume found. Please upload a resume first.');
+
+  // Re-extract text from the stored file
+  const filename = resume.fileUrl.split('/').pop();
+  const absPath = path.join(process.cwd(), 'uploads', 'resumes', filename);
+
+  let resumeText = '';
+  try {
+    const extracted = await extractResumeText(absPath, resume.originalName);
+    resumeText = extracted.text || '';
+  } catch {
+    // File may have been cleaned up — fall back to skill list so Gemini still works
+    resumeText = `Skills: ${(resume.skills || []).join(', ')}. Experience: ${(resume.experience || []).join('. ')}`;
+  }
+
+  // Re-run Gemini analysis against the new role
+  const parsedData = {
+    skills: resume.skills,
+    projects: resume.projects,
+    experience: resume.experience,
+    education: resume.education,
+    certifications: resume.certifications,
+  };
+
+  const geminiInsights = await geminiAnalyzeResume({
+    resumeText,
+    parsedData,
+    targetRole,
+    skills: resume.skills || [],
+  });
+
+  // Patch the live resume document with the new role-specific intelligence
+  resume.roleFitScore = geminiInsights.roleFitScore ?? null;
+  resume.keyGaps = geminiInsights.keyGaps ?? [];
+  resume.strengthAreas = geminiInsights.strengthAreas ?? [];
+  resume.atsKeywordsMissing = geminiInsights.atsKeywordsMissing ?? [];
+  resume.aiRecommendations = geminiInsights.recommendations ?? [];
+  resume.nextStepPriority = geminiInsights.nextStepPriority ?? '';
+  resume.aiNarrative = ''; // Invalidate cached audit narrative so dashboard regenerates narrative for new role
+  await resume.save();
+
+
+  return sendSuccess(res, {
+    message: `Analysis updated for ${targetRole}`,
+    data: { resume },
+  });
+});

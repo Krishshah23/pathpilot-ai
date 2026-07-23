@@ -66,10 +66,22 @@ export const getPathScore = asyncHandler(async (req, res) => {
     const mlResponse = await aiService.predict(payload); /* LEGACY — model demo */
     if (mlResponse?.data) {
       const mlData = mlResponse.data;
-      pathScore.score = mlData.resumeScore;
-      pathScore.readiness = mlData.careerReadiness;
+      // Store ML predictions as supplementary data without overwriting
+      // the factor-based score. The factor bars must always match the
+      // displayed total — overwriting score without recalculating factors
+      // caused visual contradictions on the dashboard.
       pathScore.predictions = mlData;
-      if (mlData.peerBenchmark) {
+
+      // Use ML readiness level/summary if it provides one, but keep
+      // the factor-derived score as the canonical number.
+      if (mlData.careerReadiness?.level) {
+        pathScore.readiness = {
+          ...pathScore.readiness,
+          mlLevel: mlData.careerReadiness.level,
+          mlSummary: mlData.careerReadiness.summary,
+        };
+      }
+      if (mlData.peerBenchmark && !mlData.peerBenchmark.isFallback) {
         pathScore.peerBenchmark = mlData.peerBenchmark;
       }
       if (mlData.recommendations) {

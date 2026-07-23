@@ -5,7 +5,7 @@ import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
 import { ScoreGauge } from '@/components/charts/ScoreGauge';
 import { useAuth } from '@/context/AuthContext';
-import { DREAM_ROLES } from '@/config/careerData';
+
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
 
@@ -21,11 +21,7 @@ export default function OverviewPage() {
   const [aiExplanation, setAiExplanation] = useState(null);
   const [loadingAi, setLoadingAi] = useState(false);
 
-  const [editingRole, setEditingRole] = useState(false);
-  const [selectedRole, setSelectedRole] = useState(user?.profile?.dreamRole || 'your target role');
 
-  // Always include the user's current role even if it's a custom value not in DREAM_ROLES
-  const roleOptions = [...new Set([selectedRole, ...(DREAM_ROLES || [])])];
 
   const fetchAiExplanation = () => {
     if (!user?.profile?.resumeUrl) return;
@@ -79,34 +75,7 @@ export default function OverviewPage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   
-  const handleRoleUpdate = async (newRole) => {
-    setSelectedRole(newRole);
-    setEditingRole(false);
-    try {
-      await api.patch('/profile', { profile: { dreamRole: newRole } });
-      // Sync React auth context so user.profile.dreamRole is fresh everywhere
-      await refreshUser();
-      // Soft re-fetch — no reload, no flash
-      setLoading(true);
-      setAiExplanation(null); // Will trigger fresh Gemini call for new role
-      const [scoreRes, growthRes] = await Promise.all([
-        api.get('/path-score'),
-        api.get('/growth').catch(() => ({ data: { data: { plan: null } } }))
-      ]);
-      setPathScore(scoreRes.data.data.pathScore || {});
-      setMarketSalary(scoreRes.data.data.marketSalary || null);
-      setBlendedBenchmark(scoreRes.data.data.blendedBenchmark || null);
-      setGrowthPlan(growthRes.data?.data?.plan || null);
-      // Re-trigger AI explanation for the new role (only if they have a resume)
-      if (user?.profile?.resumeUrl) {
-        setLoadingAi(true);
-        api.post('/ai-coach/explain').then((res) => {
-          setAiExplanation(res.data.data.explanation);
-        }).catch(() => {}).finally(() => setLoadingAi(false));
-      }
-    } catch { /* silent */ }
-    finally { setLoading(false); }
-  };
+
 
   const score = pathScore?.displayScore ?? Math.round(pathScore?.score || 0);
   const readiness = pathScore?.readiness;
@@ -160,27 +129,7 @@ export default function OverviewPage() {
             </h1>
             <p className="mt-3 text-base text-[#525252] max-w-xl leading-relaxed">
               Here's your career readiness snapshot for{' '}
-              {editingRole ? (
-                <select 
-                  autoFocus
-                  value={selectedRole} 
-                  onChange={(e) => handleRoleUpdate(e.target.value)}
-                  onBlur={() => setEditingRole(false)}
-                  className="bg-transparent font-semibold text-[#2B4C3F] border-b-2 border-[#2B4C3F] outline-none"
-                >
-                  {roleOptions.map(r => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              ) : (
-                <span 
-                  onClick={() => setEditingRole(true)} 
-                  className="font-semibold text-[#2B4C3F] cursor-pointer hover:underline underline-offset-4 decoration-2 decoration-[#C8DDD6]"
-                  title="Click to change target role"
-                >
-                  {selectedRole} <Icon.Edit size={14} className="inline-block mb-1 text-[#A3A3A3] hover:text-[#2B4C3F]" />
-                </span>
-              )}.
+              <span className="font-semibold text-[#2B4C3F]">{dreamRole}</span>.
               {readiness?.summary && ` ${readiness.summary}`}
             </p>
           </div>

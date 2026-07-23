@@ -54,13 +54,21 @@ export const getInsights = asyncHandler(async (req, res) => {
       
       const mlResponse = await aiService.predict(payload);
       if (mlResponse?.data) {
-        pathScore.score = mlResponse.data.resumeScore;
-        pathScore.readiness = mlResponse.data.careerReadiness;
+        // Store ML prediction metadata without overwriting factor-based score
+        pathScore.predictions = mlResponse.data;
+        if (mlResponse.data.careerReadiness?.level) {
+          pathScore.readiness = {
+            ...pathScore.readiness,
+            mlLevel: mlResponse.data.careerReadiness.level,
+            mlSummary: mlResponse.data.careerReadiness.summary,
+          };
+        }
       }
     }
   } catch (err) {
     console.error('Error fetching ML predictions for insights:', err);
   }
+
 
   // Resume health trend (chronological)
   const resumeTrend = resumes.map((r, i) => ({
@@ -101,8 +109,9 @@ export const getInsights = asyncHandler(async (req, res) => {
   return sendSuccess(res, {
     data: {
       pathScore: {
-        score: pathScore.score,
+        score: pathScore.displayScore ?? Math.round(pathScore.score || 0),
         label: pathScore.label,
+
         factors: pathScore.factors.map((f) => ({
           label: f.label,
           score: f.score,

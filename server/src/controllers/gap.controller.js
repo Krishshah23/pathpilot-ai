@@ -44,6 +44,7 @@ export const analyzeGap = asyncHandler(async (req, res) => {
       return {
         ...item,
         marketFrequency: market?.frequency ?? null,
+        demand: market?.frequency ?? null, // frontend reads `demand`
         marketBacked: Boolean(market),
       };
     });
@@ -67,6 +68,7 @@ export const analyzeGap = asyncHandler(async (req, res) => {
       return {
         ...item,
         marketFrequency: market?.frequency ?? null,
+        demand: market?.frequency ?? null,
         marketBacked: Boolean(market),
       };
     });

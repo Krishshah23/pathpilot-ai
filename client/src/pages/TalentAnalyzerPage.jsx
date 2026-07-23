@@ -34,26 +34,59 @@ function AnimatedScore({ target }) {
 }
 
 function SHAPVisualizer({ resume }) {
-  // Feature weights generated from CatBoost/ML diagnostics logic
+  // Derive scoring factors from the actual resume data instead of
+  // displaying hardcoded static percentages. Each factor reflects
+  // real signals extracted from the user's resume.
+  const skills = resume?.skills || [];
+  const projects = resume?.projects || [];
+  const experience = resume?.experience || [];
+  const healthScore = resume?.healthScore || 0;
+
+  // Compute real contribution scores (each out of its max weight)
+  const skillScore = Math.min(skills.length, 10) / 10 * 100;
+  const projectScore = Math.min(projects.length, 3) / 3 * 100;
+  const experienceScore = experience.length > 0 ? Math.min(experience.length, 3) / 3 * 100 : 0;
+  const atsScore = healthScore; // Resume health is the closest ATS proxy
+
   const factors = [
-    { name: 'Core Skill Match', weight: 35, color: '#2B4C3F' },
-    { name: 'Projects Metrics & Depth', weight: 25, color: '#4E7D6A' },
-    { name: 'Experience Chronology', weight: 20, color: '#92400E' },
-    { name: 'ATS Formatting Checks', weight: 20, color: '#B85A3C' }
+    {
+      name: 'Skill Coverage',
+      weight: Math.round(skillScore),
+      maxLabel: `${skills.length} skill${skills.length !== 1 ? 's' : ''} detected`,
+      color: skillScore >= 70 ? '#2B4C3F' : skillScore >= 40 ? '#92400E' : '#B85A3C',
+    },
+    {
+      name: 'Project Depth',
+      weight: Math.round(projectScore),
+      maxLabel: `${projects.length} project${projects.length !== 1 ? 's' : ''} found`,
+      color: projectScore >= 70 ? '#2B4C3F' : projectScore >= 40 ? '#92400E' : '#B85A3C',
+    },
+    {
+      name: 'Experience Signals',
+      weight: Math.round(experienceScore),
+      maxLabel: experience.length > 0 ? `${experience.length} entr${experience.length !== 1 ? 'ies' : 'y'}` : 'None detected',
+      color: experienceScore >= 70 ? '#2B4C3F' : experienceScore >= 40 ? '#92400E' : '#B85A3C',
+    },
+    {
+      name: 'Resume Health (ATS)',
+      weight: Math.round(atsScore),
+      maxLabel: `${healthScore}/100 health score`,
+      color: atsScore >= 70 ? '#2B4C3F' : atsScore >= 40 ? '#92400E' : '#B85A3C',
+    },
   ];
 
   return (
     <div className="rounded-xl border border-[#EAEAE5] bg-white p-5 space-y-4">
       <div>
-        <h4 className="text-xs font-bold uppercase tracking-wider text-[#171717]">Explainable Scoring Factors</h4>
-        <p className="text-[11px] text-[#A3A3A3] mt-0.5">Calculated model feature weight parameters contributing to your score</p>
+        <h4 className="text-xs font-bold uppercase tracking-wider text-[#171717]">Resume Signal Breakdown</h4>
+        <p className="text-[11px] text-[#A3A3A3] mt-0.5">Derived from your actual resume data</p>
       </div>
       <div className="space-y-3">
         {factors.map((f) => (
           <div key={f.name} className="space-y-1">
             <div className="flex justify-between text-xs font-medium">
               <span className="text-[#525252]">{f.name}</span>
-              <span className="font-semibold" style={{ color: f.color }}>{f.weight}% impact</span>
+              <span className="font-semibold" style={{ color: f.color }}>{f.weight}% · {f.maxLabel}</span>
             </div>
             <div className="h-2 w-full bg-[#F5F5F3] rounded-full overflow-hidden">
               <div className="h-full rounded-full transition-all duration-1000" style={{ width: `${f.weight}%`, backgroundColor: f.color }} />
@@ -64,6 +97,7 @@ function SHAPVisualizer({ resume }) {
     </div>
   );
 }
+
 
 /* ── Tab 0: AI Role Analysis (Gemini-powered) ── */
 function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
@@ -218,7 +252,7 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
                   onClick={() => onOpenFix({
                     title: `AI Recommendation #${i + 1}`,
                     current: rec,
-                    fix: `Action: Add a clear section listing this standard and implement a mock project targeting it.`,
+                    fix: rec,
                     type: 'recommendation'
                   })}
                   className="ml-4 shrink-0 text-xs font-bold text-[#2B4C3F] hover:underline"
@@ -259,20 +293,33 @@ export default function TalentAnalyzerPage() {
   // Resume version history
   const [resumeHistory, setResumeHistory] = useState([]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await api.get('/resume');
-        setResume(data.data.resume);
-        // Fetch version history in parallel
+  const fetchResume = async () => {
+    try {
+      const { data } = await api.get('/resume');
+      setResume(data.data.resume);
+      // Sync role state to match the latest analyzed resume's target
+      if (data.data.resume?.user) {
+        // also refresh history
         const histRes = await api.get('/resume/history').catch(() => null);
         if (histRes?.data?.data?.history?.length > 1) {
           setResumeHistory(histRes.data.data.history);
         }
-      } catch { /* no resume yet */ }
-      finally { setLoadingResume(false); }
-    })();
+      }
+    } catch { /* no resume yet */ }
+    finally { setLoadingResume(false); }
+  };
+
+  useEffect(() => {
+    fetchResume();
+
+    // Re-fetch whenever user returns to this tab (role may have been reanalyzed elsewhere)
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchResume();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
+
 
   useEffect(() => {
     if (activeTab === 1) loadGap();
@@ -398,7 +445,6 @@ export default function TalentAnalyzerPage() {
                 gapData={gapData}
                 loading={loadingGap}
                 role={role}
-                setRole={setRole}
                 onRefresh={loadGap}
               />
             )}
@@ -407,7 +453,6 @@ export default function TalentAnalyzerPage() {
                 jobs={liveJobs}
                 loading={loadingJobs}
                 role={role}
-                setRole={setRole}
                 onRefresh={loadJobs}
               />
             )}
@@ -598,8 +643,8 @@ function RecruiterFeedbackTab({ resume, onOpenFix }) {
                   onClick={() => onOpenFix({
                     title: `Suggestion #${i + 1}`,
                     current: s,
-                    fix: `Rewrite Idea: Make sure this section has clear metric points or structured timeline layout.`,
-                    type: 'flag'
+                    fix: s,
+                    type: 'suggestion'
                   })}
                   className="ml-4 shrink-0 text-xs font-bold text-[#2B4C3F] hover:underline"
                 >
@@ -658,13 +703,13 @@ function StickyNote({ flag, onOpenFix }) {
 
 
 /* ── Tab B: Market Alignment ── */
-function MarketAlignmentTab({ gapData, loading, role, setRole, onRefresh }) {
+function MarketAlignmentTab({ gapData, loading, role, onRefresh }) {
   const [trendingIdx, setTrendingIdx] = useState(0);
   const tickerRef = useRef(null);
 
   const missingSkills = gapData?.missingSkills || [];
   const matchedSkills = gapData?.matchedSkills || [];
-  const trendingSkills = missingSkills.filter((s) => s.demand > 60);
+  const trendingSkills = missingSkills.filter((s) => (s.demand ?? s.marketFrequency ?? 0) > 60);
 
   useEffect(() => {
     if (trendingSkills.length === 0) return;
@@ -676,15 +721,12 @@ function MarketAlignmentTab({ gapData, loading, role, setRole, onRefresh }) {
 
   return (
     <div className="space-y-6">
-      {/* Role selector */}
+      {/* Role display + refresh */}
       <div className="flex items-center gap-3">
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="input flex-1 text-sm h-10"
-        >
-          {DREAM_ROLES?.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
+        <div className="flex-1 flex items-center gap-2 h-10 px-3 rounded-xl border border-[#EAEAE5] bg-[#F5F5F3]">
+          <Icon.Target size={14} className="text-[#A3A3A3] shrink-0" />
+          <span className="text-sm font-medium text-[#171717] truncate">{role}</span>
+        </div>
         <button
           onClick={onRefresh}
           className="h-10 px-4 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F5F5F3] flex items-center gap-2 transition-colors"
@@ -708,7 +750,7 @@ function MarketAlignmentTab({ gapData, loading, role, setRole, onRefresh }) {
               <div className="overflow-hidden flex-1">
                 <p className="text-sm font-semibold text-[#171717] animate-fade-up" key={trendingIdx}>
                   <span className="text-[#B85A3C] font-bold">{trendingSkills[trendingIdx]?.skill}</span>
-                  {' '}appears in {trendingSkills[trendingIdx]?.demand}% of job postings for {role}
+                  {' '}appears in {trendingSkills[trendingIdx]?.demand ?? trendingSkills[trendingIdx]?.marketFrequency}% of job postings for {role}
                 </p>
               </div>
             </div>
@@ -736,7 +778,7 @@ function MarketAlignmentTab({ gapData, loading, role, setRole, onRefresh }) {
                 {missingSkills.slice(0, 10).map((s) => (
                   <div key={s.skill} className="flex items-center justify-between rounded-lg border border-[#E8C4B8] bg-[#FDF5F3] px-3 py-2 text-xs">
                     <span className="font-semibold text-[#B85A3C]">{s.skill}</span>
-                    {s.demand && <span className="text-[#A3A3A3]">{s.demand}% demand</span>}
+                    {(s.demand ?? s.marketFrequency) ? <span className="text-[#A3A3A3]">{s.demand ?? s.marketFrequency}% demand</span> : null}
                   </div>
                 ))}
               </div>
@@ -754,17 +796,14 @@ function MarketAlignmentTab({ gapData, loading, role, setRole, onRefresh }) {
 }
 
 /* ── Tab C: Live Jobs ── */
-function LiveJobsTab({ jobs, loading, role, setRole, onRefresh }) {
+function LiveJobsTab({ jobs, loading, role, onRefresh }) {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="input flex-1 text-sm h-10"
-        >
-          {DREAM_ROLES?.map((r) => <option key={r} value={r}>{r}</option>)}
-        </select>
+        <div className="flex-1 flex items-center gap-2 h-10 px-3 rounded-xl border border-[#EAEAE5] bg-[#F5F5F3]">
+          <Icon.Briefcase size={14} className="text-[#A3A3A3] shrink-0" />
+          <span className="text-sm font-medium text-[#171717] truncate">{role}</span>
+        </div>
         <button
           onClick={onRefresh}
           className="h-10 px-4 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F5F5F3] flex items-center gap-2 transition-colors"
@@ -865,7 +904,31 @@ function FixHelperPanel({ fixTarget, onClose }) {
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const isCritical = fixTarget.type === 'flag';
+  const fixType = fixTarget.type; // 'flag' | 'suggestion' | 'recommendation'
+  const typeConfig = {
+    flag: {
+      label: 'Recruiter Red Flag',
+      reason: 'This pattern triggers automated rejection in most ATS systems. Recruiters reviewing your resume will flag this as incomplete or unprofessional.',
+      borderColor: 'border-[#E8C4B8]',
+      bgColor: 'bg-[#FDF5F3]',
+      textColor: 'text-[#B85A3C]',
+    },
+    suggestion: {
+      label: 'Resume Improvement',
+      reason: 'Addressing this will strengthen your resume\'s clarity and make your experience more compelling to hiring managers.',
+      borderColor: 'border-[#C8DDD6]',
+      bgColor: 'bg-[#F0F5F3]',
+      textColor: 'text-[#2B4C3F]',
+    },
+    recommendation: {
+      label: 'AI Recommendation',
+      reason: 'This recommendation is based on analyzing your resume against current role requirements. Acting on it will directly improve your role-fit score.',
+      borderColor: 'border-[#E8D8A8]',
+      bgColor: 'bg-[#FEFBF0]',
+      textColor: 'text-[#92400E]',
+    },
+  };
+  const config = typeConfig[fixType] || typeConfig.suggestion;
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex justify-end">
@@ -888,7 +951,7 @@ function FixHelperPanel({ fixTarget, onClose }) {
             </span>
             <div>
               <h3 className="text-sm font-bold text-[#171717] leading-tight">Fix Helper</h3>
-              <p className="text-[10px] text-[#A3A3A3] mt-0.5">AI-powered recommendation</p>
+              <p className="text-[10px] text-[#A3A3A3] mt-0.5">{config.label}</p>
             </div>
           </div>
           <button
@@ -908,7 +971,7 @@ function FixHelperPanel({ fixTarget, onClose }) {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#F5F5F3] text-[10px] font-bold text-[#525252]">1</span>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#A3A3A3]">What was flagged</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#A3A3A3]">{fixType === 'flag' ? 'What was flagged' : 'What to improve'}</span>
               </div>
               <div className="rounded-xl border border-[#EAEAE5] bg-white p-4">
                 <h4 className="text-[13px] font-bold text-[#171717] leading-snug">{fixTarget.title}</h4>
@@ -924,24 +987,23 @@ function FixHelperPanel({ fixTarget, onClose }) {
               </div>
               <div className={cn(
                 'rounded-xl border p-4 space-y-2',
-                isCritical ? 'border-[#E8C4B8] bg-[#FDF5F3]' : 'border-[#E8D8A8] bg-[#FEFBF0]'
+                config.borderColor, config.bgColor
               )}>
                 <div className="flex items-center gap-2">
-                  <Icon.AlertTriangle size={14} className={isCritical ? 'text-[#B85A3C]' : 'text-[#92400E]'} />
+                  {fixType === 'flag' ? <Icon.AlertTriangle size={14} className={config.textColor} /> : <Icon.Info size={14} className={config.textColor} />}
                   <span className={cn(
                     'text-[10px] font-bold uppercase tracking-wider',
-                    isCritical ? 'text-[#B85A3C]' : 'text-[#92400E]'
+                    config.textColor
                   )}>
-                    {isCritical ? 'Recruiter Red Flag' : 'Improvement Area'}
+                    {config.label}
                   </span>
                 </div>
                 <p className="text-xs text-[#525252] leading-relaxed">
-                  {isCritical
-                    ? 'This pattern triggers automated rejection in most ATS systems. Recruiters reviewing your resume will flag this as incomplete or unprofessional.'
-                    : 'Addressing this will strengthen your resume\'s competitive positioning and improve match scores with target roles.'}
+                  {config.reason}
                 </p>
               </div>
             </div>
+
 
             {/* Section 3: Recommended fix */}
             <div className="space-y-2">

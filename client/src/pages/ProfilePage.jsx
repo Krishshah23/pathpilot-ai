@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
+import { DREAM_ROLES } from '@/config/careerData';
 
 export default function ProfilePage() {
   const { user, logout, refreshUser } = useAuth();
@@ -43,6 +44,7 @@ export default function ProfilePage() {
   // Handle Profile Save
   const handleSaveProfile = async () => {
     setSavingProfile(true);
+    const prevRole = user?.profile?.dreamRole;
     try {
       // 1. General details
       await api.patch('/profile', {
@@ -61,12 +63,20 @@ export default function ProfilePage() {
       });
 
       await refreshUser();
+
+      // 3. If the target role changed and there's a resume, re-run Gemini analysis
+      //    so AI Role Analysis tab reflects the new role (fire-and-forget)
+      if (profileForm.dreamRole && profileForm.dreamRole !== prevRole && user?.profile?.resumeUrl) {
+        api.post('/resume/reanalyze', { targetRole: profileForm.dreamRole }).catch(() => {});
+      }
+
       toast.success('Profile details saved successfully');
     } catch (err) {
       toast.error(errorMessage(err, 'Failed to save profile details'));
     } finally {
       setSavingProfile(false);
     }
+
   };
 
   // Handle Password Update
@@ -320,12 +330,18 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Field
-                    label="Target Dream Role"
-                    value={profileForm.dreamRole}
-                    onChange={(v) => setProfileForm((f) => ({ ...f, dreamRole: v }))}
-                    placeholder="e.g. Full Stack Developer"
-                  />
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3]">Target Dream Role</label>
+                    <select
+                      value={profileForm.dreamRole}
+                      onChange={(e) => setProfileForm((f) => ({ ...f, dreamRole: e.target.value }))}
+                      className="input w-full text-sm h-10"
+                    >
+                      {[...new Set([profileForm.dreamRole, ...DREAM_ROLES].filter(Boolean))].map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
                   <Field
                     label="College / Institution"
                     value={profileForm.college}
