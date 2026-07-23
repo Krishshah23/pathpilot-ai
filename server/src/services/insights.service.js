@@ -1,10 +1,17 @@
-/*
-  Insights helpers. Groups a student's skills into categories for the skill
-  distribution chart. The mapping is intentionally small and presentational —
-  the authoritative skill taxonomy lives in the Django ML service.
-*/
+/**
+ * services/insights.service.js — Career Insights & Skill Categorization Service
+ *
+ * ARCHITECTURAL PURPOSE:
+ * Groups student skills into standard technical categories (Languages, Frontend, Backend,
+ * Databases, DevOps & Cloud, Data & ML, Tools & CS) for rendering radar and bar charts
+ * in OverviewPage and TalentAnalyzerPage.
+ *
+ * STABLE ORDER:
+ * Uses a fixed category order (`CATEGORY_ORDER`) so chart axes remain stationary
+ * and comparative across page navigations and re-renders. Uncategorized skills fall into "Other".
+ */
 
-// Canonical skill -> category. Unlisted skills fall into "Other".
+// Canonical map mapping individual skill aliases to presentational categories
 const SKILL_CATEGORY = {
   // Languages
   JavaScript: 'Languages', TypeScript: 'Languages', Python: 'Languages', Java: 'Languages',
@@ -37,7 +44,7 @@ const SKILL_CATEGORY = {
   'System Design': 'Tools & CS', WebSockets: 'Tools & CS',
 };
 
-// Fixed order so the radar/bar chart axes are stable across renders.
+// Fixed category ordering ensuring consistent axis rendering in Recharts components
 const CATEGORY_ORDER = [
   'Languages',
   'Frontend',
@@ -48,7 +55,12 @@ const CATEGORY_ORDER = [
   'Tools & CS',
 ];
 
-/** Returns [{ category, count }] across all categories (zero-filled, ordered). */
+/**
+ * Computes skill counts per category for chart visualization.
+ *
+ * @param {Array<string>} [skills=[]] - Candidate's skill array
+ * @returns {Array<{category: string, count: number}>} Ordered array of category count objects
+ */
 export function skillDistribution(skills = []) {
   const counts = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, 0]));
   let other = 0;

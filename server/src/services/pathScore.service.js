@@ -1,19 +1,51 @@
+/**
+ * services/pathScore.service.js — Path Score Calculation Service
+ *
+ * PATH SCORE FORMULA & WEIGHTING:
+ * Path Score (0 to 100) measures a candidate's holistic readiness for their dream role.
+ * It is calculated across 4 weighted components:
+ *
+ * 1. RESUME QUALITY (35% weight, max 35 pts):
+ *    - Derived directly from `resume.healthScore` (0-100 scale from Django parser).
+ *
+ * 2. SKILLS QUANTITY & DIVERSITY (25% weight, max 25 pts):
+ *    - Counts unique skills across user profile and parsed resume.
+ *    - Reaches max score at 10+ relevant skills.
+ *
+ * 3. PROJECTS PORTFOLIO (20% weight, max 20 pts):
+ *    - Counts parsed projects from resume.
+ *    - Reaches max score at 3+ well-documented projects.
+ *
+ * 4. PROFILE COMPLETENESS (20% weight, max 20 pts):
+ *    - Evaluates onboarding readiness signals: Target Role set, Skills added, Resume uploaded.
+ *
+ * READINESS STAGES:
+ * - 85 - 100: 'Career-ready'
+ * - 70 - 84:  'Interview-ready foundation'
+ * - 50 - 69:  'Building momentum'
+ * - 1 - 49:   'Needs foundation'
+ * - 0:        'Unscored'
+ */
+
 const FACTOR_STATUS = {
   good: 'good',
   warn: 'warn',
   bad: 'bad',
 };
 
+/** Clamps a numeric value between min and max bounds. */
 function clamp(value, min = 0, max = 100) {
   return Math.min(max, Math.max(min, value));
 }
 
+/** Determines visual status color for a factor score. */
 function statusFor(score, max) {
   if (score >= max * 0.75) return FACTOR_STATUS.good;
   if (score > 0) return FACTOR_STATUS.warn;
   return FACTOR_STATUS.bad;
 }
 
+/** Deduplicates and normalizes skills case-insensitively across multiple sources. */
 function uniqueSkills(...groups) {
   const seen = new Map();
   groups
@@ -28,6 +60,7 @@ function uniqueSkills(...groups) {
   return [...seen.values()].sort((a, b) => a.localeCompare(b));
 }
 
+/** Constructs a structured factor object with normalized score, percentage, status, and tip. */
 function factor({ key, label, score, max, tip, detail }) {
   const rounded = clamp(Math.round(score * 10) / 10, 0, max);
   return {
@@ -42,6 +75,7 @@ function factor({ key, label, score, max, tip, detail }) {
   };
 }
 
+/** Maps a total numerical score to a readiness level badge and summary text. */
 function readinessFromScore(score) {
   if (score >= 85) {
     return {
@@ -78,10 +112,18 @@ function readinessFromScore(score) {
   };
 }
 
+/** Merges unique skills from the user profile document and the latest resume. */
 export function collectStudentSkills(user, resume) {
   return uniqueSkills(user?.profile?.skills || [], resume?.skills || []);
 }
 
+/**
+ * Builds the complete weighted Path Score breakdown object.
+ *
+ * @param {object} user - User document with profile
+ * @param {object} [resume] - Latest analyzed Resume document
+ * @returns {object} Path score breakdown containing score, factors array, and readiness level
+ */
 export function buildPathScore(user, resume) {
   const profile = user?.profile || {};
   const skills = collectStudentSkills(user, resume);
@@ -141,7 +183,6 @@ export function buildPathScore(user, resume) {
     score,
     label: readinessFromScore(score).label,
     summary: readinessFromScore(score).summary,
-    // Provide a rounded score for display consistency
     displayScore: roundedScore,
     factors,
     readiness: readinessFromScore(score),
@@ -164,4 +205,3 @@ export function buildPathScore(user, resume) {
       : null,
   };
 }
-

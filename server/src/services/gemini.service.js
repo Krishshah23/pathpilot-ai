@@ -1,19 +1,58 @@
+/**
+ * services/gemini.service.js — Google Gemini LLM Integration Layer
+ *
+ * ARCHITECTURAL ROLE & HYBRID AI PATTERN:
+ * PathPilot AI uses a hybrid intelligence model:
+ *   - Local rules & Django ML models handle scale, speed, feature vectors, and deterministic rules.
+ *   - Google Gemini LLM handles qualitative, conversational, and context-rich AI coaching.
+ *
+ * GEMINI FEATURES IMPLEMENTED:
+ * 1. `geminiChat()` — Context-aware career coach chat (injects resume + roadmap + profile context).
+ * 2. `geminiAnalyzeResume()` — Role-fit intelligence comparing resume structure to target role.
+ * 3. `geminiGenerateQuestion()` — Targeted mock interview question generation for a specific gap.
+ * 4. `geminiEvaluateAnswer()` — Multi-dimensional rubric scoring of candidate interview answers.
+ * 5. `geminiExplainScore()` — Pre-generated coaching narrative for the Path Score card.
+ * 6. `geminiGenerateGapRoadmap()` — Custom week-by-week learning tasks for identified resume gaps.
+ * 7. `geminiParseFallback()` — High-fidelity extraction parser for noisy or low-text PDF scans.
+ *
+ * AUTOMATIC MODEL FALLBACK & QUOTA PROTECTION:
+ * - `safeGenerateContent()` catches 429 quota errors on `gemini-3.5-flash` and automatically retries
+ *   using `gemini-3.1-flash-lite`.
+ * - `geminiAnalyzeResume()` includes a local heuristic fallback (`getLocalResumeFallback()`)
+ *   that guarantees onboarding completes cleanly even during total API outages.
+ */
+
 import { GoogleGenAI } from '@google/genai';
 import { env } from '../config/env.js';
 import { ApiError } from '../utils/ApiError.js';
 
+// Initialize Gemini API client
 const ai = new GoogleGenAI({ apiKey: env.gemini.apiKey });
 
-const MODEL = env.gemini.model; // gemini-3.5-flash
+// Default Gemini model specified in environment config
+const MODEL = env.gemini.model; // default: gemini-3.5-flash
 
+/**
+ * Invokes Gemini content generation with automatic quota fallback (`gemini-3.1-flash-lite`).
+ * @param {object} params - Model call options
+ * @returns {Promise<object>} Gemini response object
+ */
 async function safeGenerateContent({ model, contents, config }) {
   try {
     return await ai.models.generateContent({ model, contents, config });
   } catch (err) {
     const msg = err?.message || String(err);
-    const isQuota = msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota') || msg.includes('limit');
+    const isQuota =
+      msg.includes('429') ||
+      msg.includes('RESOURCE_EXHAUSTED') ||
+      msg.includes('quota') ||
+      msg.includes('limit');
+
     if (isQuota && model !== 'gemini-3.1-flash-lite') {
-      console.warn(`[Gemini Fallback] Quota exceeded on model '${model}'. Retrying with 'gemini-3.1-flash-lite'...`);
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[Gemini Fallback] Quota exceeded on model '${model}'. Retrying with 'gemini-3.1-flash-lite'...`
+      );
       try {
         return await ai.models.generateContent({
           model: 'gemini-3.1-flash-lite',
@@ -21,6 +60,7 @@ async function safeGenerateContent({ model, contents, config }) {
           config,
         });
       } catch (fallbackErr) {
+        // eslint-disable-next-line no-console
         console.error('[Gemini Fallback] Fallback model also failed:', fallbackErr.message);
         throw fallbackErr;
       }
@@ -30,8 +70,8 @@ async function safeGenerateContent({ model, contents, config }) {
 }
 
 /**
- * Converts raw Google API errors into clean, user-friendly ApiErrors.
- * Prevents raw 429/403 JSON from leaking to the frontend.
+ * Translates Google SDK errors into clean Express ApiErrors.
+ * Prevents raw Google API error keys from leaking to client responses.
  */
 function geminiErrorHandler(err) {
   const msg = err?.message || String(err);
@@ -54,25 +94,21 @@ function geminiErrorHandler(err) {
       `Model not available. Check that ${MODEL} is supported for your API key region.`
     );
   }
-  // Generic fallback
   throw new ApiError(503, `AI service error: ${msg.slice(0, 120)}`);
 }
 
 /**
- * Builds a rich system context string from user + resume data.
- * Injected into every Gemini call so responses are always personal.
+ * Constructs a comprehensive system instruction string injecting the candidate's name,
+ * target role, skills, resume health, red flags, and roadmap status.
  */
 function buildUserContext(user, resume, roadmap = null) {
   const profile = user?.profile || {};
   const dreamRole = profile.dreamRole || 'Software Engineer';
-  const skills = [
-    ...(profile.skills || []),
-    ...(resume?.skills || []),
-  ]
+  const skills = [...(profile.skills || []), ...(resume?.skills || [])]
     .filter((s) => s && s.toLowerCase() !== 'none')
     .map((s) => s.trim());
-  const uniqueSkills = [...new Set(skills.map((s) => s.toLowerCase()))].map(
-    (s) => skills.find((sk) => sk.toLowerCase() === s)
+  const uniqueSkills = [...new Set(skills.map((s) => s.toLowerCase()))].map((s) =>
+    skills.find((sk) => sk.toLowerCase() === s)
   );
 
   const resumeSection = resume
@@ -89,12 +125,12 @@ RESUME ANALYSIS:
     : `
 RESUME: Not yet uploaded. Encourage them to upload on the Resume Strategy page first.`;
 
-  const roadmapSection = roadmap 
+  const roadmapSection = roadmap
     ? `
 ROADMAP STATUS:
 - Target Role: ${roadmap.targetRole}
 - Progress: ${roadmap.progress?.completedTasks || 0}/${roadmap.progress?.totalTasks || 0} tasks completed
-- Current Week Focus: ${roadmap.weeks?.find(w => !w.isCompleted)?.topic || 'All caught up'}`
+- Current Week Focus: ${roadmap.weeks?.find((w) => !w.isCompleted)?.topic || 'All caught up'}`
     : `
 ROADMAP: No active learning roadmap generated yet.`;
 
@@ -116,8 +152,7 @@ COACHING RULES:
 6. Use their name (${user.name.split(' ')[0]}) occasionally to feel personal.`;
 }
 
-/* ─── Helpers ────────────────────────────────────────────────────────── */
-
+/** Utility to generate plain text using system instructions and temperature 0.7. */
 async function generateText(systemInstruction, userPrompt) {
   try {
     const response = await safeGenerateContent({
@@ -135,6 +170,7 @@ async function generateText(systemInstruction, userPrompt) {
   }
 }
 
+/** Utility to generate JSON objects with structured application/json MIME configuration. */
 async function generateJson(prompt) {
   try {
     const response = await safeGenerateContent({
@@ -146,37 +182,35 @@ async function generateJson(prompt) {
         responseMimeType: 'application/json',
       },
     });
-    
-    // Clean markdown and conversational padding
+
     let text = response.text.trim();
     const firstBrace = Math.min(
       text.indexOf('{') === -1 ? Infinity : text.indexOf('{'),
       text.indexOf('[') === -1 ? Infinity : text.indexOf('[')
     );
     const lastBrace = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
-    
+
     if (firstBrace !== Infinity && lastBrace !== -1 && lastBrace > firstBrace) {
       text = text.substring(firstBrace, lastBrace + 1);
     }
-    
+
     return JSON.parse(text);
   } catch (err) {
-    if (err instanceof ApiError) throw err; // already handled
+    if (err instanceof ApiError) throw err;
     geminiErrorHandler(err);
   }
 }
 
-/* ─── Exported Functions ─────────────────────────────────────────────── */
+// ── Exported Gemini Service Methods ──────────────────────────────────────────
 
 /**
- * Context-aware career coaching chat.
+ * Conducts context-aware career coaching chat.
  */
 export async function geminiChat({ user, resume, roadmap, history = [], message }) {
   try {
     const systemInstruction = buildUserContext(user, resume, roadmap);
-
-    // Build conversation contents including history
     const contents = [];
+
     for (const msg of history.slice(-8)) {
       contents.push({
         role: msg.role === 'user' ? 'user' : 'model',
@@ -201,8 +235,8 @@ export async function geminiChat({ user, resume, roadmap, history = [], message 
 }
 
 /**
- * Analyzes a resume against the user's target role.
- * Django parses structure first — Gemini adds role-specific intelligence on top.
+ * Compares parsed resume structure against candidate target role requirements.
+ * Falls back to local heuristic analysis if Gemini API is overloaded.
  */
 export async function geminiAnalyzeResume({ resumeText, parsedData, targetRole, skills = [] }) {
   try {
@@ -238,15 +272,22 @@ Return ONLY a JSON object with this exact structure:
 
     return await generateJson(prompt);
   } catch (err) {
-    console.warn('[Gemini] Analyze resume failed or overloaded. Falling back to local heuristic analysis.', err.message || err);
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[Gemini] Analyze resume failed or overloaded. Falling back to local heuristic analysis.',
+      err.message || err
+    );
     return getLocalResumeFallback(parsedData, targetRole);
   }
 }
 
-/**
- * Generates a role-specific interview question targeting a known gap.
- */
-export async function geminiGenerateQuestion({ targetRole, gap, previousQuestions = [], difficulty = 'mid' }) {
+/** Generates one targeted interview question for a specific skill gap. */
+export async function geminiGenerateQuestion({
+  targetRole,
+  gap,
+  previousQuestions = [],
+  difficulty = 'mid',
+}) {
   const prompt = `You are a senior interviewer at a top tech company interviewing for: ${targetRole}
 
 Generate ONE interview question that specifically tests this weakness/gap:
@@ -272,9 +313,7 @@ Return ONLY a JSON object:
   return generateJson(prompt);
 }
 
-/**
- * Evaluates a candidate's interview answer against a role-specific rubric.
- */
+/** Evaluates candidate interview answer using a multi-dimensional rubric. */
 export async function geminiEvaluateAnswer({ question, answer, targetRole, rubric, questionType }) {
   const prompt = `You are a senior interviewer evaluating a ${targetRole} interview response.
 
@@ -303,12 +342,9 @@ Evaluate fairly but critically. Return ONLY a JSON object:
   return generateJson(prompt);
 }
 
-/**
- * Generates a path score explanation narrative from actual score data.
- */
+/** Pre-generates the long-form coaching narrative explaining the Path Score. */
 export async function geminiExplainScore({ user, resume, pathScore }) {
   const dreamRole = user?.profile?.dreamRole || 'Software Engineer';
-
   const systemInstruction = `You are PathPilot AI, a career coach for ${user.name}. Be direct, personal, and encouraging.`;
 
   const userPrompt = `Explain this career readiness score to ${user.name}:
@@ -338,7 +374,7 @@ Write directly to them, use their first name (${user.name.split(' ')[0]}), be ho
         systemInstruction,
         temperature: 0.7,
         maxOutputTokens: 1024,
-      }
+      },
     });
     return response.text;
   } catch (err) {
@@ -346,9 +382,7 @@ Write directly to them, use their first name (${user.name.split(' ')[0]}), be ho
   }
 }
 
-/**
- * Phase 5 Connection: Generate roadmap weeks specifically targeting resume gaps.
- */
+/** Generates custom roadmap weeks specifically targeting resume gaps. */
 export async function geminiGenerateGapRoadmap({ gaps, targetRole }) {
   const prompt = `You are a technical career coach building a learning roadmap.
 The user is targeting the role: ${targetRole}
@@ -375,17 +409,14 @@ Return ONLY a valid JSON array of week objects:
   return generateJson(prompt);
 }
 
-/**
- * Fallback heuristic resume analyzer when Gemini is overloaded or API key fails.
- * Guarantees candidate onboarding succeeds with high-quality localized insights.
- */
+/** Deterministic local fallback generator for resume role-fit analysis when Gemini API is unavailable. */
 function getLocalResumeFallback(parsedData, targetRole) {
-  const candidateSkills = (parsedData?.skills || []).map(s => s.toLowerCase());
+  const candidateSkills = (parsedData?.skills || []).map((s) => s.toLowerCase());
   const roleLower = targetRole.toLowerCase();
-  
+
   let expectedSkills = ['git', 'agile', 'rest api', 'problem solving'];
   let defaultAts = ['CI/CD', 'Docker', 'Testing', 'Clean Code'];
-  
+
   if (roleLower.includes('front') || roleLower.includes('web') || roleLower.includes('ui')) {
     expectedSkills = ['javascript', 'html', 'css', 'react', 'typescript', 'tailwind'];
     defaultAts = ['Responsive Design', 'Web Performance', 'State Management', 'Vite'];
@@ -396,32 +427,37 @@ function getLocalResumeFallback(parsedData, targetRole) {
     expectedSkills = ['python', 'pandas', 'sql', 'machine learning', 'data analysis'];
     defaultAts = ['Data Pipelines', 'Scikit-learn', 'Feature Engineering', 'Jupyter'];
   }
-  
-  const missingSkills = expectedSkills.filter(s => !candidateSkills.includes(s));
-  const keyGaps = missingSkills.length > 0 
-    ? missingSkills.map(s => `Expand proficiency in ${s.toUpperCase()}`)
-    : ['Integrate advanced system architecture patterns', 'Implement CI/CD pipeline automation'];
-  
-  const matches = expectedSkills.filter(s => candidateSkills.includes(s)).length;
+
+  const missingSkills = expectedSkills.filter((s) => !candidateSkills.includes(s));
+  const keyGaps =
+    missingSkills.length > 0
+      ? missingSkills.map((s) => `Expand proficiency in ${s.toUpperCase()}`)
+      : ['Integrate advanced system architecture patterns', 'Implement CI/CD pipeline automation'];
+
+  const matches = expectedSkills.filter((s) => candidateSkills.includes(s)).length;
   const roleFitScore = Math.min(92, Math.max(55, 60 + matches * 8));
-  
+
   const strengthAreas = [];
   if (candidateSkills.length > 3) {
-    strengthAreas.push(`Broad core foundation: ${candidateSkills.slice(0, 3).join(', ').toUpperCase()}`);
+    strengthAreas.push(
+      `Broad core foundation: ${candidateSkills.slice(0, 3).join(', ').toUpperCase()}`
+    );
   } else {
     strengthAreas.push('Shows initiative in academic project implementation');
   }
   if ((parsedData?.projects || []).length > 0) {
     strengthAreas.push(`Practical project execution (${parsedData.projects.length} parsed project(s))`);
   }
-  
+
   const atsKeywordsPresent = (parsedData?.skills || []).slice(0, 5);
-  const atsKeywordsMissing = defaultAts.filter(k => !candidateSkills.includes(k.toLowerCase())).slice(0, 3);
-  
+  const atsKeywordsMissing = defaultAts
+    .filter((k) => !candidateSkills.includes(k.toLowerCase()))
+    .slice(0, 3);
+
   const recommendations = [
     `Incorporate professional project structures utilizing ${expectedSkills[0] || 'modern tech stack'} practices.`,
     'Quantify resume project results using metric impact percentages (e.g. "reduced latency by 20%").',
-    'Include direct documentation of API design, schema definition, and deployment flows.'
+    'Include direct documentation of API design, schema definition, and deployment flows.',
   ];
 
   return {
@@ -432,14 +468,11 @@ function getLocalResumeFallback(parsedData, targetRole) {
     atsKeywordsPresent,
     atsKeywordsMissing,
     recommendations,
-    nextStepPriority: `Add a comprehensive capstone project explicitly showcasing ${expectedSkills.slice(0, 2).join(' and ').toUpperCase()}.`
+    nextStepPriority: `Add a comprehensive capstone project explicitly showcasing ${expectedSkills.slice(0, 2).join(' and ').toUpperCase()}.`,
   };
 }
 
-/**
- * Fallback parser using Gemini when the local extraction/Django parses less than 30 words.
- * Returns standard structured parsed resume fields.
- */
+/** Fallback parser using Gemini when the local extraction/Django parses less than 30 words. */
 export async function geminiParseFallback(rawText) {
   const prompt = `You are a high-fidelity resume extraction parser. 
 Analyze the raw, potentially noisy or OCR-scanned text of a resume below, and extract the structured content into the specified JSON format.
@@ -481,7 +514,6 @@ Return ONLY a JSON object of this structure:
 
   try {
     const parsed = await generateJson(prompt);
-    // Add default structures if missing
     if (!parsed.skills) parsed.skills = [];
     if (!parsed.projects) parsed.projects = [];
     if (!parsed.contact) parsed.contact = { email: '', phone: '', linkedin: '', github: '' };
@@ -489,8 +521,8 @@ Return ONLY a JSON object of this structure:
     if (!parsed.suggestions) parsed.suggestions = [];
     return parsed;
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.error('[Gemini Fallback Parser] Failed:', err);
     return null;
   }
 }
-

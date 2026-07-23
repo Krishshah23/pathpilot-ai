@@ -1,8 +1,26 @@
 /**
- * Dedicated service to analyze resumes for recruiter red flags.
- * Rule/heuristic-based analysis, separated from ML scoring models.
+ * services/resumeRedFlags.js — Rule-based Recruiter Red Flag Detector
+ *
+ * PURPOSE & ARCHITECTURE:
+ * Evaluates candidate resumes for red flags that lead to human recruiter rejections
+ * before ATS evaluation. Separate from statistical ML models to ensure deterministic,
+ * rule-based rules checkable instantly upon text parsing.
+ *
+ * EVALUATED RED FLAGS:
+ * 1. Missing Contact Info / LinkedIn / GitHub Links
+ * 2. Generic / Templated Objective Statements ("highly motivated self-starter")
+ * 3. Bullet points lacking quantifiable metrics (< 25% of bullet points contain numbers/percentages)
+ * 4. Inconsistent Date Formatting (mixing Month YYYY with MM/YYYY or YYYY)
+ * 5. Unexplained Date Gaps (>= 3 years gap between education/experience years)
  */
 
+/**
+ * Evaluates raw text and parsed resume data to produce a list of detected red flag warnings.
+ *
+ * @param {string} rawText - Full extracted resume text string
+ * @param {object} parsedData - Extracted structure (skills, education, experience, projects, contact)
+ * @returns {Array<{key: string, label: string, description: string, fix: string, severity: 'critical'|'warning'}>}
+ */
 export function detectRedFlags(rawText, parsedData) {
   const redFlags = [];
   const text = rawText || '';
@@ -66,16 +84,13 @@ export function detectRedFlags(rawText, parsedData) {
   }
 
   // 3. Bullet points with no quantifiable metrics
-  // Parse bullet points from experience descriptions and projects
   const bulletLines = [];
   const bulletSplitRe = /[•●■▪◦□◇◆✓✔\n]|\s[-–—]\s/;
   experience.forEach((exp) => {
     if (typeof exp === 'string') {
-      // Split on bullet markers, newlines, and dash separators
-      const lines = exp.split(bulletSplitRe).map(line => line.trim()).filter(line => line.length > 15);
+      const lines = exp.split(bulletSplitRe).map((line) => line.trim()).filter((line) => line.length > 15);
       if (lines.length === 0) {
-        // Fallback: split paragraph-style text into sentences
-        const sentences = exp.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 15);
+        const sentences = exp.split(/[.!?]+/).map((s) => s.trim()).filter((s) => s.length > 15);
         bulletLines.push(...sentences);
       } else {
         bulletLines.push(...lines);
@@ -85,9 +100,9 @@ export function detectRedFlags(rawText, parsedData) {
   projects.forEach((proj) => {
     const desc = proj?.description || (typeof proj === 'string' ? proj : '');
     if (desc) {
-      const lines = desc.split(bulletSplitRe).map(line => line.trim()).filter(line => line.length > 15);
+      const lines = desc.split(bulletSplitRe).map((line) => line.trim()).filter((line) => line.length > 15);
       if (lines.length === 0) {
-        const sentences = desc.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 15);
+        const sentences = desc.split(/[.!?]+/).map((s) => s.trim()).filter((s) => s.length > 15);
         bulletLines.push(...sentences);
       } else {
         bulletLines.push(...lines);
@@ -96,9 +111,9 @@ export function detectRedFlags(rawText, parsedData) {
   });
 
   if (bulletLines.length > 0) {
-    // Check if line contains numbers, percentage, or currency signs
+    // Check if bullet line contains numeric digits, %, $, ₹, or "percent"
     const metricRegex = /\b\d+\b|%|\$|₹|percent/i;
-    const linesWithMetrics = bulletLines.filter(line => metricRegex.test(line));
+    const linesWithMetrics = bulletLines.filter((line) => metricRegex.test(line));
     const metricsRatio = linesWithMetrics.length / bulletLines.length;
 
     if (metricsRatio < 0.25) {
@@ -112,9 +127,7 @@ export function detectRedFlags(rawText, parsedData) {
     }
   }
 
-
   // 4. Inconsistent Date Formatting
-  // Regexes for common date formats
   const monthYearRegex = /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{4}\b/i;
   const slashDateRegex = /\b\d{1,2}\/\d{4}\b/;
   const yearOnlyRegex = /\b\d{4}\b/;
@@ -123,13 +136,11 @@ export function detectRedFlags(rawText, parsedData) {
   let hasSlashDate = false;
   let hasYearOnly = false;
 
-  // Search in experience and education strings
   const dateSources = [...experience, ...education];
   dateSources.forEach((src) => {
     if (typeof src === 'string') {
       if (monthYearRegex.test(src)) hasMonthYear = true;
       if (slashDateRegex.test(src)) hasSlashDate = true;
-      // check year only (but exclude if it matches monthYear or slashDate)
       const yearMatches = src.match(yearOnlyRegex);
       if (yearMatches && !monthYearRegex.test(src) && !slashDateRegex.test(src)) {
         hasYearOnly = true;
@@ -149,13 +160,11 @@ export function detectRedFlags(rawText, parsedData) {
   }
 
   // 5. Unexplained Date Gaps
-  // Find all 4-digit years between 2000 and current year + 1
   const currentYear = new Date().getFullYear();
   const allYears = [];
   const yearRegexGlobal = /\b(20[0-2][0-9])\b/g;
   let match;
-  
-  // Extract years from experience and education strings
+
   dateSources.forEach((src) => {
     if (typeof src === 'string') {
       while ((match = yearRegexGlobal.exec(src)) !== null) {
@@ -168,12 +177,12 @@ export function detectRedFlags(rawText, parsedData) {
   });
 
   const uniqueYears = [...new Set(allYears)].sort((a, b) => a - b);
-  
+
   if (uniqueYears.length >= 2) {
     let largestGap = 0;
     let gapStart = 0;
     let gapEnd = 0;
-    
+
     for (let i = 0; i < uniqueYears.length - 1; i++) {
       const gap = uniqueYears[i + 1] - uniqueYears[i];
       if (gap > largestGap) {
@@ -183,7 +192,6 @@ export function detectRedFlags(rawText, parsedData) {
       }
     }
 
-    // A gap of 3 or more years is flagged as unexplained gap
     if (largestGap >= 3) {
       redFlags.push({
         key: 'unexplained_gap',

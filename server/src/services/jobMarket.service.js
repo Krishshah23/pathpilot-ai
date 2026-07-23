@@ -1,24 +1,31 @@
+/**
+ * services/jobMarket.service.js — Market Intelligence & Salary Grounding Service
+ *
+ * ARCHITECTURAL PURPOSE:
+ * 1. ADZUNA INTEGRATION: Connects to the Adzuna REST API to query live job listings
+ *    in India across 12 tracked tech roles (`TRACKED_ROLES`).
+ * 2. SKILL FREQUENCY COMPUTATION: Scans job listing descriptions against `TRACKED_SKILLS`
+ *    keyword regexes to compute skill frequency percentages (e.g., 85% of Full Stack jobs require React).
+ * 3. SALARY AGGREGATION: Extracts salary ranges and converts raw figures into INR LPA (Lakhs Per Annum).
+ * 4. DB PERSISTENCE: Upserts JobMarketSnapshot documents for weekly tracking.
+ * 5. MOCK SEED FALLBACK: If Adzuna credentials are not configured or offline, automatically
+ *    seeds realistic mock snapshots (`seedMockDataForRole`) so the UI never displays empty market cards.
+ */
+
 import axios from 'axios';
 import { env } from '../config/env.js';
 import { JobMarketSnapshot } from '../models/JobMarketSnapshot.js';
 
-/*
-  Job-market grounding service.
-
-  - Talks to the Adzuna API to fetch live job listings for tracked roles.
-  - Extracts skill mentions from listing descriptions via keyword matching.
-  - Computes skill frequency % and salary ranges, then persists weekly snapshots.
-  - Exposes `getMarketDataForRole()` for the rest of the app to consume.
-*/
-
-// ── Adzuna client ────────────────────────────────────────────────────
-
+// ── Adzuna client configuration ──────────────────────────────────────────
 const ADZUNA_BASE = 'https://api.adzuna.com/v1/api/jobs';
-const COUNTRY = 'in'; // India
+const COUNTRY = 'in'; // Search Indian job market listings
 
 /**
- * Fetch a single page of Adzuna job listings for a query.
- * Returns [] if the API is misconfigured or unreachable.
+ * Fetches a single page of job listings from Adzuna API.
+ * @param {string} query - Job title query
+ * @param {number} [page=1] - Page index
+ * @param {number} [resultsPerPage=50] - Number of items per page
+ * @returns {Promise<{results: Array<object>, count: number}>}
  */
 async function fetchAdzunaPage(query, page = 1, resultsPerPage = 50) {
   if (!env.adzuna.appId || !env.adzuna.appKey) {
@@ -46,49 +53,36 @@ async function fetchAdzunaPage(query, page = 1, resultsPerPage = 50) {
   }
 }
 
-// ── Skill extraction ────────────────────────────────────────────────
-
-/**
- * Master skill keyword list. Checked case-insensitively against job
- * descriptions. Intentionally broad so we capture signal across roles.
- * These are the same skills the app already tracks (profile, resume, etc.).
- */
+// Master skill keyword list checked against job descriptions
 const TRACKED_SKILLS = [
-  // Languages
   'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'Go', 'Rust',
   'PHP', 'Ruby', 'Swift', 'Kotlin', 'R', 'Scala',
-  // Frontend
   'React', 'Next.js', 'Vue', 'Angular', 'Redux', 'Tailwind CSS', 'Bootstrap',
   'jQuery', 'Sass', 'HTML', 'CSS',
-  // Backend
   'Node.js', 'Express', 'Django', 'Flask', 'FastAPI', 'Spring Boot', 'GraphQL',
   'REST APIs',
-  // Databases
   'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'SQLite', 'Firebase', 'Oracle',
   'SQL', 'DynamoDB', 'Cassandra',
-  // DevOps / Cloud
   'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP', 'CI/CD', 'Jenkins',
   'Terraform', 'Linux', 'Nginx', 'Ansible',
-  // Data / ML
   'Pandas', 'NumPy', 'scikit-learn', 'TensorFlow', 'PyTorch',
   'Machine Learning', 'Deep Learning', 'Data Analysis', 'Matplotlib',
   'Power BI', 'Tableau', 'Excel', 'NLP', 'Spark', 'Hadoop',
-  // Tools / CS
   'Git', 'GitHub', 'GitLab', 'Data Structures', 'Algorithms', 'OOP',
   'Agile', 'Jira', 'Figma', 'Postman', 'Microservices', 'System Design',
   'WebSockets',
 ];
 
-// Pre-build lowercase set + regex for faster matching.
+// Pre-compiled regex patterns for word-boundary matching
 const SKILL_PATTERNS = TRACKED_SKILLS.map((s) => ({
   canonical: s,
   regex: new RegExp(`\\b${s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'),
 }));
 
 /**
- * Given a list of Adzuna job listing objects, returns:
- *   skillFrequency: Map<skill, { count, percent }>
- *   salaryRange: { min, max } in LPA (annual, lakhs)
+ * Analyzes raw job listings to calculate skill frequency percentages and salary ranges.
+ * @param {Array<object>} listings - Raw Adzuna listing objects
+ * @returns {{skillFrequency: Map, salaryRange: {min: number|null, max: number|null}, sampleSize: number}}
  */
 function analyzeListings(listings) {
   const skillCounts = new Map();
@@ -104,7 +98,6 @@ function analyzeListings(listings) {
       }
     }
 
-    // Adzuna salaries come as annual GBP/INR — normalize to INR LPA.
     const minSal = listing.salary_min;
     const maxSal = listing.salary_max;
     if (minSal || maxSal) {
@@ -120,17 +113,14 @@ function analyzeListings(listings) {
     });
   }
 
-  // Compute aggregate salary range (LPA).
   let salaryRange = { min: null, max: null };
   if (salaries.length) {
     const mins = salaries.map((s) => s.min).filter(Boolean);
     const maxs = salaries.map((s) => s.max).filter(Boolean);
-    // Adzuna India returns annual INR. Convert to LPA (÷ 100000).
     salaryRange = {
       min: mins.length ? Math.round(Math.min(...mins) / 100000) : null,
       max: maxs.length ? Math.round(Math.max(...maxs) / 100000) : null,
     };
-    // Clamp extreme outliers.
     if (salaryRange.min !== null) salaryRange.min = Math.max(1, salaryRange.min);
     if (salaryRange.max !== null) salaryRange.max = Math.min(200, salaryRange.max);
   }
@@ -138,21 +128,17 @@ function analyzeListings(listings) {
   return { skillFrequency, salaryRange, sampleSize: listings.length };
 }
 
-// ── Week key ─────────────────────────────────────────────────────────
-
-/** Returns the Monday of the current ISO week. */
+/** Computes the Monday Date object for the current ISO week. */
 function currentWeekStart() {
   const now = new Date();
-  const day = now.getDay(); // 0=Sun … 6=Sat
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Monday
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(now.setDate(diff));
   monday.setHours(0, 0, 0, 0);
   return monday;
 }
 
-// ── Public API ───────────────────────────────────────────────────────
-
-/** Roles tracked by the scheduled fetch. Matches `DREAM_ROLES` on the client. */
+/** Tracked job roles matching client `DREAM_ROLES`. */
 export const TRACKED_ROLES = [
   'Frontend Developer',
   'Backend Developer',
@@ -169,13 +155,13 @@ export const TRACKED_ROLES = [
 ];
 
 /**
- * Fetch listings from Adzuna for a single role, extract skill frequencies
- * and salary ranges, and persist as JobMarketSnapshot documents.
+ * Fetches listings for a single role and upserts weekly JobMarketSnapshot documents.
+ * @param {string} role - Role name
+ * @returns {Promise<number>} Count of upserted snapshot rows
  */
 export async function fetchAndStoreForRole(role) {
   const weekOf = currentWeekStart();
 
-  // Fetch up to 2 pages (100 listings) — enough for frequency signal.
   const page1 = await fetchAdzunaPage(role, 1, 50);
   const page2 = page1.count > 50 ? await fetchAdzunaPage(role, 2, 50) : { results: [] };
   const listings = [...page1.results, ...page2.results];
@@ -205,7 +191,6 @@ export async function fetchAndStoreForRole(role) {
       );
       upserted++;
     } catch (err) {
-      // Duplicate-key race — safe to ignore (unique index).
       if (err.code !== 11000) throw err;
     }
   }
@@ -214,8 +199,8 @@ export async function fetchAndStoreForRole(role) {
 }
 
 /**
- * Run the full market-data refresh for all tracked roles.
- * Called by the cron scheduler and can also be triggered manually.
+ * Executes a market data refresh across all 12 tracked roles.
+ * @returns {Promise<number>} Total snapshots written
  */
 export async function refreshAllRoles() {
   // eslint-disable-next-line no-console
@@ -225,8 +210,7 @@ export async function refreshAllRoles() {
   for (const role of TRACKED_ROLES) {
     const count = await fetchAndStoreForRole(role);
     total += count;
-    // Be polite to the API — 500 ms between roles.
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 500)); // Rate-limiting delay between requests
   }
 
   // eslint-disable-next-line no-console
@@ -235,7 +219,8 @@ export async function refreshAllRoles() {
 }
 
 /**
- * Seeding helper to dynamically generate mock snapshots when the Adzuna API is offline or missing credentials.
+ * Seeds mock market snapshots when Adzuna credentials are absent or offline.
+ * @param {string} role
  */
 async function seedMockDataForRole(role) {
   const weekOf = currentWeekStart();
@@ -248,7 +233,7 @@ async function seedMockDataForRole(role) {
       { skill: 'HTML', percent: 80 },
       { skill: 'Tailwind CSS', percent: 65 },
       { skill: 'Redux', percent: 55 },
-      { skill: 'Git', percent: 50 }
+      { skill: 'Git', percent: 50 },
     ],
     'Backend Developer': [
       { skill: 'Node.js', percent: 85 },
@@ -258,7 +243,7 @@ async function seedMockDataForRole(role) {
       { skill: 'Python', percent: 70 },
       { skill: 'SQL', percent: 70 },
       { skill: 'PostgreSQL', percent: 65 },
-      { skill: 'Docker', percent: 55 }
+      { skill: 'Docker', percent: 55 },
     ],
     'Full Stack Developer': [
       { skill: 'React', percent: 90 },
@@ -268,7 +253,7 @@ async function seedMockDataForRole(role) {
       { skill: 'MongoDB', percent: 65 },
       { skill: 'TypeScript', percent: 65 },
       { skill: 'Git', percent: 60 },
-      { skill: 'Docker', percent: 50 }
+      { skill: 'Docker', percent: 50 },
     ],
     'Data Scientist': [
       { skill: 'Python', percent: 95 },
@@ -278,7 +263,7 @@ async function seedMockDataForRole(role) {
       { skill: 'SQL', percent: 75 },
       { skill: 'NumPy', percent: 70 },
       { skill: 'TensorFlow', percent: 55 },
-      { skill: 'R', percent: 50 }
+      { skill: 'R', percent: 50 },
     ],
     'Data Analyst': [
       { skill: 'SQL', percent: 90 },
@@ -288,7 +273,7 @@ async function seedMockDataForRole(role) {
       { skill: 'Tableau', percent: 70 },
       { skill: 'Python', percent: 60 },
       { skill: 'Pandas', percent: 50 },
-      { skill: 'Git', percent: 40 }
+      { skill: 'Git', percent: 40 },
     ],
     'Machine Learning Engineer': [
       { skill: 'Python', percent: 95 },
@@ -298,7 +283,7 @@ async function seedMockDataForRole(role) {
       { skill: 'TensorFlow', percent: 75 },
       { skill: 'scikit-learn', percent: 70 },
       { skill: 'Algorithms', percent: 65 },
-      { skill: 'C++', percent: 50 }
+      { skill: 'C++', percent: 50 },
     ],
     'DevOps Engineer': [
       { skill: 'Docker', percent: 90 },
@@ -308,7 +293,7 @@ async function seedMockDataForRole(role) {
       { skill: 'Linux', percent: 75 },
       { skill: 'Git', percent: 70 },
       { skill: 'Terraform', percent: 65 },
-      { skill: 'Jenkins', percent: 60 }
+      { skill: 'Jenkins', percent: 60 },
     ],
     'Mobile App Developer': [
       { skill: 'Swift', percent: 80 },
@@ -318,7 +303,7 @@ async function seedMockDataForRole(role) {
       { skill: 'TypeScript', percent: 60 },
       { skill: 'Git', percent: 50 },
       { skill: 'REST APIs', percent: 50 },
-      { skill: 'OOP', percent: 40 }
+      { skill: 'OOP', percent: 40 },
     ],
     'Cloud Engineer': [
       { skill: 'AWS', percent: 90 },
@@ -328,7 +313,7 @@ async function seedMockDataForRole(role) {
       { skill: 'Docker', percent: 65 },
       { skill: 'Kubernetes', percent: 60 },
       { skill: 'Terraform', percent: 50 },
-      { skill: 'CI/CD', percent: 50 }
+      { skill: 'CI/CD', percent: 50 },
     ],
     'Cybersecurity Analyst': [
       { skill: 'Linux', percent: 85 },
@@ -338,7 +323,7 @@ async function seedMockDataForRole(role) {
       { skill: 'SQL', percent: 55 },
       { skill: 'Docker', percent: 40 },
       { skill: 'Git', percent: 40 },
-      { skill: 'Cloud', percent: 30 }
+      { skill: 'Cloud', percent: 30 },
     ],
     'UI/UX Designer': [
       { skill: 'Figma', percent: 95 },
@@ -348,7 +333,7 @@ async function seedMockDataForRole(role) {
       { skill: 'React', percent: 30 },
       { skill: 'Tailwind CSS', percent: 20 },
       { skill: 'Agile', percent: 40 },
-      { skill: 'Git', percent: 20 }
+      { skill: 'Git', percent: 20 },
     ],
     'Product Manager': [
       { skill: 'Agile', percent: 90 },
@@ -358,8 +343,8 @@ async function seedMockDataForRole(role) {
       { skill: 'Python', percent: 30 },
       { skill: 'Excel', percent: 70 },
       { skill: 'Figma', percent: 40 },
-      { skill: 'Git', percent: 20 }
-    ]
+      { skill: 'Git', percent: 20 },
+    ],
   };
 
   const mockSalaries = {
@@ -374,19 +359,17 @@ async function seedMockDataForRole(role) {
     'Cloud Engineer': { min: 700000, max: 1900000 },
     'Cybersecurity Analyst': { min: 600000, max: 1600000 },
     'UI/UX Designer': { min: 400000, max: 1300000 },
-    'Product Manager': { min: 900000, max: 2500000 }
+    'Product Manager': { min: 900000, max: 2500000 },
   };
 
   const skillsForRole = mockSkills[role] || [
     { skill: 'React', percent: 60 },
     { skill: 'Node.js', percent: 50 },
     { skill: 'Python', percent: 40 },
-    { skill: 'Git', percent: 40 }
+    { skill: 'Git', percent: 40 },
   ];
 
   const salRange = mockSalaries[role] || { min: 500000, max: 1200000 };
-
-  // Normalize salaries to LPA
   const minLPA = Math.round(salRange.min / 100000);
   const maxLPA = Math.round(salRange.max / 100000);
 
@@ -400,19 +383,22 @@ async function seedMockDataForRole(role) {
           frequency: item.percent,
           avgSalaryRange: { min: minLPA, max: maxLPA },
           sampleSize: 150,
-          weekOf
+          weekOf,
         },
         { upsert: true, new: true }
       );
     } catch (e) {
-      // Ignore duplicate keys
+      // Ignore duplicate key errors
     }
   }
 }
 
 /**
- * Query the latest week's market data for a given role.
- * Returns { skills: [{ skill, frequency, avgSalaryRange }], lastUpdated, sampleSize }.
+ * Returns latest market skill frequency data for a target role.
+ * Fallbacks to seeding mock data if no database snapshot exists.
+ *
+ * @param {string} role - Role name
+ * @returns {Promise<{skills: Array<object>, lastUpdated: Date|null, sampleSize: number, available: boolean}>}
  */
 export async function getMarketDataForRole(role) {
   let latest = await JobMarketSnapshot.findOne({ role })
@@ -452,8 +438,10 @@ export async function getMarketDataForRole(role) {
 }
 
 /**
- * Get aggregate salary range from market data for a specific role.
- * Returns { min, max, lastUpdated, available }.
+ * Returns aggregated salary range projection (in LPA) for a role.
+ *
+ * @param {string} role - Target role name
+ * @returns {Promise<{min: number|null, max: number|null, lastUpdated: Date|null, available: boolean}>}
  */
 export async function getMarketSalaryForRole(role) {
   let latest = await JobMarketSnapshot.findOne({ role })
@@ -473,7 +461,6 @@ export async function getMarketSalaryForRole(role) {
     return { min: null, max: null, lastUpdated: null, available: false };
   }
 
-  // Get all snapshots from that week to compute a broader salary picture.
   const snapshots = await JobMarketSnapshot.find({
     role,
     weekOf: latest.weekOf,

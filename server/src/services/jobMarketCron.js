@@ -1,25 +1,31 @@
+/**
+ * services/jobMarketCron.js — Scheduled Job Market Refresh Cron Task
+ *
+ * SCHEDULING STRATEGY:
+ * - Runs every Sunday at 02:00 AM server time via `node-cron` expression `0 2 * * 0`.
+ * - Triggers an immediate non-blocking check on server startup (`setImmediate`).
+ *   If no snapshots exist for the current week, it fetches immediately so the database
+ *   is never empty on new deployments.
+ *
+ * IDEMPOTENCY & SAFEGUARDS:
+ * - Skips execution if `ADZUNA_APP_ID` or `ADZUNA_APP_KEY` environment variables are absent.
+ * - Prevents multiple task instances if `startJobMarketCron()` is called more than once.
+ * - Graceful shutdown supported via `stopJobMarketCron()`.
+ */
+
 import cron from 'node-cron';
 import { refreshAllRoles } from './jobMarket.service.js';
 import { env } from '../config/env.js';
-
-/*
-  Weekly market-data fetch scheduler.
-
-  Runs every Sunday at 2:00 AM (server time) and also triggers once on
-  startup if no data exists for the current week. This ensures:
-    1. Fresh data is always available by Monday.
-    2. First deploy / empty DB doesn't wait until next Sunday.
-*/
 
 /** @type {import('node-cron').ScheduledTask | null} */
 let scheduledTask = null;
 
 /**
- * Start the weekly job-market cron job.
- * Safe to call multiple times — idempotent.
+ * Initializes and starts the weekly market data refresh cron job.
+ * Safe to call multiple times (idempotent).
  */
 export function startJobMarketCron() {
-  // Skip if Adzuna isn't configured — no point scheduling.
+  // Skip if Adzuna credentials are not configured
   if (!env.adzuna.appId || !env.adzuna.appKey) {
     // eslint-disable-next-line no-console
     console.log(
@@ -29,9 +35,9 @@ export function startJobMarketCron() {
     return;
   }
 
-  if (scheduledTask) return; // already running
+  if (scheduledTask) return; // Prevent duplicate task registration
 
-  // Cron: "At 02:00 on Sunday" → 0 2 * * 0
+  // Schedule task for Sunday at 02:00 AM (0 2 * * 0)
   scheduledTask = cron.schedule('0 2 * * 0', async () => {
     try {
       await refreshAllRoles();
@@ -44,14 +50,13 @@ export function startJobMarketCron() {
   // eslint-disable-next-line no-console
   console.log('[JobMarketCron] Weekly market data refresh scheduled (Sunday 02:00).');
 
-  // Trigger an initial fetch in the background so the DB isn't empty.
+  // Asynchronous startup check: fill database if current week is missing market data
   setImmediate(async () => {
     try {
-      // Only fetch if we have no data for this week at all.
       const { JobMarketSnapshot } = await import('../models/JobMarketSnapshot.js');
       const now = new Date();
       const day = now.getDay();
-      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1); // Get Monday of current week
       const weekStart = new Date(now.setDate(diff));
       weekStart.setHours(0, 0, 0, 0);
 
@@ -72,7 +77,7 @@ export function startJobMarketCron() {
 }
 
 /**
- * Stop the cron job (for graceful shutdown / tests).
+ * Stops the scheduled cron task during graceful server shutdown or test cleanup.
  */
 export function stopJobMarketCron() {
   if (scheduledTask) {
