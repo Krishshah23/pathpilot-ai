@@ -33,12 +33,13 @@ import { Spinner } from './Spinner';
 
 // Map of variant names → Tailwind classes for background/text/hover colours
 const VARIANTS = {
-  brand:   'bg-[#171717] text-white hover:bg-[#2a2a2a]',
+  brand:   'btn-editorial bg-[#171717] text-white hover:bg-[#262626]',
   outline: 'border border-[#EAEAE5] bg-white text-[#171717] hover:bg-[#F5F5F3]',
   ghost:   'text-[#525252] hover:text-[#171717] hover:bg-[#F5F5F3]',
   danger:  'bg-[#B85A3C] text-white hover:bg-[#a04f34]',
   success: 'bg-[#2B4C3F] text-white hover:bg-[#3D6B59]',
 };
+
 
 // Map of size names → Tailwind height/padding/text classes
 const SIZES = {

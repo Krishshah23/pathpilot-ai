@@ -32,6 +32,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ProtectedRoute, PublicOnlyRoute, RequireOnboarding, RequireAdmin, StudentOnlyRoute } from '@/routes/guards';
 import { FullScreenLoader } from '@/components/ui/Spinner';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Auth pages are small and needed immediately on first visit, so we import them
 // eagerly (no lazy) to avoid an extra network round-trip on the login page.
@@ -59,8 +60,10 @@ export default function App() {
   return (
     // BrowserRouter enables history-based navigation (real URLs like /dashboard, not /#/dashboard)
     <BrowserRouter>
-      {/* Suspense shows the full-screen spinner while a lazy page chunk is downloading */}
-      <Suspense fallback={<FullScreenLoader />}>
+      <ErrorBoundary>
+        {/* Suspense shows the full-screen spinner while a lazy page chunk is downloading */}
+        <Suspense fallback={<FullScreenLoader />}>
+
         <Routes>
 
           {/* ── Public auth routes ── */}
@@ -120,6 +123,8 @@ export default function App() {
           <Route path="*"  element={<NotFoundPage />} />
         </Routes>
       </Suspense>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
+

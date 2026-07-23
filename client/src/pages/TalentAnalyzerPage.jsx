@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { motion } from 'framer-motion';
 import { AppShell } from '@/components/layout/AppShell';
+
 import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
 import { FileUpload } from '@/components/ui/FileUpload';
@@ -759,31 +761,55 @@ function MarketAlignmentTab({ gapData, loading, role, onRefresh }) {
           {/* Skills grid */}
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#2B4C3F] mb-3">
-                Matched ({matchedSkills.length})
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#2B4C3F] mb-3 flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#2B4C3F]" />
+                Matched Skills ({matchedSkills.length})
               </h3>
               <div className="flex flex-wrap gap-2">
-                {matchedSkills.map((s) => (
-                  <span key={s.skill || s} className="inline-flex items-center gap-1.5 rounded-lg border border-[#C8DDD6] bg-[#F0F5F3] px-3 py-1.5 text-xs font-medium text-[#2B4C3F]">
-                    <Icon.Check size={11} /> {s.skill || s}
-                  </span>
-                ))}
+                {matchedSkills.map((s) => {
+                  const skillName = s.skill || s;
+                  return (
+                    <motion.span
+                      layout
+                      key={skillName}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.25 }}
+                      className="inline-flex items-center gap-2 rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] px-3.5 py-1.5 text-xs font-semibold text-[#2B4C3F] shadow-sm"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#2B4C3F]" />
+                      {skillName}
+                    </motion.span>
+                  );
+                })}
               </div>
             </div>
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#B85A3C] mb-3">
-                Missing ({missingSkills.length})
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#B85A3C] mb-3 flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#B85A3C]" />
+                Missing Skills ({missingSkills.length})
               </h3>
-              <div className="space-y-2">
-                {missingSkills.slice(0, 10).map((s) => (
-                  <div key={s.skill} className="flex items-center justify-between rounded-lg border border-[#E8C4B8] bg-[#FDF5F3] px-3 py-2 text-xs">
-                    <span className="font-semibold text-[#B85A3C]">{s.skill}</span>
-                    {(s.demand ?? s.marketFrequency) ? <span className="text-[#A3A3A3]">{s.demand ?? s.marketFrequency}% demand</span> : null}
-                  </div>
+              <div className="flex flex-wrap gap-2">
+                {missingSkills.slice(0, 12).map((s) => (
+                  <motion.span
+                    layout
+                    key={s.skill}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.25 }}
+                    className="inline-flex items-center gap-2 rounded-xl border border-[#E8C4B8] bg-[#FDF5F3] px-3.5 py-1.5 text-xs font-semibold text-[#B85A3C] shadow-sm"
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#B85A3C]" />
+                    <span>{s.skill}</span>
+                    {(s.demand ?? s.marketFrequency) ? (
+                      <span className="text-[10px] opacity-75 font-normal">({s.demand ?? s.marketFrequency}%)</span>
+                    ) : null}
+                  </motion.span>
                 ))}
               </div>
             </div>
           </div>
+
         </>
       ) : (
         <div className="flex flex-col items-center justify-center py-16 text-center">

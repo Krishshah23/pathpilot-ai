@@ -1,48 +1,21 @@
 /**
- * components/charts/ScoreGauge.jsx — Radial Score Gauge Chart
+ * components/charts/ScoreGauge.jsx — Matte Radial Score Gauge
  *
- * Renders a circular arc (radial bar) that fills from 0 to a given score (0-100).
- * The score number and a label appear centered inside the ring.
- *
- * Used for: Resume Health score, Path Score — anywhere we show a 0-100 score
- * as a prominent visual indicator rather than just a number.
- *
- * COLOUR THRESHOLDS (shared via scoreColor/scoreLabel helpers):
- *   ≥ 75 → green  (success) → "Strong" / "Excellent"
- *   ≥ 50 → amber  (warning) → "Fair"
- *   < 50 → red    (danger)  → "Needs work"
- *   = 0  →                  → "Unscored"
- *
- * EXPORTED HELPERS (also used by other components):
- *   scoreColor(score) → CSS hex colour string
- *   scoreLabel(score) → human-readable quality label string
- *
- * PROPS (ScoreGauge):
- *   score — number 0-100
- *   size  — pixel size of the square gauge (default 200)
- *   label — override the auto label (optional)
- *
- * USAGE:
- *   <ScoreGauge score={resume.healthScore} size={180} />
- *   <ScoreGauge score={pathScore} label="Your Path Score" />
+ * Renders a circular arc with:
+ * - Conic/Linear gradient stroke (--color-brand to --color-brand-soft, or warning/danger variants)
+ * - 10 tick marks around the ring (every 10 units) in --color-line
+ * - Smooth framer-motion arc animation on mount
+ * - metric-glow effect on the centered score number
  */
 
-import { RadialBar, RadialBarChart, PolarAngleAxis, ResponsiveContainer } from 'recharts';
+import { motion } from 'framer-motion';
 
-/**
- * Returns the correct hex colour for a given 0-100 score.
- * Exported so other components (e.g. FactorBars) can use the same thresholds.
- */
 export function scoreColor(score) {
-  if (score >= 75) return '#22c55e'; // green  — strong
-  if (score >= 50) return '#f59e0b'; // amber  — fair
-  return '#ef4444';                  // red    — needs work
+  if (score >= 75) return '#2B4C3F'; // brand forest green
+  if (score >= 50) return '#92400E'; // warning amber
+  return '#B85A3C';                  // danger rust
 }
 
-/**
- * Returns a short quality label for a given score.
- * Shown below the number inside the gauge (unless overridden by `label` prop).
- */
 export function scoreLabel(score) {
   if (score >= 85) return 'Excellent';
   if (score >= 75) return 'Strong';
@@ -51,43 +24,95 @@ export function scoreLabel(score) {
   return 'Unscored';
 }
 
-/**
- * Radial gauge — a circular arc chart with the score centered inside.
- * Built with Recharts RadialBarChart. The arc fills proportionally to `score / 100`.
- */
-export function ScoreGauge({ score = 0, size = 200, label }) {
-  const color = scoreColor(score);
+export function ScoreGauge({ score = 0, size = 180, label }) {
+  const safeScore = Math.min(100, Math.max(0, score));
+  const color = scoreColor(safeScore);
+  const colorSoft = safeScore >= 75 ? '#3D6B59' : safeScore >= 50 ? '#D97706' : '#DC2626';
 
-  // Recharts RadialBarChart expects `data` as an array.
-  // Each element's `value` fills the arc. `fill` sets the arc colour.
-  const data = [{ value: score, fill: color }];
+  const strokeWidth = 8;
+  const radius = (size - strokeWidth * 2 - 16) / 2;
+  const center = size / 2;
+  const circumference = 2 * Math.PI * radius;
+  const targetOffset = circumference * (1 - safeScore / 100);
+
+  // Generate 10 tick marks around the ring (every 36 degrees = 10 units)
+  const ticks = Array.from({ length: 10 }).map((_, i) => {
+    const angleDeg = i * 36 - 90; // Start top
+    const angleRad = (angleDeg * Math.PI) / 180;
+    const tickRadiusOuter = radius + 6;
+    const tickRadiusInner = radius - 4;
+    const x1 = center + tickRadiusInner * Math.cos(angleRad);
+    const y1 = center + tickRadiusInner * Math.sin(angleRad);
+    const x2 = center + tickRadiusOuter * Math.cos(angleRad);
+    const y2 = center + tickRadiusOuter * Math.sin(angleRad);
+    return { id: i, x1, y1, x2, y2 };
+  });
+
+  const gradientId = `score-gauge-gradient-${Math.round(safeScore)}`;
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
-      {/* ResponsiveContainer makes the chart fill its parent container */}
-      <ResponsiveContainer width="100%" height="100%">
-        <RadialBarChart
-          innerRadius="72%"  // the hole in the middle (72% of total radius)
-          outerRadius="100%" // the outer edge of the arc
-          data={data}
-          startAngle={90}    // start at the top (12 o'clock position)
-          endAngle={-270}    // go clockwise all the way around
-        >
-          {/* PolarAngleAxis defines the scale (0-100) but hides tick marks */}
-          <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rotate-[-90deg]">
+        <defs>
+          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={color} />
+            <stop offset="100%" stopColor={colorSoft} />
+          </linearGradient>
+        </defs>
 
-          {/* The coloured arc — dark grey background track + coloured foreground */}
-          <RadialBar background={{ fill: '#1b1f2b' }} dataKey="value" cornerRadius={20} />
-        </RadialBarChart>
-      </ResponsiveContainer>
+        {/* Track Ring */}
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke="#EAEAE5"
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+        />
 
-      {/* Score number and label, absolutely positioned in the center of the ring */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="font-display text-4xl font-extrabold text-ink">
-          {Math.round(score)} {/* round to nearest integer */}
-        </span>
-        <span className="text-xs font-medium" style={{ color }}>
-          {label ?? scoreLabel(score)} {/* use custom label or auto-generated one */}
+        {/* 10 Precision Tick Marks */}
+        {ticks.map((t) => (
+          <line
+            key={t.id}
+            x1={t.x1}
+            y1={t.y1}
+            x2={t.x2}
+            y2={t.y2}
+            stroke="#D0D0CA"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        ))}
+
+        {/* Animated Gradient Arc */}
+        <motion.circle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke={`url(#${gradientId})`}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: targetOffset }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+        />
+      </svg>
+
+      {/* Centered Score Display */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <div className="metric-glow flex flex-col items-center justify-center">
+          <span className="font-serif text-3xl sm:text-4xl font-extrabold text-[#171717] animate-count-up leading-none">
+            {Math.round(safeScore)}
+          </span>
+          <span className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-wider mt-1">
+            /100
+          </span>
+        </div>
+        <span className="text-xs font-semibold mt-1" style={{ color }}>
+          {label ?? scoreLabel(safeScore)}
         </span>
       </div>
     </div>

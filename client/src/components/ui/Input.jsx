@@ -63,17 +63,13 @@ export const Input = forwardRef(function Input(
         ref={ref}          // forward the ref to the actual DOM element
         id={inputId}       // links to the label's htmlFor
         className={cn(
-          // Base styling
-          'h-11 rounded-xl border bg-surface-2/60 px-4 text-sm text-ink placeholder:text-faint',
-          'transition focus:outline-none focus:ring-2',
-          // Red border + ring when there's an error; brand colour when focused normally
-          error
-            ? 'border-danger/60 focus:ring-danger/40'
-            : 'border-line focus:border-brand/60 focus:ring-brand/30',
+          'input',
+          error && '!border-[#B85A3C] !focus:ring-[#B85A3C]/20',
           className
         )}
         {...props} // passes value, onChange, type, placeholder, required, etc.
       />
+
 
       {/* Show error message (red) OR hint message (grey), never both */}
       {error ? (

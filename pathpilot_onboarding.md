@@ -1,6 +1,6 @@
 # PathPilot AI — New Engineer Onboarding Guide
 
-> Generated from live code analysis on 2026-07-16. Ignores old planning docs.
+> Generated from live code analysis on 2026-07-16. Last updated 2026-07-24 to reflect architectural fixes, design-system audit, and new components. Ignores old planning docs.
 
 ---
 
@@ -160,9 +160,12 @@ npm run dev                    # Vite → http://localhost:5173
 | `src/components/layout/AppShell.jsx` | Main authenticated shell: sidebar, topbar, notification drawer |
 | `src/components/layout/AuthLayout.jsx` | Centered card wrapper for auth pages |
 | `src/components/ui/` | Button, Card, Input, Select, FileUpload, Spinner, Stepper, TagInput, Avatar, icons… |
-| `src/components/charts/` | Recharts wrappers for score visualizations |
+| `src/components/ui/icons.jsx` | Custom hand-rolled SVG icon library (Lucide-style, no external dependency). All icons are properties of the exported `Icon` object — e.g. `Icon.Layers`, `Icon.BookOpen`. Add new icons here; never import a separate icon package. |
+| `src/components/charts/` | Custom chart components. `ScoreGauge.jsx` is a hand-crafted SVG radial gauge with gradient stroke, framer-motion arc animation, and 10 precision tick marks. |
+| `src/components/charts/ScoreGauge.jsx` | **[NEW]** Animated radial score gauge. Draws a gradient SVG arc (`--color-brand` → `--color-brand-soft`), 10 tick marks, `framer-motion` spring animation, and `animate-count-up` central number. Used in `OverviewPage` and `PublicProfilePage`. |
+| `src/components/ErrorBoundary.jsx` | **[NEW]** Global React class-based Error Boundary. Wraps the entire router tree in `App.jsx`. Catches uncaught render-phase exceptions and shows a user-friendly error card with the exact error message and a Reload button instead of a blank white screen. |
 | `src/components/resume/` | Resume health card, factor breakdown |
-| `src/components/opportunity/` | Kanban board column/card components |
+| `src/components/opportunity/` | OpportunityModal + Kanban column/card components |
 
 #### Client-side routing (all routes)
 
@@ -425,7 +428,7 @@ npm run dev                    # Vite → http://localhost:5173
 | **Job-Application Kanban** | `ExecutionEnginePage.jsx` (Opportunities tab) | `GET /opportunities` `POST /opportunities` `PATCH /opportunities/:id` `DELETE /opportunities/:id` | `opportunity.controller.js` | Fit-score calculation inline in controller | — | `opportunities` |
 | **Live Job Openings** | `ExecutionEnginePage.jsx` (Live Jobs tab) | `GET /live-jobs` | `liveJobs.controller.js` | `liveJobs.service.js` → TheirStack API → `LiveJobCache` (6 h TTL) | — | `livejobcaches` |
 | **Market Intelligence** | `TalentAnalyzerPage.jsx` (Market tab) / `OverviewPage.jsx` | `GET /job-market/:role` `GET /job-market/:role/salary` | `jobMarket.controller.js` | `jobMarket.service.js` → reads `JobMarketSnapshot` (seeded if empty) | — | `jobmarketsnapshots` |
-| **AI Career Insights** | `OverviewPage.jsx` (Insights panel) | `GET /insights` | `insights.controller.js` | `insights.service.js` → merges resume + roadmap + interview data | — | `resumes` `growthplans` `interviewsessions` |
+| **AI Career Insights** | `OverviewPage.jsx` (Insights panel) | `GET /insights` | `insights.controller.js` | `insights.service.js` → merges resume + roadmap + interview data. **Note:** The controller must NOT call `pathScore.service.js` to re-compute a fresh score and override the already-stored weighted composite. It should read and surface the composite stored on the resume document. See [Known Bug Fix #1](#known-bug-fix-1-path-score-override-in-insights) below. | — | `resumes` `growthplans` `interviewsessions` |
 | **Career Report** | `CareerReportPage.jsx` | `GET /report` | `report.controller.js` | Collects all data; formats printable report | — | `resumes` `growthplans` `interviewsessions` `opportunities` |
 | **Public Profile / Career Card** | `PublicProfilePage.jsx` | `GET /profile/public/:publicCardId` | `profile.controller.js` | Reads user + latest resume | — | `users` `resumes` |
 | **Profile & Settings** | `ProfilePage.jsx` | `GET/PATCH /profile` `POST /profile/avatar` `PATCH /profile/password` `PATCH /profile/public-card` | `profile.controller.js` | `upload.middleware.js` | — | `users` |
@@ -991,6 +994,247 @@ To build hands-on familiarity with the codebase, try implementing these targeted
 *   **Goal:** Automatically update Kanban application fit-scores whenever a student uploads a new resume.
 *   **Where to edit:** `server/src/controllers/resume.controller.js`
 *   **Implementation:** In `analyzeResume()` after the new `Resume` document is successfully saved to the database, search for all Kanban opportunities belonging to the user (`Opportunity.find({ user: userId })`). Loop through them, recalculate their fit scores against the new resume, and save the updated documents.
+
+---
+
+This concludes your PathPilot AI architectural onboarding manual. You are now ready to write code, debug models, and build features. Good luck!
+
+---
+
+> Phase 8 below — Design System, Recent Fixes, and Gotchas.
+
+---
+
+## Phase 8 — Design System, Recent Bug Fixes & Gotchas
+
+_Added 2026-07-24. This phase documents the front-end design language (which has strict rules), three critical backend bugs that were fixed, and known runtime gotchas that will trip you up if you're unaware of them._
+
+---
+
+### 8.1 — The PathPilot Design System (`client/src/index.css`)
+
+PathPilot uses **Tailwind CSS v4** with a custom `@theme` block in `index.css`. The design token vocabulary is fixed — do **not** invent new colors, radii, or shadows. Always use the tokens below.
+
+#### Color Tokens
+
+| Token | Hex | Usage |
+|---|---|---|
+| `--color-brand` | `#2B4C3F` | Primary forest green — CTAs, active states, progress bars, score fill |
+| `--color-brand-soft` | `#4A7A6A` | Brand gradient endpoint, hover accent |
+| `--color-ink` | `#171717` | Default body text, headings |
+| `--color-canvas` | `#FBFBFA` | Page background, input backgrounds |
+| `--color-surface` | `#F5F5F3` | Card inner backgrounds, badges |
+| `--color-surface-2` | `#EAEAE5` | Borders, dividers, pill backgrounds |
+| `--color-muted` | `#525252` | Secondary text, subtitles |
+| `--color-faint` | `#A3A3A3` | Placeholder text, disabled states, empty-state icons |
+| `--color-line` | `#D0D0CA` | Dashed border color for empty states |
+| `--color-warning` | `#92400E` | Amber warning text (amber pills, core-priority weeks) |
+| `--color-danger` | `#B85A3C` | Error / destructive states, rejected stage color |
+
+#### Typography
+
+| Class | Font | Usage |
+|---|---|---|
+| `font-serif` | Merriweather | **All page titles** (`h1`, `h2`), score numbers, hero labels |
+| `font-sans` | Inter | Everything else — body, labels, buttons, captions |
+| `font-mono` | Fira Code / system mono | Flight-strip index badges (`01`, `02`), code snippets |
+
+**Rule:** Every page-level `<h1>` and section `<h2>` must use `font-serif`. Sub-headings (`h3` and below), body copy, buttons, and badges use `font-sans`.
+
+#### Core CSS Classes (from `index.css`)
+
+These classes are defined globally and must be used instead of reinventing them with raw Tailwind:
+
+| Class | What it applies | When to use |
+|---|---|---|
+| `.card` | `bg-white border border-[#EAEAE5] rounded-2xl shadow-sm` | Every card-like container. Default. |
+| `.matte-card` | Slightly warmer card with `bg-[#FBFBFA]` | Feature cards, stat cards on dark sections. |
+| `.card-hover` | `hover:shadow-md hover:border-[#D0D0CA] transition-shadow` | Add to `.card` when the card is clickable. |
+| `.matte-card-hover` | Same hover animation tuned for `.matte-card` | Add to `.matte-card` when clickable. |
+| `.btn-editorial` | Full design system button — dark background, rounded-xl, Inter 600 | All primary action buttons. |
+| `.input` | Form input with brand focus ring, rounded-xl, correct padding | All `<input>`, `<select>`, `<textarea>`. |
+| `.banner-premium` | Gradient banner band for section headers | Hero sub-banners, upgrade prompts. |
+| `.nav-frosted` | Backdrop-blur nav background | TopNav bar. |
+| `.text-gradient` | Gradient text from `--color-brand` to `--color-brand-soft` | Brand taglines, metric highlights. |
+| `.section-divider` | Styled horizontal rule with fade edges | Between major page sections. |
+| `.progress-ruler` | Thin track bar background for progress fills | Roadmap week progress bars. |
+| `.metric-glow` | Subtle box-shadow glow around metric numbers | ScoreGauge central number. |
+
+**Rules enforced by code review:**
+1. Every card-like container → `.card` or `.matte-card` + hover modifier. Never `bg-white border border-gray-200` raw.
+2. Every border-radius → `rounded-xl` (16px) or `rounded-2xl` (24px). Never `rounded-md` or `rounded-lg` scattered inconsistently.
+3. Status badges → dot (4px circle, `--color-brand`) + label text on `--color-surface-2` pill with `rounded-xl`.
+4. Empty states → outline icon in `--color-faint`, `font-sans medium` headline in `--color-ink`, `--color-muted` body, dashed `--color-line` border box with `rounded-2xl`.
+
+#### Animation Utilities
+
+| Class | Effect | Usage |
+|---|---|---|
+| `.animate-fade-up` | Fade in + translate up 12px, 0.4s ease | Applied to page sections, cards entering viewport |
+| `.stagger-1` … `.stagger-5` | `animation-delay` from 0.05s to 0.25s | Add to list items alongside `.animate-fade-up` for cascading entrance |
+| `.animate-count-up` | CSS counter animation for numeric values | Applied to `<span>` wrapping metric numbers (Path Score, task counts) |
+
+---
+
+### 8.2 — Component Patterns
+
+#### ScoreGauge (`src/components/charts/ScoreGauge.jsx`)
+
+This is **not a Recharts component**. It is a hand-crafted SVG gauge.
+
+```jsx
+<ScoreGauge score={78} size={160} />
+```
+
+Internals:
+- **SVG arc:** Two overlaid `<circle>` elements using `strokeDashoffset` to draw a gradient arc from `--color-brand` to `--color-brand-soft`. The gradient is defined via a `<linearGradient>` in an `<defs>` block.
+- **Tick marks:** 10 `<line>` elements rotated around the circumference.
+- **Animation:** `framer-motion` animates `strokeDashoffset` from 0 to the target value over 1.2 seconds with a spring easing.
+- **Central number:** `<motion.span>` inside an `absolute` div, styled with `font-serif text-4xl font-black` + `metric-glow`.
+- **Usage locations:** `OverviewPage.jsx` (Dashboard), `PublicProfilePage.jsx` (Public career card).
+
+#### Flight-Strip Roadmap Pattern (`ExecutionEnginePage.jsx` — `WeekCard`)
+
+Each learning week is rendered as a "flight-strip" card:
+
+```
+[ 01 ]  Week Title                                  ──── 40% ▼
+        AI-personalized from your resume gaps · ~6 hrs · 3/8 tasks
+```
+
+- **Index badge:** `font-mono text-sm font-bold` in a `bg-[#F5F5F3] border border-[#EAEAE5] rounded-lg px-2.5 py-1.5` box. Left-padded to 2 digits with `String.padStart(2, '0')`.
+- **Left accent bar:** 4px `border-l` in one of three colors:
+  - `border-l-[#2B4C3F]` (brand green) → gap-targeted weeks (tasks whose `key` starts with `gap-task-`)
+  - `border-l-[#92400E]` (amber) → `priority: 'core'` or `'high'` weeks
+  - `border-l-[#D0D0CA]` (line) → supporting / filler weeks
+- **Entrance animation:** `.card.animate-fade-up.stagger-{1..5}` where stagger index = `weekIndex % 5 + 1`.
+
+#### Dot+Label Status Pill Pattern
+
+Used for skill badges (TalentAnalyzer), user status (AdminPage), and notification types.
+
+```jsx
+<span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-xl text-xs font-semibold border border-[#C8DDD6] text-[#2B4C3F] bg-[#F0F5F3]">
+  <span className="h-1.5 w-1.5 rounded-full bg-[#2B4C3F]" />
+  Matched
+</span>
+```
+
+Color variants:
+| State | Dot color | Text color | Border | Background |
+|---|---|---|---|---|
+| Matched / Active | `#2B4C3F` | `#2B4C3F` | `#C8DDD6` | `#F0F5F3` |
+| Missing / Warning | `#92400E` | `#92400E` | `#E8D8A8` | `#FEFBF0` |
+| Error / Rejected | `#B85A3C` | `#B85A3C` | `#E8C4B8` | `#FDF5F3` |
+| Neutral / Muted | `#A3A3A3` | `#525252` | `#EAEAE5` | `#F5F5F3` |
+
+#### Global Error Boundary (`src/components/ErrorBoundary.jsx`)
+
+A React class component (`extends React.Component`) that wraps the full router tree inside `App.jsx`.
+
+- **Catches:** Any uncaught JavaScript exception thrown during a component render, lifecycle method, or constructor of a descendant.
+- **Shows:** A centered error card with `Icon.AlertTriangle`, the literal `error.message`, and a "Reload Page" button that calls `window.location.reload()`.
+- **Also logs:** `console.error(error, errorInfo)` so the error still appears in DevTools.
+- **Integration:** Placed inside `<BrowserRouter>` but outside `<Suspense>` in `App.jsx` so it catches both lazy-load errors and runtime render errors.
+
+---
+
+### 8.3 — Known Bug Fixes (What Was Broken & Why)
+
+These three bugs caused user-visible problems and have been patched. Understanding them will prevent you from reintroducing them.
+
+#### Known Bug Fix #1: Path Score Override in Insights
+
+**File:** `server/src/controllers/insights.controller.js`
+
+**Bug:** The `/api/insights` endpoint was calling `pathScore.service.js → buildPathScore()` internally to compute a "fresh" score for the insights panel. However, `buildPathScore()` returns a raw unweighted average across factors that differs from the composite weighted score shown on the dashboard (which goes through additional ML prediction weighting). This meant the score displayed in the Insights panel would often be 5–15 points higher or lower than the dashboard score, causing user confusion.
+
+**Fix:** The insights controller now reads `resume.pathScore` (the stored composite value) directly from MongoDB instead of recomputing it. If no resume exists, it defaults to `0`. Never call `buildPathScore()` from the insights controller.
+
+```js
+// WRONG — recomputes a different value
+const fresh = buildPathScore(user, resume);
+
+// CORRECT — read the stored composite
+const pathScore = resume?.pathScore ?? 0;
+```
+
+---
+
+#### Known Bug Fix #2: Stale AI Narrative After Role Change
+
+**Files:** `server/src/controllers/resume.controller.js` + `server/src/controllers/profile.controller.js`
+
+**Bug:** The Gemini AI narrative (`resume.aiNarrative`) is pre-generated during resume upload against the user's `dreamRole` at that moment. If the user later changed their target role via the Profile or Skill Roadmap page, the `dreamRole` was updated in the `user.profile` but the old narrative (written for the previous role) remained on the `resume` document. The dashboard would then show a stale coaching paragraph that described the wrong role.
+
+**Fix:** Any controller that updates `user.profile.dreamRole` must also clear `resume.aiNarrative`:
+
+```js
+// In profile.controller.js → updateProfile()
+if (updates.dreamRole && updates.dreamRole !== user.profile.dreamRole) {
+  // Invalidate stale narrative — will be regenerated on next /dashboard load
+  await Resume.findOneAndUpdate(
+    { user: userId },
+    { $set: { aiNarrative: '' } },
+    { sort: { createdAt: -1 } }
+  );
+}
+```
+
+The same invalidation is applied in `resume.controller.js → reanalyzeForRole()` when a role is re-analyzed without a new file upload.
+
+---
+
+#### Known Bug Fix #3: Blank Screen on ExecutionEnginePage After Data Load
+
+**File:** `client/src/pages/ExecutionEnginePage.jsx`
+
+**Root Cause (two layers):**
+
+1. **Missing icon:** The Kanban column empty-state UI referenced `<Icon.Layers />`. The `Layers` SVG was not defined on the `Icon` export object in `icons.jsx`, so `Icon.Layers` evaluated to `undefined`. React threw `TypeError: Element type is invalid: expected a string ... but got undefined` during the render phase of the Kanban board.
+
+2. **Truncated JSX string:** During an earlier edit, a string in the empty-state JSX was accidentally truncated (`text-[#17...`), producing an unterminated string literal that caused a Vite build error after the initial Suspense spinner was dismissed.
+
+**Sequence:** The page loaded the spinner (Suspense). Once `loadOpportunities()` / `loadLiveJobs()` resolved and triggered a state update, React attempted to re-render the Kanban board. The invalid `Icon.Layers` reference caused a throw during render. Because there was no Error Boundary, React unmounted the entire component tree, leaving a white screen.
+
+**Fix applied:**
+1. Added `Layers` to `src/components/ui/icons.jsx`.
+2. Fixed the truncated JSX string.
+3. Added null/undefined guards to `KanbanCard`, `RadarJobRow`, `WeekCard`, and `RoadmapView` components.
+4. Wrapped the full router tree in `<ErrorBoundary>` so future render crashes display a friendly error card instead of a blank screen.
+
+**Guard pattern used throughout ExecutionEnginePage:**
+```jsx
+// Guard at component top — bail out if data is missing
+function KanbanCard({ opp }) {
+  if (!opp || typeof opp !== 'object') return null;
+  const company = opp.company || opp.companyName || 'Company';
+  // ...
+}
+
+// Guard in map calls — use index as fallback key
+cards.map((opp, oIdx) => (
+  <KanbanCard key={opp?._id || opp?.id || oIdx} opp={opp} />
+))
+```
+
+---
+
+### 8.4 — Golden Rules for Future Development
+
+1. **Never add a raw icon to the UI without defining it in `icons.jsx` first.** The custom icon library has no tree-shaking fallback — an undefined reference will crash the renderer silently in production.
+
+2. **Always clear `resume.aiNarrative` when changing `dreamRole`.** The narrative is role-specific. A stale one is worse than no narrative (it actively misleads the user).
+
+3. **Never call `buildPathScore()` from the insights or reporting layers.** It returns a raw unweighted value. The stored `resume.pathScore` is the authoritative composite.
+
+4. **All new card containers must use `.card` or `.matte-card`.** Raw `bg-white border border-gray-200` bypasses the design system and will be flagged in code review.
+
+5. **All new form fields must use `.input`.** Never add inline border/focus styles to `<input>` elements.
+
+6. **Guard every async-populated array before rendering.** If a `map()` runs over data fetched from an API, add `if (!item || typeof item !== 'object') return null;` at the top of the child component. API data is never guaranteed to be well-formed.
+
+7. **Test the Error Boundary works.** After deploying any new page, temporarily throw an error inside a `useEffect` and confirm the boundary card appears instead of a blank screen.
 
 ---
 

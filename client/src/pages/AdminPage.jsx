@@ -120,29 +120,30 @@ function OverviewTab({ stats }) {
     <div className="space-y-6">
       {/* Primary stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {primaryStats.map((s) => {
+        {primaryStats.map((s, idx) => {
           const Ico = s.icon;
           return (
-            <Card key={s.label} className="relative overflow-hidden">
+            <div key={s.label} className={cn("card card-hover p-5 relative overflow-hidden animate-fade-up", `stagger-${idx + 1}`)}>
               <div className="absolute top-0 right-0 h-20 w-20 rounded-full opacity-[0.07]"
                 style={{ backgroundColor: s.color, transform: 'translate(30%, -30%)' }}
               />
               <div className="flex items-start gap-3">
                 <span
-                  className="flex h-10 w-10 items-center justify-center rounded-xl"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl shrink-0"
                   style={{ backgroundColor: `${s.color}18`, color: s.color }}
                 >
                   <Ico size={18} />
                 </span>
                 <div>
-                  <p className="text-xs text-faint">{s.label}</p>
-                  <p className="mt-1 font-display text-2xl font-bold text-ink">{s.value}</p>
+                  <p className="text-xs font-medium text-[#A3A3A3]">{s.label}</p>
+                  <p className="mt-1 font-serif text-2xl font-black text-[#171717] animate-count-up">{s.value}</p>
                 </div>
               </div>
-            </Card>
+            </div>
           );
         })}
       </div>
+
 
       {/* Module engagement */}
       <Card>
@@ -377,16 +378,16 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
   const skillCount = u.profile?.skills?.length || 0;
 
   return (
-    <tr className="group border-b border-line/60 transition hover:bg-surface-2/30">
+    <tr className="group border-b border-[#EAEAE5] transition-colors duration-150 hover:bg-[#F5F5F3]">
       {/* User info */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-brand-soft">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#2B4C3F]/10 text-sm font-bold text-[#2B4C3F]">
             {u.name?.charAt(0).toUpperCase()}
           </div>
           <div>
-            <p className="font-medium text-ink">{u.name}</p>
-            <p className="text-xs text-faint">{u.email}</p>
+            <p className="font-medium text-[#171717]">{u.name}</p>
+            <p className="text-xs text-[#A3A3A3]">{u.email}</p>
           </div>
         </div>
       </td>
@@ -400,8 +401,8 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
           className={cn(
             'rounded-lg border px-2 py-1 text-xs font-semibold transition',
             u.role === 'admin'
-              ? 'border-violet/30 bg-violet/10 text-violet'
-              : 'border-line bg-surface-2/60 text-muted'
+              ? 'border-[#2B4C3F]/30 bg-[#F0F5F3] text-[#2B4C3F]'
+              : 'border-[#EAEAE5] bg-[#F5F5F3] text-[#525252]'
           )}
         >
           <option value="student">Student</option>
@@ -411,7 +412,7 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
 
       {/* Status */}
       <td className="px-4 py-3 hidden sm:table-cell">
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5 items-start">
           <StatusBadge active={u.isEmailVerified} label="Verified" />
           <StatusBadge active={u.onboardingCompleted} label="Onboarded" />
         </div>
@@ -419,17 +420,17 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
 
       {/* Dream role */}
       <td className="px-4 py-3 hidden md:table-cell">
-        <span className="text-xs text-muted">{u.profile?.dreamRole || '—'}</span>
+        <span className="text-xs text-[#525252]">{u.profile?.dreamRole || '—'}</span>
       </td>
 
       {/* Skills */}
       <td className="px-4 py-3 hidden lg:table-cell">
-        <span className="text-xs text-muted">{skillCount > 0 ? `${skillCount} skills` : '—'}</span>
+        <span className="text-xs text-[#525252]">{skillCount > 0 ? `${skillCount} skills` : '—'}</span>
       </td>
 
       {/* Joined */}
       <td className="px-4 py-3 hidden lg:table-cell">
-        <span className="text-xs text-faint">{joinDate}</span>
+        <span className="text-xs text-[#A3A3A3]">{joinDate}</span>
       </td>
 
       {/* Actions */}
@@ -437,7 +438,7 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
         <button
           onClick={() => onDelete(u._id, u.name)}
           disabled={loading}
-          className="rounded-lg p-1.5 text-faint opacity-0 transition group-hover:opacity-100 hover:bg-danger/10 hover:text-danger disabled:opacity-30"
+          className="rounded-lg p-1.5 text-[#A3A3A3] opacity-0 transition group-hover:opacity-100 hover:bg-[#FDF5F3] hover:text-[#B85A3C] disabled:opacity-30"
           title="Delete user"
         >
           <Icon.Trash size={14} />
@@ -450,13 +451,14 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
 function StatusBadge({ active, label }) {
   return (
     <span className={cn(
-      'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold',
+      'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border',
       active
-        ? 'bg-success/10 text-success'
-        : 'bg-surface-2 text-faint'
+        ? 'bg-[#F0F5F3] text-[#2B4C3F] border-[#C8DDD6]'
+        : 'bg-[#F5F5F3] text-[#A3A3A3] border-[#EAEAE5]'
     )}>
-      <span className={cn('h-1.5 w-1.5 rounded-full', active ? 'bg-success' : 'bg-faint/40')} />
+      <span className={cn('h-1.5 w-1.5 rounded-full', active ? 'bg-[#2B4C3F]' : 'bg-[#D0D0CA]')} />
       {label}
     </span>
   );
 }
+

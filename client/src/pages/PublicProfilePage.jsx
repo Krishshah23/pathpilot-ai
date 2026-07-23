@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Icon } from '@/components/ui/icons';
+import { ScoreGauge } from '@/components/charts/ScoreGauge';
 import { api, errorMessage } from '@/lib/api';
+
 
 export default function PublicProfilePage() {
   const { publicCardId } = useParams();
@@ -151,13 +153,15 @@ export default function PublicProfilePage() {
         </div>
 
         {/* ── Hero Section ── */}
-        <div className="relative rounded-2xl p-8 sm:p-10 mb-6 fade-up-2 border border-[#EAEAE5] bg-white overflow-hidden">
-          {/* Subtle background detail inside hero */}
-          <div className="absolute inset-0 opacity-10 pointer-events-none" style={{
-            backgroundImage: 'radial-gradient(circle at 80% 50%, #2B4C3F 0%, transparent 60%)',
+        <div className="relative matte-card matte-card-hover p-8 sm:p-10 mb-6 fade-up-2 overflow-hidden shadow-lg">
+          {/* Subtle top gradient band using brand color at low opacity */}
+          <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-r from-[#2B4C3F]/15 via-[#3D6B59]/8 to-transparent pointer-events-none border-b border-[#EAEAE5]/60" />
+          <div className="absolute top-0 right-0 w-80 h-32 opacity-15 pointer-events-none" style={{
+            backgroundImage: 'radial-gradient(#2B4C3F 1px, transparent 1px)',
+            backgroundSize: '16px 16px',
           }} />
 
-          <div className="relative flex flex-col sm:flex-row items-center gap-8">
+          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-8">
             {/* Avatar */}
             <div className="relative flex-shrink-0">
               <div className="relative h-28 w-28 rounded-2xl overflow-hidden border border-[#EAEAE5] bg-[#F5F5F3] flex items-center justify-center text-4xl font-serif font-black text-[#171717]">
@@ -184,7 +188,7 @@ export default function PublicProfilePage() {
                 <span className="text-[10px] font-bold tracking-widest uppercase text-[#A3A3A3]">Member since {joinYear}</span>
               </div>
               <h1 className="text-3xl sm:text-4xl font-serif font-black tracking-tight text-[#171717] mb-2">{name}</h1>
-              <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold mb-4 bg-[#F5F5F3] border border-[#EAEAE5] text-[#525252]">
+              <div className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1 text-sm font-semibold mb-4 bg-[#F5F5F3] border border-[#EAEAE5] text-[#525252]">
                 <Icon.Target size={13} className="text-[#2B4C3F]" />
                 {dreamRole}
               </div>
@@ -205,8 +209,8 @@ export default function PublicProfilePage() {
             </div>
 
             {/* Quick score badge on hero */}
-            <div className="flex-shrink-0 text-center p-5 rounded-2xl bg-[#F5F5F3] border border-[#EAEAE5]">
-              <div className="text-4xl font-serif font-black" style={{ color: scoreColor }}>{score}</div>
+            <div className="flex-shrink-0 text-center p-5 rounded-2xl bg-[#F5F5F3] border border-[#EAEAE5] metric-glow">
+              <div className="text-4xl font-serif font-black animate-count-up" style={{ color: scoreColor }}>{score}</div>
               <div className="text-[10px] font-bold tracking-widest uppercase text-[#525252] mt-1">Path Score</div>
               <div className="mt-1 text-[10px] font-bold uppercase tracking-wider" style={{ color: scoreColor }}>
                 {score >= 75 ? 'Interview-Ready' : score >= 50 ? 'On Track' : 'Building'}
@@ -222,40 +226,20 @@ export default function PublicProfilePage() {
           <div className="lg:col-span-2 space-y-5">
 
             {/* Ring gauge card */}
-            <div className="matte-card p-7">
-              <h3 className="text-[10px] font-bold tracking-widest uppercase text-[#A3A3A3] mb-6">Career Readiness</h3>
-              <div className="flex flex-col items-center gap-5">
-                <div className="relative">
-                  <svg width="160" height="160" viewBox="0 0 160 160">
-                    {/* Track */}
-                    <circle cx="80" cy="80" r={r} fill="none" stroke="#F5F5F3" strokeWidth="10" />
-                    {/* Score arc */}
-                    <circle
-                      cx="80" cy="80" r={r}
-                      fill="none"
-                      stroke={scoreColor}
-                      strokeWidth="10"
-                      strokeLinecap="round"
-                      strokeDasharray={circ}
-                      className="ring-draw"
-                      transform="rotate(-90 80 80)"
-                    />
-                    {/* Center text */}
-                    <text x="80" y="72" textAnchor="middle" fill="#171717" fontSize="28" fontWeight="900" className="font-serif-header">{score}</text>
-                    <text x="80" y="90" textAnchor="middle" fill="#525252" fontSize="9" fontWeight="700" letterSpacing="2">PATH SCORE</text>
-                  </svg>
-                </div>
+            <div className="matte-card p-7 flex flex-col items-center text-center">
+              <h3 className="text-[10px] font-bold tracking-widest uppercase text-[#A3A3A3] mb-4">Career Readiness</h3>
+              <ScoreGauge score={score} size={160} label={profile.readinessLabel} />
 
-                <div className="w-full p-4 rounded-2xl text-center" style={{ background: `${scoreColor}0A`, borderColor: `${scoreColor}20`, borderStyle: 'solid', borderWidth: '1px' }}>
-                  <p className="text-xs font-bold" style={{ color: scoreColor }}>
-                    {score >= 75 ? 'Interview-Ready Foundation' : score >= 50 ? 'On Track — Keep Building' : 'Early-Stage Candidate'}
-                  </p>
-                  <p className="mt-1 text-[11px] text-[#525252] leading-relaxed">
-                    {profile.readinessSummary || 'Actively building portfolio signals and technical expertise to match hireability standards.'}
-                  </p>
-                </div>
+              <div className="w-full mt-5 p-4 rounded-2xl text-center" style={{ background: `${scoreColor}0A`, borderColor: `${scoreColor}20`, borderStyle: 'solid', borderWidth: '1px' }}>
+                <p className="text-xs font-bold" style={{ color: scoreColor }}>
+                  {score >= 75 ? 'Interview-Ready Foundation' : score >= 50 ? 'On Track — Keep Building' : 'Early-Stage Candidate'}
+                </p>
+                <p className="mt-1 text-[11px] text-[#525252] leading-relaxed">
+                  {profile.readinessSummary || 'Actively building portfolio signals and technical expertise to match hireability standards.'}
+                </p>
               </div>
             </div>
+
 
             {/* Factor breakdown */}
             {factors.length > 0 && (
