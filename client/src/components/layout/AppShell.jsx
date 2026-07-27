@@ -15,6 +15,8 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/cn';
 import { Avatar } from '@/components/ui/Avatar';
 import { Icon } from '@/components/ui/icons';
@@ -22,6 +24,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, errorMessage } from '@/lib/api';
+import { Footer } from '@/components/layout/Footer';
+import { ContactModal } from '@/components/layout/ContactModal';
 
 /* ─── Top Nav ─────────────────────────────────────────────────────── */
 
@@ -37,7 +41,7 @@ const ADMIN_NAV_LINKS = [
   { label: 'Admin Panel', path: '/admin' },
 ];
 
-function TopNav({ user }) {
+function TopNav({ user, onOpenContact, onStartTour }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -86,11 +90,12 @@ function TopNav({ user }) {
             <NavLink
               key={link.path}
               to={link.path}
+              data-tour={`nav-${link.path.replace('/', '')}`}
               className={({ isActive }) =>
                 cn(
                   'px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150',
                   isActive
-                    ? 'bg-brand text-white shadow-sm'
+                    ? 'nav-gradient-active text-white shadow-sm'
                     : 'text-muted hover:text-ink hover:bg-surface-2'
                 )
               }
@@ -154,6 +159,30 @@ function TopNav({ user }) {
                   Profile Settings
                 </button>
               )}
+
+              {!isAdmin && onStartTour && (
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    onStartTour();
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted hover:text-ink hover:bg-surface-2 rounded-lg transition-colors"
+                >
+                  <Icon.Compass size={14} />
+                  Take a Tour
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setDropdownOpen(false);
+                  onOpenContact();
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted hover:text-ink hover:bg-surface-2 rounded-lg transition-colors"
+              >
+                <Icon.MessageSquare size={14} />
+                Contact &amp; Feedback
+              </button>
 
               <button
                 onClick={handleLogout}
@@ -480,7 +509,13 @@ function AICoachDrawer({ onClose, explainType, clearExplainType, messages, setMe
                     : 'mr-auto bg-surface border border-line text-ink rounded-bl-none'
                 )}
               >
-                <p className="whitespace-pre-line">{msg.content}</p>
+                {isUser ? (
+                  <p className="whitespace-pre-line">{msg.content}</p>
+                ) : (
+                  <div className="markdown-chat">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  </div>
+                )}
                 {msg.metrics?.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-line space-y-2">
                     {msg.metrics.map((m, idx) => (
@@ -570,6 +605,7 @@ export function AppShell({ children }) {
   const navigate = useNavigate();
   const [coachOpen, setCoachOpen] = useState(false);
   const [explainType, setExplainType] = useState(null);
+  const [contactOpen, setContactOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([
     { role: 'assistant', content: "Hi! I'm your AI Career Coach. Ask me anything about your resume, skill gaps, or career readiness." }
   ]);
@@ -583,17 +619,28 @@ export function AppShell({ children }) {
     return () => window.removeEventListener('open-ai-coach', handleOpenCoach);
   }, []);
 
+  const startTour = () => {
+    localStorage.setItem('pp_tour_requested', '1');
+    if (window.location.pathname === '/dashboard') {
+      window.dispatchEvent(new CustomEvent('start-app-tour'));
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-canvas text-ink transition-colors duration-300">
-      <TopNav user={user} />
+      <TopNav user={user} onOpenContact={() => setContactOpen(true)} onStartTour={user?.role !== 'admin' ? startTour : null} />
 
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-8 animate-fade-up">
-        {children}
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-8 animate-fade-up flex flex-col">
+        <div className="flex-1">{children}</div>
+        <Footer />
       </main>
 
       {/* Floating AI Coach button — hidden for admins */}
       {user?.role !== 'admin' && (
         <button
+          data-tour="coach-button"
           onClick={() => setCoachOpen(true)}
           className="fixed bottom-6 right-6 z-40 flex items-center justify-center rounded-full bg-brand text-white transition-all duration-300 hover:scale-110 active:scale-95 group"
           style={{ height: '56px', width: '56px', boxShadow: '0 8px 32px -4px rgba(43, 76, 63, 0.4), 0 2px 8px rgba(0, 0, 0, 0.15)' }}
@@ -614,6 +661,8 @@ export function AppShell({ children }) {
           setMessages={setChatMessages}
         />
       )}
+
+      {contactOpen && <ContactModal onClose={() => setContactOpen(false)} />}
     </div>
   );
 }

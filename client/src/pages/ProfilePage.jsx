@@ -199,8 +199,11 @@ export default function ProfilePage() {
               <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808003_1px,transparent_1px),linear-gradient(to_bottom,#80808003_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
 
               {/* Picture Upload Selector */}
-              <div className="relative mb-4 cursor-pointer group/avatar" onClick={handleAvatarClick}>
-                <div className="relative flex h-24 w-24 items-center justify-center rounded-[22px] bg-slate-900 text-3xl font-extrabold text-white border border-line overflow-hidden transition-all duration-300 group-hover/avatar:opacity-90">
+              <div className="relative mb-4 cursor-pointer group/avatar ring-glow rounded-[22px]" onClick={handleAvatarClick}>
+                <div
+                  className="relative flex h-24 w-24 items-center justify-center rounded-[22px] text-3xl font-extrabold text-white overflow-hidden transition-all duration-300 group-hover/avatar:opacity-90"
+                  style={{ background: 'linear-gradient(135deg, var(--brand-grad-from, #2D6A4F), var(--brand-grad-to, #40916C))' }}
+                >
                   {user?.profile?.avatarUrl ? (
                     <img src={user.profile.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                   ) : (
@@ -231,17 +234,17 @@ export default function ProfilePage() {
               <p className="text-xs text-faint mb-1">{user?.email}</p>
               
               <div className="flex flex-wrap gap-1.5 justify-center mt-1.5">
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold tracking-wider uppercase border border-slate-200">
+                <span className="badge-glow-blue inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase">
                   {user?.role}
                 </span>
 
                 {user?.isEmailVerified ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold tracking-wider uppercase border border-emerald-200">
+                  <span className="badge-glow-green inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase">
                     <Icon.Check size={10} />
                     Verified
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-semibold tracking-wider uppercase border border-amber-200">
+                  <span className="badge-glow-amber inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase">
                     Unverified
                   </span>
                 )}
@@ -251,11 +254,11 @@ export default function ProfilePage() {
                 <button
                   onClick={handleResendVerification}
                   disabled={sendingVerification}
-                  className="mt-3 text-xs font-bold text-indigo-600 hover:text-indigo-500 hover:underline disabled:opacity-50 flex items-center gap-1 transition-colors bg-transparent border-0 cursor-pointer"
+                  className="mt-3 text-xs font-bold text-brand hover:text-brand-soft hover:underline disabled:opacity-50 flex items-center gap-1 transition-colors bg-transparent border-0 cursor-pointer"
                 >
                   {sendingVerification ? (
                     <>
-                      <div className="h-3 w-3 animate-spin rounded-full border border-indigo-600/20 border-t-indigo-600" />
+                      <div className="h-3 w-3 animate-spin rounded-full border border-brand/20 border-t-brand" />
                       Sending...
                     </>
                   ) : verificationSent ? (
@@ -273,7 +276,7 @@ export default function ProfilePage() {
 
             {/* Change Password Card */}
             <Card className="!p-6 border border-line bg-surface space-y-4">
-              <div className="flex items-center gap-2 border-b border-line-soft pb-3">
+              <div className="section-heading-accent flex items-center gap-2 border-b border-line-soft pb-3">
                 <Icon.Shield size={16} className="text-muted" />
                 <h3 className="font-semibold text-sm text-ink">Security Settings</h3>
               </div>
@@ -318,7 +321,7 @@ export default function ProfilePage() {
             
             {/* General Info Card */}
             <Card className="!p-6 border border-line bg-surface space-y-6">
-              <div className="flex items-center gap-2 border-b border-line-soft pb-3">
+              <div className="section-heading-accent flex items-center gap-2 border-b border-line-soft pb-3">
                 <Icon.User size={16} className="text-muted" />
                 <h3 className="font-semibold text-sm text-ink">Academic Profile Details</h3>
               </div>
@@ -381,7 +384,7 @@ export default function ProfilePage() {
 
             {/* Tracked Skills Card */}
             <Card className="!p-6 border border-line bg-surface space-y-4">
-              <div className="flex items-center gap-2 border-b border-line-soft pb-3">
+              <div className="section-heading-accent flex items-center gap-2 border-b border-line-soft pb-3">
                 <Icon.Zap size={16} className="text-muted" />
                 <h3 className="font-semibold text-sm text-ink">Tracked Technical Skills</h3>
               </div>
@@ -397,7 +400,7 @@ export default function ProfilePage() {
 
             {/* Public Portfolio Visibility Card */}
             <Card className="!p-6 border border-line bg-surface space-y-4">
-              <div className="flex items-center gap-2 border-b border-line-soft pb-3">
+              <div className="section-heading-accent flex items-center gap-2 border-b border-line-soft pb-3">
                 <Icon.Link size={16} className="text-muted" />
                 <h3 className="font-semibold text-sm text-ink">Public Career Card Visibility</h3>
               </div>
@@ -414,9 +417,9 @@ export default function ProfilePage() {
                     aria-label="Toggle public profile"
                   >
                     {profileForm.isPublic ? (
-                      <Icon.ToggleRight size={32} className="text-[#2B4C3F]" />
+                      <Icon.ToggleRight size={32} className="text-brand" />
                     ) : (
-                      <Icon.ToggleLeft size={32} className="text-[#D0D0CA]" />
+                      <Icon.ToggleLeft size={32} className="text-faint" />
                     )}
                   </button>
                 </div>
@@ -427,11 +430,11 @@ export default function ProfilePage() {
                     <span className="text-muted truncate flex-1 font-mono">{profileUrl}</span>
                     <button
                       onClick={handleCopyLink}
-                      className="text-[#2B4C3F] font-bold hover:underline shrink-0 flex items-center gap-1"
+                      className="text-brand font-bold hover:underline shrink-0 flex items-center gap-1"
                     >
                       {copied ? (
                         <>
-                          <Icon.Check size={11} className="text-emerald-500" />
+                          <Icon.Check size={11} className="text-brand" />
                           Copied!
                         </>
                       ) : (
@@ -448,7 +451,7 @@ export default function ProfilePage() {
               <button
                 onClick={handleSaveProfile}
                 disabled={savingProfile}
-                className="inline-flex items-center justify-center px-6 h-11 rounded-xl bg-brand hover:bg-brand-soft text-white text-sm font-semibold shadow-sm transition duration-150 disabled:opacity-50"
+                className="btn-press inline-flex items-center justify-center px-6 h-11 rounded-xl bg-brand hover:bg-brand-soft text-white text-sm font-semibold shadow-sm transition duration-150 disabled:opacity-50"
               >
                 {savingProfile ? (
                   <>

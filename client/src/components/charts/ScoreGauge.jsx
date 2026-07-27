@@ -27,8 +27,14 @@ export function scoreLabel(score) {
 
 export function ScoreGauge({ score = 0, size = 180, label, dark = false }) {
   const safeScore = Math.min(100, Math.max(0, score));
-  const color = scoreColor(safeScore);
-  const colorSoft = safeScore >= 75 ? '#3D6B59' : safeScore >= 50 ? '#D97706' : '#DC2626';
+  // In the dark Path Score card, a strong score gets the richer emerald gradient
+  // treatment (2C); mid/low scores keep the amber/rust semantics so the color
+  // still communicates "needs work" rather than looking uniformly premium.
+  const useEmeraldGradient = dark && safeScore >= 75;
+  const color = useEmeraldGradient ? '#40C48A' : scoreColor(safeScore);
+  const colorSoft = useEmeraldGradient
+    ? '#7FE0B5'
+    : safeScore >= 75 ? '#3D6B59' : safeScore >= 50 ? '#D97706' : '#DC2626';
 
   const strokeWidth = 8;
   const radius = (size - strokeWidth * 2 - 16) / 2;
@@ -53,7 +59,14 @@ export function ScoreGauge({ score = 0, size = 180, label, dark = false }) {
 
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rotate-[-90deg]">
+      {/* Soft pulsing glow behind the ring — dark Path Score card only */}
+      {dark && (
+        <span
+          className="absolute inset-2 rounded-full animate-pulse-glow pointer-events-none"
+          style={{ background: `radial-gradient(circle, ${color}33 0%, transparent 70%)` }}
+        />
+      )}
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rotate-[-90deg] relative">
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor={color} />

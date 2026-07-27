@@ -55,6 +55,7 @@ const AdminPage          = lazy(() => import('@/pages/AdminPage'));
 const PublicProfilePage  = lazy(() => import('@/pages/PublicProfilePage'));   // shareable career card
 const ProfilePage        = lazy(() => import('@/pages/ProfilePage'));
 const CareerReportPage   = lazy(() => import('@/pages/CareerReportPage'));
+const FAQPage            = lazy(() => import('@/pages/FAQPage'));
 const NotFoundPage       = lazy(() => import('@/pages/NotFoundPage'));
 
 export default function App() {
@@ -81,6 +82,8 @@ export default function App() {
           <Route path="/verify-email"         element={<VerifyEmailPage />} />
           {/* Anyone with the link can view a public career profile card */}
           <Route path="/profile/:publicCardId" element={<PublicProfilePage />} />
+          {/* FAQ is reachable by guests (linked from the Login page) and logged-in users (Footer) */}
+          <Route path="/faq" element={<FAQPage />} />
 
           {/* ── Protected app routes (must be logged in) ── */}
           <Route element={<ProtectedRoute />}>

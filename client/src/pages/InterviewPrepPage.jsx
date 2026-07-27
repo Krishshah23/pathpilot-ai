@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
@@ -270,18 +271,28 @@ export default function InterviewPrepPage() {
           {[
             { key: 'practice', label: 'Practice', icon: <Icon.Sparkles size={13} /> },
             { key: 'analytics', label: 'Analytics', icon: <Icon.ChartBar size={13} /> },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setView(tab.key)}
-              className={cn(
-                'flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors',
-                view === tab.key ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'
-              )}
-            >
-              {tab.icon} {tab.label}
-            </button>
-          ))}
+          ].map((tab) => {
+            const isActive = view === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setView(tab.key)}
+                className={cn(
+                  'btn-press relative flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors',
+                  isActive ? 'text-ink' : 'text-muted hover:text-ink'
+                )}
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="interview-tab-indicator"
+                    className="absolute inset-0 rounded-lg bg-surface shadow-sm"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-1.5">{tab.icon} {tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {view === 'analytics' && <InterviewAnalytics />}
@@ -322,13 +333,13 @@ export default function InterviewPrepPage() {
               {loadingResume ? (
                 <div className="mt-6 flex justify-center"><Spinner className="h-5 w-5 text-[#2B4C3F]" /></div>
               ) : keyGaps.length > 0 ? (
-                <div className="mt-6 text-left rounded-xl border border-[#E8C4B8] bg-[#FDF5F3] p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#B85A3C] mb-2">
+                <div className="mt-6 text-left rounded-xl border border-line border-l-4 border-l-danger bg-surface-2 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-danger mb-2">
                     {keyGaps.length} gap{keyGaps.length > 1 ? 's' : ''} identified — questions will target these
                   </p>
                   {keyGaps.slice(0, 3).map((gap, i) => (
                     <p key={i} className="text-xs text-muted mt-1 flex items-start gap-1.5">
-                      <span className="font-bold text-[#B85A3C] shrink-0">{i + 1}.</span> {gap}
+                      <span className="font-bold text-danger shrink-0">{i + 1}.</span> {gap}
                     </p>
                   ))}
                   {keyGaps.length > 3 && <p className="text-xs text-faint mt-1">+{keyGaps.length - 3} more</p>}
@@ -364,7 +375,7 @@ export default function InterviewPrepPage() {
 
               <button
                 onClick={startSession}
-                className="mt-8 h-12 px-10 rounded-xl bg-brand text-white font-semibold hover:bg-brand-soft transition-colors flex items-center gap-2 mx-auto"
+                className="btn-press mt-8 h-12 px-10 rounded-xl bg-brand text-white font-semibold hover:bg-brand-soft transition-colors flex items-center gap-2 mx-auto"
               >
                 <Icon.Sparkles size={16} /> Start Session
               </button>
@@ -491,7 +502,7 @@ export default function InterviewPrepPage() {
                 <button
                   onClick={submitAnswer}
                   disabled={!responseText.trim()}
-                  className="h-10 px-6 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-soft disabled:opacity-40 transition-colors"
+                  className="btn-press h-10 px-6 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-soft disabled:opacity-40 transition-colors"
                 >
                   Submit Answer
                 </button>

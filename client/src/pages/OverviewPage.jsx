@@ -17,11 +17,16 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { AppShell } from '@/components/layout/AppShell';
+import { fadeInUp, staggerContainer } from '@/lib/motion';
 import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
 import { ScoreGauge } from '@/components/charts/ScoreGauge';
 import { PeerBenchmarkCard } from '@/components/dashboard/PeerBenchmarkCard';
+import { JobCard } from '@/components/jobs/JobCard';
+import { matchJobToSkills } from '@/lib/jobMatch';
+import { AppTour } from '@/components/tour/AppTour';
 import { useAuth } from '@/context/AuthContext';
 
 import { api, errorMessage } from '@/lib/api';
@@ -76,6 +81,60 @@ const FEATURE_HUB = [
   },
 ];
 
+const ONBOARDING_STEPS = [
+  { n: 1, title: 'Upload Resume', desc: 'AI parses and analyzes it in seconds.', icon: <Icon.Upload size={18} /> },
+  { n: 2, title: 'Get Your Path Score', desc: 'A 0-100 career readiness score, instantly.', icon: <Icon.Gauge size={18} /> },
+  { n: 3, title: 'Follow Your Roadmap', desc: 'A personalized plan closes every gap.', icon: <Icon.Route size={18} /> },
+];
+
+/** New-user empty state shown on Overview until a resume has been uploaded. */
+function EmptyStateHero({ navigate }) {
+  return (
+    <div className="card p-10 sm:p-14 text-center max-w-2xl mx-auto">
+      <span
+        className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-white mb-5 shadow-sm"
+        style={{ background: 'linear-gradient(135deg, var(--brand-grad-from, #2D6A4F), var(--brand-grad-to, #40916C))' }}
+      >
+        <Icon.Sparkles size={24} />
+      </span>
+      <h2 className="font-serif text-2xl font-bold text-ink">Let's build your career profile</h2>
+      <p className="text-sm text-muted mt-2 max-w-md mx-auto">
+        It takes about 2 minutes. Start by uploading your resume.
+      </p>
+
+      <div className="grid sm:grid-cols-3 gap-4 mt-8 text-left">
+        {ONBOARDING_STEPS.map((s) => (
+          <div key={s.n} className="rounded-xl border border-line bg-surface-2 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface border border-line text-brand text-xs font-bold">
+                {s.n}
+              </span>
+              <span className="text-muted">{s.icon}</span>
+            </div>
+            <p className="text-xs font-bold text-ink">{s.title}</p>
+            <p className="text-[11px] text-faint mt-1 leading-relaxed">{s.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={() => navigate('/talent-analyzer')}
+        className="btn-gradient mt-8 px-6 py-3 rounded-xl text-sm font-bold inline-flex items-center gap-2"
+      >
+        Upload Your Resume <Icon.ArrowRight size={15} />
+      </button>
+      <div className="mt-3">
+        <button
+          onClick={() => navigate('/resume-builder')}
+          className="text-xs font-semibold text-muted hover:text-brand transition-colors"
+        >
+          Or build one from scratch →
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function OverviewPage() {
   const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
@@ -91,6 +150,8 @@ export default function OverviewPage() {
   const [peerBenchmark, setPeerBenchmark] = useState(null);
   const [loadingBenchmark, setLoadingBenchmark] = useState(true);
   const [hasResumeBuilder, setHasResumeBuilder] = useState(false);
+  const [liveJobs, setLiveJobs] = useState([]);
+  const [loadingJobs, setLoadingJobs] = useState(true);
 
   useEffect(() => {
     if (loading) return;
@@ -139,6 +200,16 @@ export default function OverviewPage() {
       .finally(() => setLoadingBenchmark(false));
   }, []);
 
+  /* Live Opportunities widget (9B) — top listings preview for the user's dream role */
+  useEffect(() => {
+    const dr = user?.profile?.dreamRole;
+    if (!dr) { setLoadingJobs(false); return; }
+    api.get(`/live-jobs?role=${encodeURIComponent(dr)}`)
+      .then((res) => setLiveJobs(res.data.data.jobs || []))
+      .catch(() => setLiveJobs([]))
+      .finally(() => setLoadingJobs(false));
+  }, [user?.profile?.dreamRole]);
+
   const handleExportPDF = () => {
     navigate('/report');
   };
@@ -166,6 +237,7 @@ export default function OverviewPage() {
   const factors = pathScore?.factors || [];
   const explanations = predictions?.explanations;
   const hasResume = !!(user?.profile?.resumeUrl);
+  const isNewUser = !hasResume;
 
   const showSalaryCard = marketSalary?.available === true
     && typeof marketSalary?.min === 'number'
@@ -214,6 +286,7 @@ export default function OverviewPage() {
 
   return (
     <AppShell>
+      <AppTour navigate={navigate} />
       <div className="space-y-8">
         {/* Header section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-line pb-6">
@@ -222,7 +295,7 @@ export default function OverviewPage() {
               Target Role: <strong className="text-ink">{dreamRole}</strong>
             </span>
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-ink">
-              {greeting}, {firstName} 👋
+              {greeting}, <span className="text-gradient-emerald">{firstName}</span> 👋
             </h1>
             <p className="text-sm text-muted mt-1">
               Here is your career readiness overview and recommended action items.
@@ -238,20 +311,29 @@ export default function OverviewPage() {
           </button>
         </div>
 
-        {/* Smart CTA Banner */}
-        <div className="rounded-2xl border border-line bg-surface p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink border border-line">
+        {isNewUser ? (
+          <EmptyStateHero navigate={navigate} />
+        ) : (
+        <>
+        {/* Smart CTA Banner — premium dark gradient treatment */}
+        <div className="banner-premium relative overflow-hidden rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          {/* Decorative glow illustration, right side */}
+          <div
+            className="hidden md:block absolute -right-10 -top-10 h-40 w-40 rounded-full pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(127,181,160,0.25) 0%, transparent 70%)' }}
+          />
+          <div className="flex items-start gap-4 relative z-10">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white border border-white/10">
               {smartCta.icon}
             </div>
             <div>
-              <h3 className="text-base font-bold text-ink">{smartCta.title}</h3>
-              <p className="text-xs text-muted mt-1">{smartCta.desc}</p>
+              <h3 className="text-base font-bold text-white">{smartCta.title}</h3>
+              <p className="text-xs text-white/60 mt-1 max-w-md">{smartCta.desc}</p>
             </div>
           </div>
           <button
             onClick={() => navigate(smartCta.link)}
-            className="px-5 py-2.5 rounded-xl bg-brand text-white text-xs font-bold hover:bg-brand-soft transition-colors shrink-0 shadow-sm"
+            className="btn-gradient relative z-10 px-6 py-3 rounded-xl text-sm font-bold shrink-0"
           >
             {smartCta.btn} →
           </button>
@@ -261,13 +343,17 @@ export default function OverviewPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Path Score Card — luxury dark card with glowing border */}
           <div
+            data-tour="path-score-card"
             className="relative overflow-hidden rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center border border-[#2B4C3F]/40"
             style={{
               background: 'linear-gradient(160deg, #0C1810 0%, #0F2318 50%, #0A1A10 100%)',
               boxShadow: '0 0 0 1px rgba(127,181,160,0.08), 0 20px 50px -12px rgba(10,26,16,0.6)',
             }}
           >
-            <span className="absolute top-4 right-4 inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider bg-white/10 border border-white/10 text-[#7FB5A0]">
+            <span
+              className="absolute top-4 right-4 inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm"
+              style={{ background: 'linear-gradient(135deg, var(--brand-grad-from, #2D6A4F), var(--brand-grad-to, #40916C))' }}
+            >
               {readiness?.label ?? 'Score'}
             </span>
             <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-4">Path Score</h3>
@@ -278,9 +364,9 @@ export default function OverviewPage() {
           </div>
 
           {/* Factor Breakdown */}
-          <div className="lg:col-span-2 rounded-2xl border border-line bg-surface p-6 shadow-sm flex flex-col justify-between">
+          <div className="card lg:col-span-2 p-6 flex flex-col justify-between">
             <div>
-              <h3 className="text-xs font-bold text-faint uppercase tracking-wider mb-4">Readiness Factors</h3>
+              <h3 className="section-heading-accent text-xs font-bold text-faint uppercase tracking-wider mb-4">Readiness Factors</h3>
               <div className="space-y-4">
                 {factors.map((f, i) => (
                   <div key={f.key} className={cn('animate-fade-up', `stagger-${Math.min(5, i + 1)}`)}>
@@ -310,14 +396,53 @@ export default function OverviewPage() {
         {/* Peer Benchmarking Card */}
         <PeerBenchmarkCard benchmark={peerBenchmark} loading={loadingBenchmark} />
 
+        {/* Live Opportunities Widget (9B) */}
+        {user?.profile?.dreamRole && (loadingJobs || liveJobs.length > 0) && (
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-2 text-brand border border-line">
+                  <Icon.Briefcase size={15} />
+                </span>
+                <h3 className="section-heading-accent text-sm font-bold text-ink">Live Opportunities</h3>
+                {!loadingJobs && (
+                  <span className="text-[10px] font-bold text-faint bg-surface-2 border border-line px-2 py-0.5 rounded-full">
+                    {liveJobs.length} live job{liveJobs.length === 1 ? '' : 's'} for {dreamRole}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => navigate('/talent-analyzer')}
+                className="text-xs font-semibold text-brand hover:underline shrink-0"
+              >
+                View All →
+              </button>
+            </div>
+
+            {loadingJobs ? (
+              <div className="space-y-2">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-10 rounded-lg bg-surface-2 animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <div className="divide-y divide-line">
+                {liveJobs.slice(0, 3).map((job) => (
+                  <JobCard key={job.id} job={job} matchTier={matchJobToSkills(user?.profile?.skills, job)} variant="compact" />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* AI Score Audit Card */}
         {hasResume && (
-          <div className="rounded-2xl border border-line bg-surface p-6 shadow-sm">
+          <div className="card p-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-2 text-ink">
                 <Icon.MessageSquare size={16} />
               </span>
-              <h3 className="text-sm font-bold text-ink">AI Career Audit Narrative</h3>
+              <h3 className="section-heading-accent text-sm font-bold text-ink">AI Career Audit Narrative</h3>
             </div>
             {loadingAi ? (
               <div className="py-6 flex items-center justify-center">
@@ -333,7 +458,7 @@ export default function OverviewPage() {
 
         {/* Market Salary Card */}
         {showSalaryCard && (
-          <div className="rounded-2xl p-5 flex items-center justify-between gap-4 border border-line bg-surface shadow-sm">
+          <div className="card p-5 flex items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <span className="relative flex h-2 w-2">
@@ -358,13 +483,19 @@ export default function OverviewPage() {
 
         {/* Feature Hub Shortcuts */}
         <div>
-          <h3 className="text-xs font-bold text-faint uppercase tracking-wider mb-4">Jump Back In</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <h3 className="section-heading-accent text-xs font-bold text-faint uppercase tracking-wider mb-4">Jump Back In</h3>
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={staggerContainer(0.05)}
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+          >
             {FEATURE_HUB.map((hub) => (
-              <button
+              <motion.button
                 key={hub.link}
+                variants={fadeInUp}
                 onClick={() => navigate(hub.link)}
-                className="group text-left rounded-2xl border border-line bg-surface p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-brand/30"
+                className="card card-hover btn-press group text-left p-5"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-ink border border-line transition-colors duration-300 group-hover:bg-brand group-hover:text-white">
                   {hub.icon}
@@ -374,10 +505,12 @@ export default function OverviewPage() {
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand mt-3 opacity-0 -translate-x-1 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0">
                   Open <Icon.ArrowRight size={13} />
                 </span>
-              </button>
+              </motion.button>
             ))}
-          </div>
+          </motion.div>
         </div>
+        </>
+        )}
       </div>
     </AppShell>
   );

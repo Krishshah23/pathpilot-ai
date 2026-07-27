@@ -1,4 +1,5 @@
 import { Icon } from '@/components/ui/icons';
+import { FAQSection } from '@/components/FAQSection';
 
 const HIGHLIGHTS = [
   { title: 'Path Score', desc: 'An explainable readiness score, not a random number.', icon: <Icon.Target size={16} /> },
@@ -14,7 +15,7 @@ export function AuthLayout({ title, subtitle, children }) {
   return (
     <div className="auth-dark-bg grid min-h-screen lg:grid-cols-2">
       {/* Brand panel — rich dark with subtle texture */}
-      <div className="auth-brand-panel relative z-10 hidden overflow-hidden border-r border-[#1A2E24] lg:flex lg:flex-col lg:justify-between lg:p-12">
+      <div className="auth-brand-panel relative z-10 hidden overflow-y-auto border-r border-[#1A2E24] lg:flex lg:flex-col lg:justify-between lg:p-12">
         {/* Subtle glow orbs */}
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#2B4C3F] opacity-[0.07] rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-64 h-64 bg-[#3D6B59] opacity-[0.05] rounded-full blur-3xl pointer-events-none" />
@@ -53,9 +54,17 @@ export function AuthLayout({ title, subtitle, children }) {
               </li>
             ))}
           </ul>
+
+          <div className="mt-10">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#7FB5A0] mb-3">Frequently Asked</p>
+            <FAQSection limit={3} dark />
+            <a href="/faq" className="mt-3 inline-block text-xs font-semibold text-[#7FB5A0] hover:underline">
+              View all FAQs →
+            </a>
+          </div>
         </div>
 
-        <p className="relative z-10 text-xs text-[#4A5E53]">© {new Date().getFullYear()} PathPilot AI</p>
+        <p className="relative z-10 text-xs text-[#4A5E53] shrink-0 pt-6">© {new Date().getFullYear()} PathPilot AI</p>
       </div>
 
       {/* Form panel — dark glassmorphism card floating on the animated backdrop */}

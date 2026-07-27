@@ -25,8 +25,11 @@ import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { DREAM_ROLES } from '@/config/careerData';
+import { JobCard } from '@/components/jobs/JobCard';
+import { useSavedJobs } from '@/lib/useSavedJobs';
+import { matchJobToSkills } from '@/lib/jobMatch';
 
-const TABS = ['AI Role Analysis', 'Recruiter Feedback', 'Market Alignment', 'Live Jobs'];
+const TABS = ['AI Role Analysis', 'Recruiter First Impression', 'Market Alignment', 'Live Jobs'];
 
 function AnimatedScore({ target }) {
   const [score, setScore] = useState(0);
@@ -305,6 +308,7 @@ export default function TalentAnalyzerPage() {
   // Live jobs
   const [liveJobs, setLiveJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
+  const [jobsFetchedAt, setJobsFetchedAt] = useState(null);
 
   // Resume version history
   const [resumeHistory, setResumeHistory] = useState([]);
@@ -359,6 +363,7 @@ export default function TalentAnalyzerPage() {
     try {
       const { data } = await api.get(`/live-jobs?role=${encodeURIComponent(role)}`);
       setLiveJobs(data.data.jobs || []);
+      setJobsFetchedAt(data.data.fetchedAt || new Date().toISOString());
     } catch { /* silent */ }
     finally { setLoadingJobs(false); }
   };
@@ -436,20 +441,28 @@ export default function TalentAnalyzerPage() {
         <div className="card overflow-hidden">
           {/* Tab Bar */}
           <div className="flex border-b border-line bg-surface-2">
-            {TABS.map((tab, i) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(i)}
-                className={cn(
-                  'flex-1 py-4 text-sm font-medium transition-colors border-b-2',
-                  activeTab === i
-                    ? 'text-ink border-brand bg-surface font-semibold'
-                    : 'text-faint border-transparent hover:text-muted hover:bg-surface'
-                )}
-              >
-                {tab}
-              </button>
-            ))}
+            {TABS.map((tab, i) => {
+              const isActive = activeTab === i;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(i)}
+                  className={cn(
+                    'btn-press relative flex-1 py-4 text-sm font-medium transition-colors',
+                    isActive ? 'text-ink bg-surface font-semibold' : 'text-faint hover:text-muted hover:bg-surface'
+                  )}
+                >
+                  {tab}
+                  {isActive && (
+                    <motion.span
+                      layoutId="talent-tab-indicator"
+                      className="absolute left-0 right-0 bottom-0 h-0.5 bg-brand"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Tab Content */}
@@ -457,7 +470,17 @@ export default function TalentAnalyzerPage() {
             {activeTab === 0 && <AIRoleAnalysisTab resume={resume} role={role} onOpenFix={setFixTarget} />}
             {activeTab === 1 && <RecruiterFeedbackTab resume={resume} onOpenFix={setFixTarget} />}
             {activeTab === 2 && <MarketAlignmentTab gapData={gapData} loading={loadingGap} role={role} onRefresh={loadGap} />}
-            {activeTab === 3 && <LiveJobsTab jobs={liveJobs} loading={loadingJobs} role={role} onRefresh={loadJobs} />}
+            {activeTab === 3 && (
+              <LiveJobsTab
+                jobs={liveJobs}
+                loading={loadingJobs}
+                role={role}
+                setRole={setRole}
+                onRefresh={loadJobs}
+                fetchedAt={jobsFetchedAt}
+                skills={[...(user?.profile?.skills || []), ...(resume?.skills || [])]}
+              />
+            )}
           </div>
         </div>
       </div>
@@ -597,6 +620,16 @@ function RecruiterFeedbackTab({ resume, onOpenFix }) {
 
   return (
     <div className="space-y-8">
+      {/* Context callout — sets the "6 second scan" framing immediately */}
+      <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-2 px-4 py-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface border border-line text-brand">
+          <Icon.Clock size={15} />
+        </span>
+        <p className="text-xs text-muted leading-relaxed">
+          <span className="font-semibold text-ink">Average recruiter spends 6 seconds</span> on a first scan. This is not about career gaps — it's about whether they'd keep reading past that first glance. We simulate what a recruiter sees at a glance: formatting, structure, and immediate red flags.
+        </p>
+      </div>
+
       {/* Red Flags */}
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -837,9 +870,33 @@ function MarketAlignmentTab({ gapData, loading, role, onRefresh }) {
 }
 
 /* ── Tab C: Live Jobs ── */
-function LiveJobsTab({ jobs, loading, role, onRefresh }) {
+
+function relativeTime(iso) {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+function LiveJobsTab({ jobs, loading, role, setRole, onRefresh, fetchedAt, skills }) {
+  const [seniorityFilter, setSeniorityFilter] = useState('all');
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [searchRole, setSearchRole] = useState(role);
+  const { isSaved, toggleSave, clearAll, count } = useSavedJobs();
+
+  const seniorities = [...new Set(jobs.map((j) => j.seniority).filter(Boolean))];
+
+  let visibleJobs = jobs;
+  if (seniorityFilter !== 'all') visibleJobs = visibleJobs.filter((j) => j.seniority === seniorityFilter);
+  if (showSavedOnly) visibleJobs = visibleJobs.filter((j) => isSaved(j.id));
+
   return (
     <div className="space-y-5">
+      {/* Role bar + refresh */}
       <div className="flex items-center gap-3">
         <div className="flex-1 flex items-center gap-2 h-10 px-3 rounded-xl border border-line bg-surface-2">
           <Icon.Briefcase size={14} className="text-faint shrink-0" />
@@ -847,58 +904,99 @@ function LiveJobsTab({ jobs, loading, role, onRefresh }) {
         </div>
         <button
           onClick={onRefresh}
-          className="h-10 px-4 rounded-xl border border-line text-sm font-medium text-muted hover:bg-surface-2 flex items-center gap-2 transition-colors"
+          disabled={loading}
+          className="h-10 px-4 rounded-xl border border-line text-sm font-medium text-muted hover:bg-surface-2 flex items-center gap-2 transition-colors disabled:opacity-50"
         >
-          <Icon.ArrowRight size={14} /> Search
+          <Icon.RotateCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
         </button>
       </div>
+
+      {/* Refreshed indicator + saved filter */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <span className="text-[10px] text-faint">
+          {fetchedAt ? `Last refreshed ${relativeTime(fetchedAt)}` : ' '}
+        </span>
+        {count > 0 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSavedOnly((s) => !s)}
+              className={cn(
+                'inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border transition-colors',
+                showSavedOnly ? 'border-brand/40 bg-brand/10 text-brand' : 'border-line bg-surface-2 text-muted hover:text-ink'
+              )}
+            >
+              <Icon.Bookmark size={11} /> {count} saved
+            </button>
+            {showSavedOnly && (
+              <button onClick={clearAll} className="text-[10px] font-semibold text-faint hover:text-danger transition-colors">
+                Clear all
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Seniority filter row */}
+      {seniorities.length > 1 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {['all', ...seniorities].map((s) => (
+            <button
+              key={s}
+              onClick={() => setSeniorityFilter(s)}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors border',
+                seniorityFilter === s ? 'bg-brand text-white border-brand' : 'border-line text-muted hover:bg-surface-2'
+              )}
+            >
+              {s === 'all' ? 'All levels' : String(s).replace('_', ' ')}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex h-40 items-center justify-center">
           <Spinner className="h-6 w-6 text-[#2B4C3F]" />
         </div>
-      ) : jobs.length > 0 ? (
-        <div className="space-y-2">
-          {jobs.map((job) => (
-            <JobListCard key={job.id} job={job} />
+      ) : visibleJobs.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {visibleJobs.map((job) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              matchTier={matchJobToSkills(skills, job)}
+              saved={isSaved(job.id)}
+              onToggleSave={toggleSave}
+            />
           ))}
+        </div>
+      ) : jobs.length > 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Icon.Bookmark size={36} className="text-line mb-3" />
+          <p className="text-sm text-faint">No saved jobs match this filter.</p>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Icon.Briefcase size={36} className="text-line mb-3" />
-          <p className="text-sm text-faint">No live openings found for {role}.</p>
+          <p className="text-sm text-faint max-w-sm">
+            No live listings found for {role} right now — check back soon or try a related role title.
+          </p>
+          <div className="flex items-center gap-2 mt-4 w-full max-w-xs">
+            <input
+              value={searchRole}
+              onChange={(e) => setSearchRole(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && searchRole.trim()) setRole(searchRole.trim()); }}
+              placeholder="Try a related role title…"
+              className="input flex-1 text-sm h-9"
+            />
+            <button
+              onClick={() => searchRole.trim() && setRole(searchRole.trim())}
+              className="h-9 px-3 rounded-xl bg-brand text-white text-xs font-semibold hover:bg-brand-soft transition-colors shrink-0"
+            >
+              Search
+            </button>
+          </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-function JobListCard({ job }) {
-  return (
-    <div className="flex items-center justify-between rounded-xl border border-line bg-canvas px-4 py-3.5 gap-4 hover:border-faint transition-colors">
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-ink truncate">{job.title}</p>
-        <p className="text-xs text-muted mt-0.5 truncate">{job.company} · {job.location}</p>
-        <div className="flex items-center gap-3 mt-1.5">
-          {job.seniority && (
-            <span className="text-[10px] font-bold uppercase tracking-wider text-faint bg-surface-2 border border-line px-1.5 py-0.5 rounded">
-              {job.seniority.replace('_', ' ')}
-            </span>
-          )}
-          {job.postedAgo && (
-            <span className="text-[10px] text-faint">{job.postedAgo}</span>
-          )}
-        </div>
-      </div>
-      {job.applyUrl && (
-        <a
-          href={job.applyUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-brand text-white text-xs font-semibold hover:bg-brand-soft transition-colors"
-        >
-          Apply <Icon.ArrowRight size={12} />
-        </a>
       )}
     </div>
   );

@@ -472,4 +472,45 @@ export const Icon = {
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </Svg>
   ),
+  /** Envelope — email / contact links */
+  Mail: (p) => (
+    <Svg {...p}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="m22 6-10 7L2 6" />
+    </Svg>
+  ),
+  /** GitHub mark — social/contact link */
+  Github: (p) => (
+    <Svg {...p}>
+      <path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21" />
+    </Svg>
+  ),
+  /** LinkedIn "in" mark — social/contact link */
+  Linkedin: (p) => (
+    <Svg {...p}>
+      <rect x="2" y="9" width="4" height="12" />
+      <circle cx="4" cy="4" r="2" />
+      <path d="M10 21v-7a3 3 0 0 1 6 0v7M10 9v12M22 21v-7a3 3 0 0 0-6 0" />
+    </Svg>
+  ),
+  /** Instagram camera-square mark — social/contact link */
+  Instagram: (p) => (
+    <Svg {...p}>
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M17.5 6.5h.01" />
+    </Svg>
+  ),
+  /** Bookmark — "save job" toggle */
+  Bookmark: (p) => (
+    <Svg {...p}>
+      <path d="M19 21 12 16l-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+    </Svg>
+  ),
+  /** Star — match/rating indicator */
+  Star: (p) => (
+    <Svg {...p}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </Svg>
+  ),
 };
