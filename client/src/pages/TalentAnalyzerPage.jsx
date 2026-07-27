@@ -179,11 +179,11 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
 
       {/* Next Step Priority */}
       {nextStep && (
-        <div className="flex items-start gap-3 rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] p-4">
-          <Icon.ArrowRight size={16} className="text-[#2B4C3F] mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/40 p-4">
+          <Icon.ArrowRight size={16} className="text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-[#2B4C3F] mb-1">Top Priority Right Now</p>
-            <p className="text-sm text-[#2B4C3F] font-medium">{nextStep}</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1">Top Priority Right Now</p>
+            <p className="text-sm text-ink font-medium">{nextStep}</p>
           </div>
         </div>
       )}
@@ -192,14 +192,14 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
         {/* Key Gaps */}
         {keyGaps.length > 0 && (
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#B85A3C] mb-3 flex items-center gap-1.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mb-3 flex items-center gap-1.5">
               <Icon.AlertTriangle size={12} /> Key Gaps ({keyGaps.length})
             </h3>
             <div className="space-y-2">
               {keyGaps.map((gap, i) => (
-                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-[#E8C4B8] bg-[#FDF5F3] px-3 py-2.5 text-sm">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#B85A3C] text-white text-[10px] font-bold mt-0.5">{i + 1}</span>
-                  <span className="text-muted">{gap}</span>
+                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-red-500/30 bg-red-500/10 dark:bg-red-950/30 px-3 py-2.5 text-sm">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold mt-0.5">{i + 1}</span>
+                  <span className="text-ink">{gap}</span>
                 </div>
               ))}
             </div>
@@ -209,14 +209,14 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
         {/* Strengths */}
         {strengthAreas.length > 0 && (
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#2B4C3F] mb-3 flex items-center gap-1.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3 flex items-center gap-1.5">
               <Icon.Check size={12} /> Strengths
             </h3>
             <div className="space-y-2">
               {strengthAreas.map((s, i) => (
-                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-[#C8DDD6] bg-[#F0F5F3] px-3 py-2.5 text-sm">
-                  <Icon.Check size={14} className="text-[#2B4C3F] shrink-0 mt-0.5" />
-                  <span className="text-[#2B4C3F]">{s}</span>
+                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/30 px-3 py-2.5 text-sm">
+                  <Icon.Check size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <span className="text-ink">{s}</span>
                 </div>
               ))}
             </div>
@@ -233,20 +233,20 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#2B4C3F] mb-2">Identified Keywords</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">Identified Keywords</p>
               <div className="flex flex-wrap gap-1.5">
                 {(resume.skills || []).slice(0, 8).map((kw, i) => (
-                  <span key={i} className="rounded-lg border border-[#C8DDD6] bg-[#F0F5F3] px-2.5 py-1 text-xs text-[#2B4C3F] font-medium">
+                  <span key={i} className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/30 px-2.5 py-1 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
                     {kw}
                   </span>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#B85A3C] mb-2">Missing Keywords</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mb-2">Missing Keywords</p>
               <div className="flex flex-wrap gap-1.5">
                 {atsKeywordsMissing.map((kw, i) => (
-                  <span key={i} className="rounded-lg border border-[#E8C4B8] bg-[#FDF5F3] px-2.5 py-1 text-xs text-[#B85A3C] font-medium">
+                  <span key={i} className="rounded-lg border border-red-500/30 bg-red-500/10 dark:bg-red-950/30 px-2.5 py-1 text-xs text-red-700 dark:text-red-300 font-medium">
                     {kw}
                   </span>
                 ))}
@@ -715,14 +715,14 @@ function StickyNote({ flag, onOpenFix }) {
     <div className={cn(
       'rounded-xl border p-4 text-sm flex flex-col justify-between',
       isCritical
-        ? 'border-[#E8C4B8] bg-[#FDF5F3]'
-        : 'border-[#E8D8A8] bg-[#FEFBF0]'
+        ? 'border-red-500/30 bg-red-500/10 dark:bg-red-950/40 dark:border-red-900/60'
+        : 'border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/40 dark:border-amber-900/60'
     )}>
       <div>
         <div className="flex items-center gap-2 mb-2">
           <span className={cn(
             'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded',
-            isCritical ? 'bg-[#B85A3C] text-white' : 'bg-[#92400E] text-white'
+            isCritical ? 'bg-red-600 text-white' : 'bg-amber-600 text-white'
           )}>
             {flag.severity}
           </span>
@@ -730,9 +730,9 @@ function StickyNote({ flag, onOpenFix }) {
         </div>
         <p className="text-xs text-muted leading-relaxed">{flag.description}</p>
       </div>
-      <div className="mt-3 pt-3 border-t border-current/10 flex items-center justify-between text-xs text-muted">
+      <div className="mt-3 pt-3 border-t border-line flex items-center justify-between text-xs text-muted">
         <div className="flex items-start gap-1">
-          <span className="font-bold text-[11px] shrink-0">💡 Fix:</span>
+          <span className="font-bold text-[11px] shrink-0 text-ink">💡 Fix:</span>
           <span className="truncate max-w-[150px]">{flag.fix}</span>
         </div>
         <button
@@ -742,7 +742,7 @@ function StickyNote({ flag, onOpenFix }) {
             fix: flag.fix,
             type: 'flag'
           })}
-          className="text-xs font-bold text-[#2B4C3F] hover:underline shrink-0 ml-2"
+          className="text-xs font-bold text-brand hover:underline shrink-0 ml-2"
         >
           Fix Red Flag
         </button>

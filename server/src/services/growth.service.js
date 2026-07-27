@@ -78,11 +78,13 @@ export function withProgress(plan) {
 
   let completedTasks = 0;
   let completedHours = 0;
+  let liveTotalTasks = 0;
 
   const weeks = obj.weeks.map((week) => {
     const total = week.tasks.length;
     const done = week.tasks.filter((t) => t.completed).length;
     completedTasks += done;
+    liveTotalTasks += total;
     completedHours += week.tasks
       .filter((t) => t.completed)
       .reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
@@ -95,15 +97,17 @@ export function withProgress(plan) {
     };
   });
 
-  const percent = obj.totalTasks ? Math.round((completedTasks / obj.totalTasks) * 100) : 0;
+  // Use the live-summed total (not the stored value which can be stale)
+  const percent = liveTotalTasks ? Math.round((completedTasks / liveTotalTasks) * 100) : 0;
 
   return {
     ...obj,
     weeks,
+    totalTasks: liveTotalTasks, // override stale stored value
     progress: {
       percent,
       completedTasks,
-      totalTasks: obj.totalTasks,
+      totalTasks: liveTotalTasks,
       completedHours,
       totalHours: obj.totalHours,
     },
