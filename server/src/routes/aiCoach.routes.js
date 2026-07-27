@@ -18,6 +18,8 @@ import {
   evaluateInterviewAnswer,
   saveInterviewSession,
   getInterviewSessions,
+  getInterviewSessionDetail,
+  getInterviewAnalytics,
 } from '../controllers/aiCoach.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 
@@ -32,6 +34,8 @@ router.post('/chat', chat);
 router.post('/interview/question', generateInterviewQuestion);
 router.post('/interview/evaluate', evaluateInterviewAnswer);
 router.post('/interview/save-session', saveInterviewSession);
+router.get('/interview/analytics', getInterviewAnalytics);
 router.get('/interview/sessions', getInterviewSessions);
+router.get('/interview/sessions/:id', getInterviewSessionDetail);
 
 export default router;

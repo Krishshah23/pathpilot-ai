@@ -6,7 +6,7 @@
  */
 
 import { Router } from 'express';
-import { getPathScore } from '../controllers/pathScore.controller.js';
+import { getPathScore, getPeerBenchmarkStats } from '../controllers/pathScore.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -14,5 +14,6 @@ const router = Router();
 router.use(protect);
 
 router.get('/', getPathScore);
+router.get('/peer-benchmark', getPeerBenchmarkStats);
 
 export default router;

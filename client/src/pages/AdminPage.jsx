@@ -50,19 +50,19 @@ export default function AdminPage() {
   return (
     <AppShell>
       {/* Ledger Header */}
-      <div className="mb-8 pb-6 border-b border-[#EAEAE5]">
+      <div className="mb-8 pb-6 border-b border-line">
         <div className="flex items-center gap-3 mb-1">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#EAEAE5] bg-[#F5F5F3]">
-            <Icon.Shield size={16} className="text-[#525252]" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface-2">
+            <Icon.Shield size={16} className="text-muted" />
           </span>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[#A3A3A3]">Admin Access</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-faint">Admin Access</span>
         </div>
-        <h1 className="font-serif text-3xl font-black text-[#171717]">The Admin Ledger</h1>
-        <p className="mt-1 text-sm text-[#A3A3A3]">Platform monitoring · User management · System metrics</p>
+        <h1 className="font-serif text-3xl font-black text-ink">The Admin Ledger</h1>
+        <p className="mt-1 text-sm text-faint">Platform monitoring · User management · System metrics</p>
       </div>
 
       {/* Tab bar */}
-      <div className="mb-6 flex items-center gap-1 rounded-xl border border-[#EAEAE5] bg-[#F5F5F3] p-1 w-fit">
+      <div className="mb-6 flex items-center gap-1 rounded-xl border border-line bg-surface-2 p-1 w-fit">
         {TABS.map((t) => {
           const Ico = t.icon;
           return (
@@ -72,8 +72,8 @@ export default function AdminPage() {
               className={cn(
                 'flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition',
                 tab === t.key
-                  ? 'bg-[#171717] text-white shadow-sm'
-                  : 'text-[#A3A3A3] hover:text-[#525252]'
+                  ? 'bg-brand text-white shadow-sm'
+                  : 'text-faint hover:text-muted'
               )}
             >
               <Ico size={15} />
@@ -85,7 +85,7 @@ export default function AdminPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#EAEAE5] border-t-[#171717]" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-ink" />
         </div>
       ) : tab === 'overview' ? (
         <OverviewTab stats={stats} />
@@ -145,8 +145,8 @@ function OverviewTab({ stats }) {
                   <Ico size={18} />
                 </span>
                 <div>
-                  <p className="text-xs font-medium text-[#A3A3A3]">{s.label}</p>
-                  <p className="mt-1 font-serif text-2xl font-black text-[#171717] animate-count-up">{s.value}</p>
+                  <p className="text-xs font-medium text-faint">{s.label}</p>
+                  <p className="mt-1 font-serif text-2xl font-black text-ink animate-count-up">{s.value}</p>
                 </div>
               </div>
             </div>
@@ -388,7 +388,7 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
   const skillCount = u.profile?.skills?.length || 0;
 
   return (
-    <tr className="group border-b border-[#EAEAE5] transition-colors duration-150 hover:bg-[#F5F5F3]">
+    <tr className="group border-b border-line transition-colors duration-150 hover:bg-surface-2">
       {/* User info */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
@@ -396,8 +396,8 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
             {u.name?.charAt(0).toUpperCase()}
           </div>
           <div>
-            <p className="font-medium text-[#171717]">{u.name}</p>
-            <p className="text-xs text-[#A3A3A3]">{u.email}</p>
+            <p className="font-medium text-ink">{u.name}</p>
+            <p className="text-xs text-faint">{u.email}</p>
           </div>
         </div>
       </td>
@@ -412,7 +412,7 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
             'rounded-lg border px-2 py-1 text-xs font-semibold transition',
             u.role === 'admin'
               ? 'border-[#2B4C3F]/30 bg-[#F0F5F3] text-[#2B4C3F]'
-              : 'border-[#EAEAE5] bg-[#F5F5F3] text-[#525252]'
+              : 'border-line bg-surface-2 text-muted'
           )}
         >
           <option value="student">Student</option>
@@ -430,17 +430,17 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
 
       {/* Dream role */}
       <td className="px-4 py-3 hidden md:table-cell">
-        <span className="text-xs text-[#525252]">{u.profile?.dreamRole || '—'}</span>
+        <span className="text-xs text-muted">{u.profile?.dreamRole || '—'}</span>
       </td>
 
       {/* Skills */}
       <td className="px-4 py-3 hidden lg:table-cell">
-        <span className="text-xs text-[#525252]">{skillCount > 0 ? `${skillCount} skills` : '—'}</span>
+        <span className="text-xs text-muted">{skillCount > 0 ? `${skillCount} skills` : '—'}</span>
       </td>
 
       {/* Joined */}
       <td className="px-4 py-3 hidden lg:table-cell">
-        <span className="text-xs text-[#A3A3A3]">{joinDate}</span>
+        <span className="text-xs text-faint">{joinDate}</span>
       </td>
 
       {/* Actions */}
@@ -448,7 +448,7 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
         <button
           onClick={() => onDelete(u._id, u.name)}
           disabled={loading}
-          className="rounded-lg p-1.5 text-[#A3A3A3] opacity-0 transition group-hover:opacity-100 hover:bg-[#FDF5F3] hover:text-[#B85A3C] disabled:opacity-30"
+          className="rounded-lg p-1.5 text-faint opacity-0 transition group-hover:opacity-100 hover:bg-danger/10 hover:text-danger disabled:opacity-30"
           title="Delete user"
         >
           <Icon.Trash size={14} />
@@ -464,7 +464,7 @@ function StatusBadge({ active, label }) {
       'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border',
       active
         ? 'bg-[#F0F5F3] text-[#2B4C3F] border-[#C8DDD6]'
-        : 'bg-[#F5F5F3] text-[#A3A3A3] border-[#EAEAE5]'
+        : 'bg-surface-2 text-faint border-line'
     )}>
       <span className={cn('h-1.5 w-1.5 rounded-full', active ? 'bg-[#2B4C3F]' : 'bg-[#D0D0CA]')} />
       {label}

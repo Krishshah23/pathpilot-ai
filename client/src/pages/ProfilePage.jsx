@@ -186,8 +186,8 @@ export default function ProfilePage() {
         
         {/* Header */}
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-2xl font-serif font-black text-[#171717]">Profile & Settings</h1>
-          <p className="text-sm text-[#A3A3A3]">Manage your academic identity, tracked skills, and public visibility credentials.</p>
+          <h1 className="text-2xl font-serif font-black text-ink">Profile & Settings</h1>
+          <p className="text-sm text-faint">Manage your academic identity, tracked skills, and public visibility credentials.</p>
         </div>
 
         {/* Main Grid */}
@@ -195,12 +195,12 @@ export default function ProfilePage() {
           
           {/* Left Column: Avatar & Account Basics */}
           <div className="md:col-span-4 space-y-6">
-            <Card className="!p-6 border border-[#EAEAE5] bg-white flex flex-col items-center text-center relative overflow-hidden group">
+            <Card className="!p-6 border border-line bg-surface flex flex-col items-center text-center relative overflow-hidden group">
               <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808003_1px,transparent_1px),linear-gradient(to_bottom,#80808003_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
-              
+
               {/* Picture Upload Selector */}
               <div className="relative mb-4 cursor-pointer group/avatar" onClick={handleAvatarClick}>
-                <div className="relative flex h-24 w-24 items-center justify-center rounded-[22px] bg-slate-900 text-3xl font-extrabold text-white border border-[#EAEAE5] overflow-hidden transition-all duration-300 group-hover/avatar:opacity-90">
+                <div className="relative flex h-24 w-24 items-center justify-center rounded-[22px] bg-slate-900 text-3xl font-extrabold text-white border border-line overflow-hidden transition-all duration-300 group-hover/avatar:opacity-90">
                   {user?.profile?.avatarUrl ? (
                     <img src={user.profile.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                   ) : (
@@ -227,8 +227,8 @@ export default function ProfilePage() {
                 className="hidden"
               />
 
-              <h2 className="text-lg font-bold text-[#171717]">{user?.name}</h2>
-              <p className="text-xs text-[#A3A3A3] mb-1">{user?.email}</p>
+              <h2 className="text-lg font-bold text-ink">{user?.name}</h2>
+              <p className="text-xs text-faint mb-1">{user?.email}</p>
               
               <div className="flex flex-wrap gap-1.5 justify-center mt-1.5">
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold tracking-wider uppercase border border-slate-200">
@@ -266,16 +266,16 @@ export default function ProfilePage() {
                 </button>
               )}
 
-              <p className="text-[11px] text-[#A3A3A3] mt-4 leading-normal">
+              <p className="text-[11px] text-faint mt-4 leading-normal">
                 Click on the avatar frame to upload or change your profile photo.
               </p>
             </Card>
 
             {/* Change Password Card */}
-            <Card className="!p-6 border border-[#EAEAE5] bg-white space-y-4">
-              <div className="flex items-center gap-2 border-b border-[#F5F5F3] pb-3">
-                <Icon.Shield size={16} className="text-[#525252]" />
-                <h3 className="font-semibold text-sm text-[#171717]">Security Settings</h3>
+            <Card className="!p-6 border border-line bg-surface space-y-4">
+              <div className="flex items-center gap-2 border-b border-line-soft pb-3">
+                <Icon.Shield size={16} className="text-muted" />
+                <h3 className="font-semibold text-sm text-ink">Security Settings</h3>
               </div>
 
               <form onSubmit={handleUpdatePassword} className="space-y-4">
@@ -296,7 +296,7 @@ export default function ProfilePage() {
                 <button
                   type="submit"
                   disabled={savingPassword}
-                  className="w-full h-9 rounded-xl border border-[#EAEAE5] text-xs font-semibold text-[#171717] hover:bg-[#F5F5F3] disabled:opacity-50 transition-colors"
+                  className="w-full h-9 rounded-xl border border-line text-xs font-semibold text-ink hover:bg-surface-2 disabled:opacity-50 transition-colors"
                 >
                   {savingPassword ? 'Updating...' : 'Update Password'}
                 </button>
@@ -306,7 +306,7 @@ export default function ProfilePage() {
             {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="w-full h-11 rounded-xl border border-[#EAEAE5] text-[#B85A3C] text-sm font-bold hover:bg-[#FDF5F3] hover:border-[#F5D5CB] transition-colors flex items-center justify-center gap-2 bg-white shadow-sm"
+              className="w-full h-11 rounded-xl border border-line text-danger text-sm font-bold hover:bg-danger/10 hover:border-danger/30 transition-colors flex items-center justify-center gap-2 bg-surface shadow-sm"
             >
               <Icon.Logout size={15} />
               Log out
@@ -317,10 +317,10 @@ export default function ProfilePage() {
           <div className="md:col-span-8 space-y-6">
             
             {/* General Info Card */}
-            <Card className="!p-6 border border-[#EAEAE5] bg-white space-y-6">
-              <div className="flex items-center gap-2 border-b border-[#F5F5F3] pb-3">
-                <Icon.User size={16} className="text-[#525252]" />
-                <h3 className="font-semibold text-sm text-[#171717]">Academic Profile Details</h3>
+            <Card className="!p-6 border border-line bg-surface space-y-6">
+              <div className="flex items-center gap-2 border-b border-line-soft pb-3">
+                <Icon.User size={16} className="text-muted" />
+                <h3 className="font-semibold text-sm text-ink">Academic Profile Details</h3>
               </div>
 
               <div className="space-y-4">
@@ -342,7 +342,7 @@ export default function ProfilePage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3]">Target Dream Role</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-faint">Target Dream Role</label>
                     <select
                       value={profileForm.dreamRole}
                       onChange={(e) => setProfileForm((f) => ({ ...f, dreamRole: e.target.value }))}
@@ -380,14 +380,14 @@ export default function ProfilePage() {
             </Card>
 
             {/* Tracked Skills Card */}
-            <Card className="!p-6 border border-[#EAEAE5] bg-white space-y-4">
-              <div className="flex items-center gap-2 border-b border-[#F5F5F3] pb-3">
-                <Icon.Zap size={16} className="text-[#525252]" />
-                <h3 className="font-semibold text-sm text-[#171717]">Tracked Technical Skills</h3>
+            <Card className="!p-6 border border-line bg-surface space-y-4">
+              <div className="flex items-center gap-2 border-b border-line-soft pb-3">
+                <Icon.Zap size={16} className="text-muted" />
+                <h3 className="font-semibold text-sm text-ink">Tracked Technical Skills</h3>
               </div>
 
               <div className="space-y-1">
-                <p className="text-xs text-[#A3A3A3] mb-2">Tracked skills are verified during career audits to construct your path alignment score.</p>
+                <p className="text-xs text-faint mb-2">Tracked skills are verified during career audits to construct your path alignment score.</p>
                 <SkillTagInput
                   skills={profileForm.skills}
                   onChange={(skills) => setProfileForm((f) => ({ ...f, skills }))}
@@ -396,17 +396,17 @@ export default function ProfilePage() {
             </Card>
 
             {/* Public Portfolio Visibility Card */}
-            <Card className="!p-6 border border-[#EAEAE5] bg-white space-y-4">
-              <div className="flex items-center gap-2 border-b border-[#F5F5F3] pb-3">
-                <Icon.Link size={16} className="text-[#525252]" />
-                <h3 className="font-semibold text-sm text-[#171717]">Public Career Card Visibility</h3>
+            <Card className="!p-6 border border-line bg-surface space-y-4">
+              <div className="flex items-center gap-2 border-b border-line-soft pb-3">
+                <Icon.Link size={16} className="text-muted" />
+                <h3 className="font-semibold text-sm text-ink">Public Career Card Visibility</h3>
               </div>
 
-              <div className="rounded-xl bg-[#FBFBFA] border border-[#EAEAE5] p-4 space-y-4">
+              <div className="rounded-xl bg-canvas border border-line p-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-sm font-semibold text-[#171717]">Enable Public Career Profile</h4>
-                    <p className="text-xs text-[#A3A3A3] mt-0.5">Allow recruiters to discover and view your verified path alignment score card.</p>
+                    <h4 className="text-sm font-semibold text-ink">Enable Public Career Profile</h4>
+                    <p className="text-xs text-faint mt-0.5">Allow recruiters to discover and view your verified path alignment score card.</p>
                   </div>
                   <button
                     onClick={() => setProfileForm((f) => ({ ...f, isPublic: !f.isPublic }))}
@@ -422,9 +422,9 @@ export default function ProfilePage() {
                 </div>
 
                 {profileForm.isPublic && (
-                  <div className="flex items-center gap-2 rounded-lg bg-white border border-[#EAEAE5] px-3 py-2.5 text-xs">
-                    <Icon.Link size={12} className="text-[#A3A3A3] shrink-0" />
-                    <span className="text-[#525252] truncate flex-1 font-mono">{profileUrl}</span>
+                  <div className="flex items-center gap-2 rounded-lg bg-surface border border-line px-3 py-2.5 text-xs">
+                    <Icon.Link size={12} className="text-faint shrink-0" />
+                    <span className="text-muted truncate flex-1 font-mono">{profileUrl}</span>
                     <button
                       onClick={handleCopyLink}
                       className="text-[#2B4C3F] font-bold hover:underline shrink-0 flex items-center gap-1"
@@ -448,7 +448,7 @@ export default function ProfilePage() {
               <button
                 onClick={handleSaveProfile}
                 disabled={savingProfile}
-                className="inline-flex items-center justify-center px-6 h-11 rounded-xl bg-[#171717] hover:bg-[#2a2a2a] text-white text-sm font-semibold shadow-sm transition duration-150 disabled:opacity-50"
+                className="inline-flex items-center justify-center px-6 h-11 rounded-xl bg-brand hover:bg-brand-soft text-white text-sm font-semibold shadow-sm transition duration-150 disabled:opacity-50"
               >
                 {savingProfile ? (
                   <>

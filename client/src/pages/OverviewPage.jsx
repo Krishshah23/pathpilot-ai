@@ -21,10 +21,60 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
 import { ScoreGauge } from '@/components/charts/ScoreGauge';
+import { PeerBenchmarkCard } from '@/components/dashboard/PeerBenchmarkCard';
 import { useAuth } from '@/context/AuthContext';
 
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
+
+/** Animates a number from 0 up to `target` using an ease-out curve. */
+function useCountUp(target, duration = 1000) {
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    let raf;
+    const start = performance.now();
+
+    const tick = (now) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      setValue(Math.round(target * eased));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+
+  return value;
+}
+
+const FACTOR_GRADIENTS = {
+  good: 'linear-gradient(90deg, #2B4C3F, #4A8067)',
+  warn: 'linear-gradient(90deg, #92400E, #C9832E)',
+  bad: 'linear-gradient(90deg, #B85A3C, #D97D5E)',
+};
+
+const FEATURE_HUB = [
+  {
+    title: 'Resume Strategy',
+    desc: 'AI-driven resume audit and gap analysis against your dream role.',
+    link: '/talent-analyzer',
+    icon: <Icon.FileText size={20} />,
+  },
+  {
+    title: 'Skill Roadmap',
+    desc: 'A personalized week-by-week growth plan to close every skill gap.',
+    link: '/execution-engine',
+    icon: <Icon.Route size={20} />,
+  },
+  {
+    title: 'Interview Prep',
+    desc: 'Practice role-specific mock interviews with instant AI feedback.',
+    link: '/interview-prep',
+    icon: <Icon.Award size={20} />,
+  },
+];
 
 export default function OverviewPage() {
   const { user, refreshUser } = useAuth();
@@ -37,6 +87,16 @@ export default function OverviewPage() {
   const [growthPlan, setGrowthPlan] = useState(null);
   const [aiExplanation, setAiExplanation] = useState(null);
   const [loadingAi, setLoadingAi] = useState(false);
+  const [barsFilled, setBarsFilled] = useState(false);
+  const [peerBenchmark, setPeerBenchmark] = useState(null);
+  const [loadingBenchmark, setLoadingBenchmark] = useState(true);
+  const [hasResumeBuilder, setHasResumeBuilder] = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    const t = setTimeout(() => setBarsFilled(true), 50);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   const fetchAiExplanation = () => {
     if (!user?.profile?.resumeUrl) return;
@@ -52,15 +112,17 @@ export default function OverviewPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [scoreRes, growthRes] = await Promise.all([
+        const [scoreRes, growthRes, resumeBuilderRes] = await Promise.all([
           api.get('/path-score'),
-          api.get('/growth').catch(() => ({ data: { data: { plan: null } } }))
+          api.get('/growth').catch(() => ({ data: { data: { plan: null } } })),
+          api.get('/resume-builder').catch(() => ({ data: { data: { exists: false } } })),
         ]);
 
         setPathScore(scoreRes.data.data.pathScore || {});
         setMarketSalary(scoreRes.data.data.marketSalary || null);
         setBlendedBenchmark(scoreRes.data.data.blendedBenchmark || null);
         setGrowthPlan(growthRes.data?.data?.plan || null);
+        setHasResumeBuilder(!!resumeBuilderRes.data?.data?.exists);
 
         if (user?.profile?.resumeUrl) {
           fetchAiExplanation();
@@ -70,9 +132,19 @@ export default function OverviewPage() {
     })();
   }, [user?.profile?.resumeUrl]);
 
+  useEffect(() => {
+    api.get('/path-score/peer-benchmark')
+      .then((res) => setPeerBenchmark(res.data.data.benchmark))
+      .catch(() => setPeerBenchmark(null))
+      .finally(() => setLoadingBenchmark(false));
+  }, []);
+
   const handleExportPDF = () => {
     navigate('/report');
   };
+
+  const score = pathScore?.displayScore ?? Math.round(pathScore?.score || 0);
+  const animatedScore = useCountUp(score);
 
   if (loading) {
     return (
@@ -89,21 +161,36 @@ export default function OverviewPage() {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-  const score = pathScore?.displayScore ?? Math.round(pathScore?.score || 0);
   const readiness = pathScore?.readiness;
   const predictions = pathScore?.predictions;
-  const peerBenchmark = pathScore?.peerBenchmark;
   const factors = pathScore?.factors || [];
   const explanations = predictions?.explanations;
   const hasResume = !!(user?.profile?.resumeUrl);
 
+  const showSalaryCard = marketSalary?.available === true
+    && typeof marketSalary?.min === 'number'
+    && typeof marketSalary?.max === 'number'
+    && marketSalary.min > 0
+    && marketSalary.max > 0
+    && marketSalary.min !== marketSalary.max;
+
   let smartCta = {
-    title: 'Upload your resume',
-    desc: 'Unlock your AI career audit, gap analysis, and path score.',
-    btn: 'Analyze Resume',
-    link: '/talent-analyzer',
+    title: 'Build your resume',
+    desc: 'Create a polished, ATS-optimized resume with our built-in editor and AI writing help.',
+    btn: 'Build Resume',
+    link: '/resume-builder',
     icon: <Icon.FileText size={20} />
   };
+
+  if (!hasResume && hasResumeBuilder) {
+    smartCta = {
+      title: 'Analyze your resume',
+      desc: 'Run your resume against your target role to unlock your AI career audit, gap analysis, and path score.',
+      btn: 'Analyze Resume',
+      link: '/talent-analyzer',
+      icon: <Icon.Sparkles size={20} />
+    };
+  }
 
   if (hasResume) {
     if (!growthPlan) {
@@ -129,22 +216,22 @@ export default function OverviewPage() {
     <AppShell>
       <div className="space-y-8">
         {/* Header section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#EAEAE5] pb-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-line pb-6">
           <div>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F5F5F3] text-xs font-semibold text-[#525252] mb-2 border border-[#EAEAE5]">
-              Target Role: <strong className="text-[#171717]">{dreamRole}</strong>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-2 text-xs font-semibold text-muted mb-2 border border-line">
+              Target Role: <strong className="text-ink">{dreamRole}</strong>
             </span>
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#171717]">
+            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-ink">
               {greeting}, {firstName} 👋
             </h1>
-            <p className="text-sm text-[#525252] mt-1">
+            <p className="text-sm text-muted mt-1">
               Here is your career readiness overview and recommended action items.
             </p>
           </div>
           <button
             onClick={handleExportPDF}
             disabled={exporting}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-[#EAEAE5] text-xs font-bold text-[#171717] hover:bg-[#F5F5F3] transition-colors shadow-sm self-start md:self-auto"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-surface border border-line text-xs font-bold text-ink hover:bg-surface-2 transition-colors shadow-sm self-start md:self-auto"
           >
             <Icon.Download size={15} />
             Export Career Report
@@ -152,19 +239,19 @@ export default function OverviewPage() {
         </div>
 
         {/* Smart CTA Banner */}
-        <div className="rounded-2xl border border-[#EAEAE5] bg-white p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="rounded-2xl border border-line bg-surface p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F5F5F3] text-[#171717] border border-[#EAEAE5]">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink border border-line">
               {smartCta.icon}
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#171717]">{smartCta.title}</h3>
-              <p className="text-xs text-[#525252] mt-1">{smartCta.desc}</p>
+              <h3 className="text-base font-bold text-ink">{smartCta.title}</h3>
+              <p className="text-xs text-muted mt-1">{smartCta.desc}</p>
             </div>
           </div>
           <button
             onClick={() => navigate(smartCta.link)}
-            className="px-5 py-2.5 rounded-xl bg-[#171717] text-white text-xs font-bold hover:bg-[#2a2a2a] transition-colors shrink-0"
+            className="px-5 py-2.5 rounded-xl bg-brand text-white text-xs font-bold hover:bg-brand-soft transition-colors shrink-0 shadow-sm"
           >
             {smartCta.btn} →
           </button>
@@ -172,36 +259,47 @@ export default function OverviewPage() {
 
         {/* Main Grid: Path Score & Factor Breakdown */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Path Score Card */}
-          <div className="rounded-2xl border border-[#EAEAE5] bg-white p-6 shadow-sm flex flex-col items-center justify-center text-center">
-            <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-4">Path Score</h3>
-            <ScoreGauge score={score} label={readiness?.label} />
-            <p className="text-xs text-[#525252] mt-4 max-w-xs leading-relaxed">
+          {/* Path Score Card — luxury dark card with glowing border */}
+          <div
+            className="relative overflow-hidden rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center border border-[#2B4C3F]/40"
+            style={{
+              background: 'linear-gradient(160deg, #0C1810 0%, #0F2318 50%, #0A1A10 100%)',
+              boxShadow: '0 0 0 1px rgba(127,181,160,0.08), 0 20px 50px -12px rgba(10,26,16,0.6)',
+            }}
+          >
+            <span className="absolute top-4 right-4 inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider bg-white/10 border border-white/10 text-[#7FB5A0]">
+              {readiness?.label ?? 'Score'}
+            </span>
+            <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-4">Path Score</h3>
+            <ScoreGauge score={animatedScore} label={readiness?.label} dark />
+            <p className="text-xs text-white/60 mt-4 max-w-xs leading-relaxed">
               {readiness?.summary}
             </p>
           </div>
 
           {/* Factor Breakdown */}
-          <div className="lg:col-span-2 rounded-2xl border border-[#EAEAE5] bg-white p-6 shadow-sm flex flex-col justify-between">
+          <div className="lg:col-span-2 rounded-2xl border border-line bg-surface p-6 shadow-sm flex flex-col justify-between">
             <div>
-              <h3 className="text-xs font-bold text-[#A3A3A3] uppercase tracking-wider mb-4">Readiness Factors</h3>
+              <h3 className="text-xs font-bold text-faint uppercase tracking-wider mb-4">Readiness Factors</h3>
               <div className="space-y-4">
-                {factors.map((f) => (
-                  <div key={f.key}>
+                {factors.map((f, i) => (
+                  <div key={f.key} className={cn('animate-fade-up', `stagger-${Math.min(5, i + 1)}`)}>
                     <div className="flex justify-between text-xs mb-1.5">
-                      <span className="font-semibold text-[#171717]">{f.label}</span>
-                      <span className="text-[#525252] font-mono">{f.score} / {f.max}</span>
+                      <span className="font-semibold text-ink">{f.label}</span>
+                      <span className="text-muted font-mono">{f.score} / {f.max}</span>
                     </div>
-                    <div className="h-2 rounded-full bg-[#F5F5F3] overflow-hidden border border-[#EAEAE5]">
+                    <div className="h-2 rounded-full bg-surface-2 overflow-hidden border border-line">
                       <div
-                        className={cn(
-                          'h-full rounded-full transition-all duration-500',
-                          f.status === 'good' ? 'bg-[#2B4C3F]' : f.status === 'warn' ? 'bg-amber-600' : 'bg-[#B85A3C]'
-                        )}
-                        style={{ width: `${f.percent}%` }}
+                        className="h-full rounded-full transition-all ease-out"
+                        style={{
+                          width: barsFilled ? `${f.percent}%` : '0%',
+                          background: FACTOR_GRADIENTS[f.status] || FACTOR_GRADIENTS.good,
+                          transitionDuration: '900ms',
+                          transitionDelay: `${i * 120}ms`,
+                        }}
                       />
                     </div>
-                    {f.tip && <p className="text-[10px] text-[#A3A3A3] mt-1">{f.tip}</p>}
+                    {f.tip && <p className="text-[10px] text-faint mt-1">{f.tip}</p>}
                   </div>
                 ))}
               </div>
@@ -209,21 +307,24 @@ export default function OverviewPage() {
           </div>
         </div>
 
+        {/* Peer Benchmarking Card */}
+        <PeerBenchmarkCard benchmark={peerBenchmark} loading={loadingBenchmark} />
+
         {/* AI Score Audit Card */}
         {hasResume && (
-          <div className="rounded-2xl border border-[#EAEAE5] bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-line bg-surface p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#F5F5F3] text-[#171717]">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-2 text-ink">
                 <Icon.MessageSquare size={16} />
               </span>
-              <h3 className="text-sm font-bold text-[#171717]">AI Career Audit Narrative</h3>
+              <h3 className="text-sm font-bold text-ink">AI Career Audit Narrative</h3>
             </div>
             {loadingAi ? (
               <div className="py-6 flex items-center justify-center">
-                <Spinner className="h-6 w-6 text-[#2B4C3F]" />
+                <Spinner className="h-6 w-6 text-brand" />
               </div>
             ) : (
-              <div className="prose prose-sm max-w-none text-[#525252] text-xs leading-relaxed space-y-3 whitespace-pre-line">
+              <div className="prose prose-sm max-w-none text-muted text-xs leading-relaxed space-y-3 whitespace-pre-line">
                 {aiExplanation || 'Your AI audit is being generated...'}
               </div>
             )}
@@ -231,20 +332,52 @@ export default function OverviewPage() {
         )}
 
         {/* Market Salary Card */}
-        {marketSalary?.available && (
-          <div className="rounded-2xl border border-[#EAEAE5] bg-white p-6 shadow-sm flex items-center justify-between">
+        {showSalaryCard && (
+          <div className="rounded-2xl p-5 flex items-center justify-between gap-4 border border-line bg-surface shadow-sm">
             <div>
-              <span className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-wider">Live Market Benchmark</span>
-              <h4 className="text-base font-bold text-[#171717] mt-0.5">{dreamRole} Salary Range</h4>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-40" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-brand" />
+                </span>
+                <span className="text-[10px] font-bold text-brand uppercase tracking-wider">
+                  Live Market Benchmark
+                </span>
+              </div>
+              <h4 className="text-sm font-bold text-ink">{dreamRole} Salary Range</h4>
+              <p className="text-[10px] text-muted mt-0.5">Estimated from live job postings · Data may vary</p>
             </div>
-            <div className="text-right">
-              <span className="text-xl font-bold font-mono text-[#2B4C3F]">
-                ₹{marketSalary.min} - ₹{marketSalary.max} LPA
+            <div className="text-right shrink-0">
+              <span className="text-lg font-bold font-mono text-brand">
+                ₹{marketSalary.min}L – ₹{marketSalary.max}L
               </span>
-              <p className="text-[10px] text-[#A3A3A3] mt-0.5">Based on live job posting analysis</p>
+              <p className="text-[10px] text-muted mt-0.5">per annum</p>
             </div>
           </div>
         )}
+
+        {/* Feature Hub Shortcuts */}
+        <div>
+          <h3 className="text-xs font-bold text-faint uppercase tracking-wider mb-4">Jump Back In</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {FEATURE_HUB.map((hub) => (
+              <button
+                key={hub.link}
+                onClick={() => navigate(hub.link)}
+                className="group text-left rounded-2xl border border-line bg-surface p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-brand/30"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-surface-2 text-ink border border-line transition-colors duration-300 group-hover:bg-brand group-hover:text-white">
+                  {hub.icon}
+                </div>
+                <h4 className="text-sm font-bold text-ink mt-4">{hub.title}</h4>
+                <p className="text-xs text-muted mt-1 leading-relaxed">{hub.desc}</p>
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand mt-3 opacity-0 -translate-x-1 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0">
+                  Open <Icon.ArrowRight size={13} />
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </AppShell>
   );

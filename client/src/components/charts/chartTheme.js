@@ -20,15 +20,20 @@
  *   <Tooltip {...tooltipStyle} />
  */
 
-/** Colour tokens matching the dark dashboard theme */
+/**
+ * Colour tokens matching PathPilot's matte editorial design system.
+ * Values reference the CSS custom properties from index.css (--color-*) so
+ * charts automatically follow the light/dark theme toggle (ThemeContext) —
+ * no separate dark-mode chart theme needed.
+ */
 export const CHART = {
-  grid:    '#232838', // subtle gridline colour — very dark blue-grey
-  axis:    '#626b80', // axis tick labels and axis line colour
-  brand:   '#818cf8', // indigo — primary data line colour (resume scores over time)
-  violet:  '#8b5cf6', // purple — skill radar chart fill
-  success: '#22c55e', // green  — scores >= 75%
-  warning: '#f59e0b', // amber  — scores 50-74%
-  danger:  '#ef4444', // red    — scores < 50%
+  grid:    'var(--color-line)',   // gridlines — warm/dark border colour depending on theme
+  axis:    'var(--color-faint)',  // axis tick labels
+  brand:   '#2B4C3F',             // forest green — primary data colour (brand, constant across themes)
+  violet:  '#2B4C3F',             // alias — kept for API compatibility with existing chart props
+  success: '#2B4C3F',             // scores >= 75%
+  warning: '#92400E',             // scores 50-74%
+  danger:  '#B85A3C',             // scores < 50%
 };
 
 /**
@@ -38,13 +43,13 @@ export const CHART = {
  */
 export const tooltipStyle = {
   contentStyle: {
-    background: '#151823',   // dark panel background
-    border: '1px solid #232838',
+    background: 'var(--color-surface)',
+    border: '1px solid var(--color-line)',
     borderRadius: 12,
-    color: '#f4f6fb',        // light text inside tooltip
+    color: 'var(--color-ink)',
     fontSize: 12,
   },
-  labelStyle: { color: '#9aa3b6' },   // x-axis label inside tooltip (e.g. "Week 1")
-  itemStyle:  { color: '#f4f6fb' },   // data value inside tooltip
-  cursor: { fill: 'rgba(99,102,241,0.08)' }, // faint hover column highlight
+  labelStyle: { color: 'var(--color-muted)' },
+  itemStyle:  { color: 'var(--color-ink)' },
+  cursor: { fill: 'rgba(43,76,63,0.08)' }, // faint brand-green hover column highlight
 };

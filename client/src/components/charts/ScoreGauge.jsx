@@ -9,6 +9,7 @@
  */
 
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/cn';
 
 export function scoreColor(score) {
   if (score >= 75) return '#2B4C3F'; // brand forest green
@@ -24,7 +25,7 @@ export function scoreLabel(score) {
   return 'Unscored';
 }
 
-export function ScoreGauge({ score = 0, size = 180, label }) {
+export function ScoreGauge({ score = 0, size = 180, label, dark = false }) {
   const safeScore = Math.min(100, Math.max(0, score));
   const color = scoreColor(safeScore);
   const colorSoft = safeScore >= 75 ? '#3D6B59' : safeScore >= 50 ? '#D97706' : '#DC2626';
@@ -65,7 +66,7 @@ export function ScoreGauge({ score = 0, size = 180, label }) {
           cx={center}
           cy={center}
           r={radius}
-          stroke="#EAEAE5"
+          stroke={dark ? 'rgba(255,255,255,0.08)' : '#EAEAE5'}
           strokeWidth={strokeWidth}
           fill="none"
           strokeLinecap="round"
@@ -79,7 +80,7 @@ export function ScoreGauge({ score = 0, size = 180, label }) {
             y1={t.y1}
             x2={t.x2}
             y2={t.y2}
-            stroke="#D0D0CA"
+            stroke={dark ? 'rgba(255,255,255,0.15)' : '#D0D0CA'}
             strokeWidth="1.5"
             strokeLinecap="round"
           />
@@ -104,10 +105,10 @@ export function ScoreGauge({ score = 0, size = 180, label }) {
       {/* Centered Score Display */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <div className="metric-glow flex flex-col items-center justify-center">
-          <span className="font-serif text-3xl sm:text-4xl font-extrabold text-[#171717] animate-count-up leading-none">
+          <span className={cn('font-serif text-3xl sm:text-4xl font-extrabold animate-count-up leading-none', dark ? 'text-white' : 'text-[#171717]')}>
             {Math.round(safeScore)}
           </span>
-          <span className="text-[10px] font-bold text-[#A3A3A3] uppercase tracking-wider mt-1">
+          <span className={cn('text-[10px] font-bold uppercase tracking-wider mt-1', dark ? 'text-white/40' : 'text-[#A3A3A3]')}>
             /100
           </span>
         </div>

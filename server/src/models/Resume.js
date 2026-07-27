@@ -164,6 +164,12 @@ const resumeSchema = new Schema(
     // Django's regex parser struggles with complex two-column PDFs; Gemini handles these
     lowText: { type: Boolean, default: false },
 
+    // Field names (e.g. 'skills', 'experience') the post-parse Gemini sanity check
+    // flagged as uncertain — usually from multi-column layouts, tables, or skills
+    // listed inline within job descriptions. The UI shows a "please verify" hint
+    // next to these sections. See geminiValidateParsedResume() in gemini.service.js.
+    lowConfidenceFields: { type: [String], default: [] },
+
     // ── Gemini AI Intelligence Layer ──────────────────────────────────────────
     // These fields are populated AFTER Django parsing by gemini.service.js.
     // They represent role-specific intelligence (comparing the resume to dreamRole).

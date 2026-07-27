@@ -17,6 +17,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { api, setAccessToken } from '@/lib/api';
+import { signInWithGoogle } from '@/config/firebase';
 
 // Context object — consumed by useAuth() below
 const AuthContext = createContext(null);
@@ -83,6 +84,14 @@ export function AuthProvider({ children }) {
     return data.data.user;
   };
 
+  /** Sign in with Google via Firebase popup, then exchange the idToken for a session. */
+  const googleLogin = async () => {
+    const idToken = await signInWithGoogle();
+    const { data } = await api.post('/auth/google', { idToken });
+    applySession(data.data);
+    return data.data.user;
+  };
+
   /**
    * Log out. Asks the backend to clear the refresh cookie, then clears
    * the client-side token and user. `finally` runs even if the request fails,
@@ -105,6 +114,7 @@ export function AuthProvider({ children }) {
     isAuthenticated: !!user, // convenience: true when a user is logged in
     login,
     register,
+    googleLogin,
     logout,
     refreshUser: loadMe,     // re-fetches user — call after profile updates
   };

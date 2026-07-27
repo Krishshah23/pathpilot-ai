@@ -6,7 +6,8 @@
  *
  * FEATURES:
  * 1. Skill Roadmap Engine: Interactive week-by-week task checklist with hour tracking and progress bar calculations.
- *    Supports progress preservation across regenerations and Gemini AI gap week injection.
+ *    Supports progress preservation across regenerations and Gemini AI gap week injection. Each task also surfaces
+ *    2-3 curated learning resources (see config/learningResources.js) with a "Mark as Learned" toggle.
  * 2. Application Kanban Pipeline: 7-stage drag-and-drop opportunity cards (Wishlist -> Applied -> OA -> Interview -> HR -> Offer -> Rejected).
  * 3. Live Job Openings Feed: TheirStack API integration rendering role-specific active job openings with 1-click application tracking.
  */
@@ -22,6 +23,7 @@ import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { DREAM_ROLES } from '@/config/careerData';
+import { getLearningResources } from '@/config/learningResources';
 
 /* ── Kanban Stage config ── */
 const STAGES = [
@@ -111,6 +113,9 @@ export default function ExecutionEnginePage() {
     try {
       const { data } = await api.patch(`/growth/tasks/${key}`, { completed: next });
       if (data?.data?.plan) setPlan(data.data.plan);
+      if (next) {
+        toast.info('Nice work! Completing skills like this can lift your Path Score — check your dashboard.');
+      }
     } catch (err) {
       setPlan((prev) => applyToggle(prev, key, !next));
       toast.error(errorMessage(err, 'Could not update task'));
@@ -200,19 +205,19 @@ export default function ExecutionEnginePage() {
 
         {/* ── Page Header ─────────────────────────────────────────── */}
         <div>
-          <h1 className="font-serif text-3xl font-bold text-[#171717]">Skill Roadmap & Opportunities</h1>
-          <p className="mt-2 text-sm text-[#525252]">Your week-by-week learning plan alongside your application pipeline.</p>
+          <h1 className="font-serif text-3xl font-bold text-ink">Skill Roadmap & Opportunities</h1>
+          <p className="mt-2 text-sm text-muted">Your week-by-week learning plan alongside your application pipeline.</p>
         </div>
 
         {/* ── Section 1: Skill Roadmap ─────────────────────────── */}
         <section>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="font-serif text-xl font-bold text-[#171717]">Skill Roadmap</h2>
+            <h2 className="font-serif text-xl font-bold text-ink">Skill Roadmap</h2>
             {plan && (
               <div className="flex items-center gap-3">
-                <select 
-                  value={planRole} 
-                  onChange={(e) => setPlanRole(e.target.value)} 
+                <select
+                  value={planRole}
+                  onChange={(e) => setPlanRole(e.target.value)}
                   className="input h-9 py-0 text-sm w-48"
                 >
                   {roleOptions.map((r) => <option key={r} value={r}>{r}</option>)}
@@ -220,7 +225,7 @@ export default function ExecutionEnginePage() {
                 <button
                   onClick={generatePlan}
                   disabled={generating}
-                  className="inline-flex items-center gap-2 h-9 px-4 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F5F5F3] disabled:opacity-50 transition-colors"
+                  className="inline-flex items-center gap-2 h-9 px-4 rounded-xl border border-line text-sm font-medium text-muted hover:bg-surface-2 disabled:opacity-50 transition-colors"
                 >
                   {generating ? <Spinner className="h-4 w-4" /> : <Icon.Sparkles size={14} />}
                   Rebuild
@@ -243,10 +248,10 @@ export default function ExecutionEnginePage() {
         {/* ── Section 2: Application Pipeline + Market Radar ─────── */}
         <section>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="font-serif text-xl font-bold text-[#171717]">Application Pipeline</h2>
+            <h2 className="font-serif text-xl font-bold text-ink">Application Pipeline</h2>
             <button
               onClick={() => { setEditing(null); setModalOpen(true); }}
-              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-[#171717] text-white text-sm font-semibold hover:bg-[#2a2a2a] transition-colors"
+              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-soft transition-colors"
             >
               <Icon.Plus size={14} /> Add Application
             </button>
@@ -279,27 +284,27 @@ export default function ExecutionEnginePage() {
                           if (oppId) handleStageChange(oppId, stage.value);
                         }}
                         className={cn(
-                          "flex w-52 shrink-0 flex-col rounded-xl border transition-all duration-200 bg-[#FBFBFA]",
-                          isOver ? "border-[#2B4C3F] bg-[#F0F5F3] scale-[1.02] shadow-md" : "border-[#EAEAE5]"
+                          "flex w-52 shrink-0 flex-col rounded-xl border transition-all duration-200 bg-canvas",
+                          isOver ? "border-[#2B4C3F] bg-[#F0F5F3] scale-[1.02] shadow-md" : "border-line"
                         )}
                       >
                         {/* Column header */}
-                        <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#EAEAE5]">
+                        <div className="flex items-center justify-between px-3 py-2.5 border-b border-line">
                           <div className="flex items-center gap-2">
                             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
-                            <span className="text-xs font-semibold text-[#171717]">{stage.label}</span>
+                            <span className="text-xs font-semibold text-ink">{stage.label}</span>
                           </div>
-                          <span className="text-[10px] font-bold text-[#A3A3A3] bg-[#EAEAE5] px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] font-bold text-faint bg-surface-2 px-1.5 py-0.5 rounded">
                             {cards.length}
                           </span>
                         </div>
                         {/* Cards */}
                         <div className="flex flex-col gap-2 p-2 overflow-y-auto" style={{ maxHeight: '50vh' }}>
                           {cards.length === 0 ? (
-                            <div className="m-1 rounded-2xl border-2 border-dashed border-[#EAEAE5] py-6 px-3 flex flex-col items-center justify-center text-center gap-1 bg-[#FBFBFA]">
-                              <Icon.Layers size={18} className="text-[#A3A3A3] mb-0.5" />
-                              <p className="text-xs font-medium text-[#171717]">No applications yet</p>
-                              <p className="text-[10px] text-[#525252]">Track roles as you apply — they'll show up here.</p>
+                            <div className="m-1 rounded-2xl border-2 border-dashed border-line py-6 px-3 flex flex-col items-center justify-center text-center gap-1 bg-canvas">
+                              <Icon.Layers size={18} className="text-faint mb-0.5" />
+                              <p className="text-xs font-medium text-ink">No applications yet</p>
+                              <p className="text-[10px] text-muted">Track roles as you apply — they'll show up here.</p>
                             </div>
                           ) : (
                             cards.map((opp, oIdx) => (
@@ -323,17 +328,17 @@ export default function ExecutionEnginePage() {
 
             {/* Active Market Radar */}
             <div className="card overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-[#EAEAE5]">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-line">
                 <div>
-                  <h3 className="text-sm font-bold text-[#171717] flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-ink flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-[#2B4C3F] animate-pulse" />
                     Active Market Radar
                   </h3>
-                  <p className="text-[11px] text-[#A3A3A3] mt-0.5">Live openings for your role</p>
+                  <p className="text-[11px] text-faint mt-0.5">Live openings for your role</p>
                 </div>
               </div>
 
-              <div className="divide-y divide-[#EAEAE5] max-h-[480px] overflow-y-auto">
+              <div className="divide-y divide-line max-h-[480px] overflow-y-auto">
                 {loadingJobs ? (
                   <div className="flex h-32 items-center justify-center">
                     <Spinner className="h-5 w-5 text-[#2B4C3F]" />
@@ -343,10 +348,10 @@ export default function ExecutionEnginePage() {
                     <RadarJobRow key={job?.id || job?._id || jIdx} job={job} />
                   ))
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center px-6 m-4 rounded-2xl border-2 border-dashed border-[#EAEAE5] bg-[#FBFBFA]">
-                    <Icon.Briefcase size={28} className="text-[#A3A3A3] mb-2" />
-                    <p className="text-sm font-medium text-[#171717]">No live openings loaded</p>
-                    <p className="text-xs text-[#525252] mt-0.5">Explore active roles matching your target profile.</p>
+                  <div className="flex flex-col items-center justify-center py-12 text-center px-6 m-4 rounded-2xl border-2 border-dashed border-line bg-canvas">
+                    <Icon.Briefcase size={28} className="text-faint mb-2" />
+                    <p className="text-sm font-medium text-ink">No live openings loaded</p>
+                    <p className="text-xs text-muted mt-0.5">Explore active roles matching your target profile.</p>
                   </div>
                 )}
               </div>
@@ -372,11 +377,11 @@ export default function ExecutionEnginePage() {
 function GeneratePanel({ role, setRole, roleOptions, generating, onGenerate }) {
   return (
     <div className="card p-10 text-center max-w-xl mx-auto">
-      <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F5F5F3] text-[#525252] mb-5">
+      <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-2 text-muted mb-5">
         <Icon.BookOpen size={22} />
       </span>
-      <h2 className="font-serif text-lg font-bold text-[#171717]">Build your Skill Roadmap</h2>
-      <p className="mt-2 text-sm text-[#525252]">Turn your skill gap into a focused week-by-week learning plan.</p>
+      <h2 className="font-serif text-lg font-bold text-ink">Build your Skill Roadmap</h2>
+      <p className="mt-2 text-sm text-muted">Turn your skill gap into a focused week-by-week learning plan.</p>
       <div className="mt-8 space-y-4 text-left max-w-sm mx-auto">
         <select value={role || ''} onChange={(e) => setRole(e.target.value)} className="input w-full text-sm">
           {(roleOptions || DREAM_ROLES)?.map((r) => <option key={r} value={r}>{r}</option>)}
@@ -384,7 +389,7 @@ function GeneratePanel({ role, setRole, roleOptions, generating, onGenerate }) {
         <button
           onClick={onGenerate}
           disabled={generating}
-          className="w-full h-11 rounded-xl bg-[#171717] text-white text-sm font-semibold hover:bg-[#2a2a2a] disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+          className="w-full h-11 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-soft disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
         >
           {generating ? <><Spinner className="h-4 w-4" /> Generating…</> : <><Icon.Sparkles size={15} /> Generate Roadmap</>}
         </button>
@@ -404,8 +409,8 @@ function RoadmapView({ plan, role, setRole, generating, onGenerate, onToggle }) 
       <div className="card p-6">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-sm font-semibold text-[#171717]">{plan.targetRole || role || 'Target Role'} Roadmap</p>
-            <p className="text-xs text-[#A3A3A3] mt-0.5">{plan.totalWeeks || weeks.length} weeks · {plan.totalHours || 0} hrs estimated</p>
+            <p className="text-sm font-semibold text-ink">{plan.targetRole || role || 'Target Role'} Roadmap</p>
+            <p className="text-xs text-faint mt-0.5">{plan.totalWeeks || weeks.length} weeks · {plan.totalHours || 0} hrs estimated</p>
           </div>
           <span className="font-serif text-3xl font-black text-[#2B4C3F]">{pct}%</span>
         </div>
@@ -415,7 +420,7 @@ function RoadmapView({ plan, role, setRole, generating, onGenerate, onToggle }) 
             style={{ width: `${pct}%` }}
           />
         </div>
-        <p className="text-xs text-[#A3A3A3] mt-2">
+        <p className="text-xs text-faint mt-2">
           {plan.progress?.completedTasks || 0} of {plan.totalTasks || 0} tasks complete
         </p>
       </div>
@@ -436,7 +441,7 @@ function WeekCard({ week, index = 0, onToggle }) {
   const tasks = Array.isArray(week.tasks) ? week.tasks : [];
   const isGapTargeted = tasks.some(t => typeof t === 'object' && t?.key?.startsWith('gap-task-'));
   const isRecommended = week.priority === 'core' || week.priority === 'high';
-  
+
   const accentColorClass = isGapTargeted
     ? 'border-l-[#2B4C3F]'
     : isRecommended
@@ -454,14 +459,14 @@ function WeekCard({ week, index = 0, onToggle }) {
       {/* Header */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-[#FBFBFA] transition-colors"
+        className="w-full flex items-center gap-4 px-6 py-4 text-left hover:bg-canvas transition-colors"
       >
-        <span className="font-mono text-sm font-bold text-[#171717] bg-[#F5F5F3] px-2.5 py-1.5 rounded-lg border border-[#EAEAE5] tracking-wider">
+        <span className="font-mono text-sm font-bold text-ink bg-surface-2 px-2.5 py-1.5 rounded-lg border border-line tracking-wider">
           {formattedIndex}
         </span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-semibold text-[#171717]">{week.title || week.topic || 'Untitled Week'}</p>
+            <p className="text-sm font-semibold text-ink">{week.title || week.topic || 'Untitled Week'}</p>
             {isGapTargeted && (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#C8DDD6] text-[#2B4C3F] bg-[#F0F5F3]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#2B4C3F]" />
@@ -469,7 +474,7 @@ function WeekCard({ week, index = 0, onToggle }) {
               </span>
             )}
           </div>
-          <p className="text-xs text-[#A3A3A3] mt-0.5">
+          <p className="text-xs text-faint mt-0.5">
             {isGapTargeted ? 'AI-personalized from your resume gaps · ' : ''}
             {week.focusHours ? `~${week.focusHours} hrs · ` : ''}
             {week.completedTasks ?? completedCount}/{tasks.length} tasks
@@ -479,13 +484,13 @@ function WeekCard({ week, index = 0, onToggle }) {
           <div className="w-20 h-1.5 rounded-full progress-ruler overflow-hidden">
             <div className="h-full rounded-full bg-[#2B4C3F]" style={{ width: `${week.percent || 0}%` }} />
           </div>
-          <Icon.ChevronDown size={16} className={cn('text-[#A3A3A3] transition-transform', open && 'rotate-180')} />
+          <Icon.ChevronDown size={16} className={cn('text-faint transition-transform', open && 'rotate-180')} />
         </div>
       </button>
 
       {/* Tasks */}
       {open && (
-        <div className="border-t border-[#EAEAE5] px-6 py-4 space-y-2 bg-[#FBFBFA]/50">
+        <div className="border-t border-line px-6 py-4 space-y-2 bg-canvas/50">
           {tasks.map((task, tIdx) => {
             const isObj = typeof task === 'object' && task !== null;
             const key = isObj ? (task.key || `task-${tIdx}`) : `task-${tIdx}`;
@@ -493,39 +498,98 @@ function WeekCard({ week, index = 0, onToggle }) {
             const hours = isObj ? (task.estimatedHours || task.hours || 1) : 1;
             const completed = isObj ? Boolean(task.completed) : false;
             const difficulty = isObj ? (task.difficulty || 'Intermediate') : 'Intermediate';
+            const skillLabel = isObj ? (task.skill || title) : title;
 
             return (
-              <button
+              <TaskRow
                 key={key}
-                onClick={() => onToggle(key, !completed)}
-                className={cn(
-                  'flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-all duration-200 card-hover',
-                  completed ? 'border-[#C8DDD6] bg-[#F0F5F3]' : 'border-[#EAEAE5] bg-white hover:bg-[#FBFBFA]'
-                )}
-              >
-                <span className={cn(
-                  'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors',
-                  completed ? 'border-[#2B4C3F] bg-[#2B4C3F] text-white' : 'border-[#D0D0CA]'
-                )}>
-                  {completed && <Icon.Check size={11} />}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className={cn('text-sm font-medium truncate', completed ? 'text-[#A3A3A3] line-through' : 'text-[#171717]')}>
-                    {title}
-                  </p>
-                  <p className="text-xs text-[#A3A3A3]">{hours} hrs</p>
-                </div>
-                <span className={cn(
-                  'shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg border',
-                  difficulty === 'Beginner' ? 'border-[#C8DDD6] text-[#2B4C3F] bg-[#F0F5F3]' :
-                  difficulty === 'Advanced' ? 'border-[#E8C4B8] text-[#B85A3C] bg-[#FDF5F3]' :
-                  'border-[#E8D8A8] text-[#92400E] bg-[#FEFBF0]'
-                )}>
-                  {difficulty}
-                </span>
-              </button>
+                taskKey={key}
+                title={title}
+                hours={hours}
+                completed={completed}
+                difficulty={difficulty}
+                skillLabel={skillLabel}
+                onToggle={onToggle}
+              />
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Task Row (with Learning Resources disclosure) ── */
+function TaskRow({ taskKey, title, hours, completed, difficulty, skillLabel, onToggle }) {
+  const [resourcesOpen, setResourcesOpen] = useState(false);
+  const resources = useMemo(() => getLearningResources(skillLabel), [skillLabel]);
+
+  return (
+    <div className={cn(
+      'rounded-xl border transition-all duration-200',
+      completed ? 'border-[#C8DDD6] bg-[#F0F5F3]' : 'border-line bg-surface'
+    )}>
+      <button
+        onClick={() => onToggle(taskKey, !completed)}
+        className="flex w-full items-center gap-3 p-3 text-left"
+        title={completed ? 'Mark as not learned' : 'Mark as learned'}
+      >
+        <span className={cn(
+          'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors',
+          completed ? 'border-[#2B4C3F] bg-[#2B4C3F] text-white' : 'border-line-soft'
+        )}>
+          {completed && <Icon.Check size={11} />}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className={cn('text-sm font-medium truncate', completed ? 'text-faint line-through' : 'text-ink')}>
+            {title}
+          </p>
+          <p className="text-xs text-faint">{hours} hrs</p>
+        </div>
+        <span className={cn(
+          'shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg border',
+          difficulty === 'Beginner' ? 'border-[#C8DDD6] text-[#2B4C3F] bg-[#F0F5F3]' :
+          difficulty === 'Advanced' ? 'border-[#E8C4B8] text-[#B85A3C] bg-[#FDF5F3]' :
+          'border-[#E8D8A8] text-[#92400E] bg-[#FEFBF0]'
+        )}>
+          {difficulty}
+        </span>
+      </button>
+
+      {resources.length > 0 && (
+        <div className="border-t border-line/60 px-3 py-2">
+          <button
+            onClick={() => setResourcesOpen((o) => !o)}
+            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-brand hover:underline"
+          >
+            <Icon.BookOpen size={11} /> Learning Resources
+            <Icon.ChevronDown size={10} className={cn('transition-transform', resourcesOpen && 'rotate-180')} />
+          </button>
+          {resourcesOpen && (
+            <div className="mt-2 space-y-1.5">
+              {resources.map((r) => (
+                <a
+                  key={r.url}
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-line px-2.5 py-1.5 text-[11px] hover:bg-surface-2 transition-colors"
+                >
+                  <span className="min-w-0 truncate text-ink font-medium">{r.title}</span>
+                  <span className="shrink-0 flex items-center gap-1.5">
+                    <span className="text-[9px] font-bold uppercase tracking-wide text-faint">{r.type}</span>
+                    <span className={cn(
+                      'px-1.5 py-0.5 rounded text-[9px] font-bold',
+                      r.free ? 'bg-brand/10 text-brand' : 'bg-warning/10 text-warning'
+                    )}>
+                      {r.free ? 'Free' : 'Paid'}
+                    </span>
+                    <span className="text-faint">{r.time}</span>
+                  </span>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -547,18 +611,18 @@ function KanbanCard({ opp, onEdit, onDelete, onStageChange }) {
         if (oppId) e.dataTransfer.setData('text/plain', oppId);
         e.dataTransfer.effectAllowed = 'move';
       }}
-      className="group rounded-xl border border-[#EAEAE5] bg-white p-3 hover:border-[#D0D0CA] transition-colors cursor-grab active:cursor-grabbing hover:shadow-sm"
+      className="group rounded-xl border border-line bg-surface p-3 hover:border-faint transition-colors cursor-grab active:cursor-grabbing hover:shadow-sm"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-[#171717] truncate">{company}</p>
-          <p className="text-[11px] text-[#A3A3A3] truncate mt-0.5">{role}</p>
+          <p className="text-xs font-semibold text-ink truncate">{company}</p>
+          <p className="text-[11px] text-faint truncate mt-0.5">{role}</p>
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-          <button onClick={() => onEdit(opp)} className="rounded p-1 hover:bg-[#F5F5F3] text-[#A3A3A3] hover:text-[#171717]">
+          <button onClick={() => onEdit(opp)} className="rounded p-1 hover:bg-surface-2 text-faint hover:text-ink">
             <Icon.Edit size={11} />
           </button>
-          <button onClick={() => onDelete(oppId)} className="rounded p-1 hover:bg-[#FDF5F3] text-[#A3A3A3] hover:text-[#B85A3C]">
+          <button onClick={() => onDelete(oppId)} className="rounded p-1 hover:bg-[#FDF5F3] text-faint hover:text-[#B85A3C]">
             <Icon.Trash size={11} />
           </button>
         </div>
@@ -566,7 +630,7 @@ function KanbanCard({ opp, onEdit, onDelete, onStageChange }) {
       <select
         value={opp.stage || 'wishlist'}
         onChange={(e) => onStageChange(oppId, e.target.value)}
-        className="mt-2 w-full text-[10px] border border-[#EAEAE5] rounded-lg px-2 py-1 bg-[#FBFBFA] text-[#525252] focus:outline-none cursor-pointer"
+        className="mt-2 w-full text-[10px] border border-line rounded-lg px-2 py-1 bg-canvas text-muted focus:outline-none cursor-pointer"
         onClick={(e) => e.stopPropagation()}
         onDragStart={(e) => e.preventDefault()}
       >
@@ -586,18 +650,18 @@ function RadarJobRow({ job }) {
   const url = job.applyUrl || job.url || job.link;
 
   return (
-    <div className="flex items-center justify-between gap-3 px-5 py-4 hover:bg-[#FBFBFA] transition-colors">
+    <div className="flex items-center justify-between gap-3 px-5 py-4 hover:bg-canvas transition-colors">
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-[#171717] truncate">{title}</p>
-        <p className="text-xs text-[#525252] mt-0.5 truncate">{company}</p>
-        <p className="text-[11px] text-[#A3A3A3] mt-0.5">{location}{postedAgo}</p>
+        <p className="text-sm font-semibold text-ink truncate">{title}</p>
+        <p className="text-xs text-muted mt-0.5 truncate">{company}</p>
+        <p className="text-[11px] text-faint mt-0.5">{location}{postedAgo}</p>
       </div>
       {url && (
         <a
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-[#171717] text-[#171717] text-xs font-semibold hover:bg-[#171717] hover:text-white transition-colors"
+          className="shrink-0 inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-ink text-ink text-xs font-semibold hover:bg-ink hover:text-canvas transition-colors"
         >
           Apply <Icon.ArrowRight size={11} />
         </a>
@@ -627,4 +691,3 @@ function applyToggle(plan, key, completed) {
     },
   };
 }
-

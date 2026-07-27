@@ -30,6 +30,7 @@ import {
   forgotPassword,
   resetPassword,
 } from '../controllers/auth.controller.js';
+import { googleAuth } from '../controllers/oauth.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import {
@@ -53,6 +54,7 @@ const authLimiter = rateLimit({
 
 router.post('/register', authLimiter, validate(registerSchema), register);
 router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/google', authLimiter, googleAuth);
 router.post('/refresh', refresh);
 router.post('/logout', logout);
 router.get('/me', protect, me);

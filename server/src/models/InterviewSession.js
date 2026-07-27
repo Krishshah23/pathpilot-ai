@@ -53,6 +53,12 @@ const questionResultSchema = new Schema(
     // (e.g. 'System Design') — used in gap coverage reporting
     gapAddressed: { type: String, default: '' },
 
+    // Question category from Gemini's generateQuestion() rubric — 'behavioral',
+    // 'technical', or 'situational'. This is the fixed taxonomy Interview Analytics
+    // uses for the topic breakdown radar chart (gapAddressed is free-text and too
+    // varied to chart consistently across sessions).
+    questionType: { type: String, default: 'general' },
+
     // Gemini's numeric score for this answer (0–100)
     // Computed by geminiEvaluateAnswer() using a structured rubric prompt
     totalScore: { type: Number, default: 0 },

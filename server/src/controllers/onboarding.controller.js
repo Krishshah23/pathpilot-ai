@@ -8,6 +8,7 @@
 
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
+import { recomputePathScoreCache } from '../services/pathScore.service.js';
 
 /**
  * PUT /api/onboarding
@@ -22,6 +23,15 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
   user.onboardingCompleted = true;
 
   await user.save();
+
+  // Warm the Path Score cache immediately — dreamRole now exists, so the
+  // Peer Benchmarking aggregation has a role to group this user under right away.
+  try {
+    await recomputePathScoreCache(user, null);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to warm Path Score cache after onboarding:', err);
+  }
 
   return sendSuccess(res, {
     message: 'Onboarding complete. Welcome aboard!',

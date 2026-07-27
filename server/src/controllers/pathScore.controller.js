@@ -12,7 +12,8 @@
 
 import { Resume } from '../models/Resume.js';
 import { aiService } from '../services/ai.service.js';
-import { buildPathScore, collectStudentSkills } from '../services/pathScore.service.js';
+import { buildPathScore, collectStudentSkills, isPathScoreCacheStale, recomputePathScoreCache } from '../services/pathScore.service.js';
+import { getPeerBenchmark } from '../services/peerBenchmark.service.js';
 import { getMarketSalaryForRole, getMarketDataForRole } from '../services/jobMarket.service.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
@@ -25,6 +26,16 @@ export const getPathScore = asyncHandler(async (req, res) => {
   const resume = await Resume.findOne({ user: req.user._id }).sort({ createdAt: -1 });
   const pathScore = buildPathScore(req.user, resume);
   const currentSkills = collectStudentSkills(req.user, resume);
+
+  // Opportunistically warm the Path Score cache on dashboard load — this is what
+  // keeps Peer Benchmarking's aggregation and Smart Notifications' delta detection
+  // accurate without a separate backfill job for existing users.
+  if (isPathScoreCacheStale(req.user)) {
+    recomputePathScoreCache(req.user, resume).catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('Failed to opportunistically refresh Path Score cache:', err);
+    });
+  }
 
   try {
     const payload = {
@@ -123,4 +134,14 @@ export const getPathScore = asyncHandler(async (req, res) => {
   }
 
   return sendSuccess(res, { data: { pathScore, marketSalary, blendedBenchmark } });
+});
+
+/**
+ * GET /api/path-score/peer-benchmark
+ * Returns anonymous peer comparison stats for the candidate's dream role
+ * (percentile, score histogram, per-factor comparison). See peerBenchmark.service.js.
+ */
+export const getPeerBenchmarkStats = asyncHandler(async (req, res) => {
+  const benchmark = await getPeerBenchmark(req.user);
+  return sendSuccess(res, { data: { benchmark } });
 });

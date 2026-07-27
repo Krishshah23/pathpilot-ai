@@ -1,4 +1,3 @@
-import { Logo } from '@/components/ui/Logo';
 import { Icon } from '@/components/ui/icons';
 
 const HIGHLIGHTS = [
@@ -13,9 +12,9 @@ const HIGHLIGHTS = [
  */
 export function AuthLayout({ title, subtitle, children }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <div className="auth-dark-bg grid min-h-screen lg:grid-cols-2">
       {/* Brand panel — rich dark with subtle texture */}
-      <div className="auth-brand-panel relative hidden overflow-hidden border-r border-[#1A2E24] lg:flex lg:flex-col lg:justify-between lg:p-12">
+      <div className="auth-brand-panel relative z-10 hidden overflow-hidden border-r border-[#1A2E24] lg:flex lg:flex-col lg:justify-between lg:p-12">
         {/* Subtle glow orbs */}
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#2B4C3F] opacity-[0.07] rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-64 h-64 bg-[#3D6B59] opacity-[0.05] rounded-full blur-3xl pointer-events-none" />
@@ -59,14 +58,17 @@ export function AuthLayout({ title, subtitle, children }) {
         <p className="relative z-10 text-xs text-[#4A5E53]">© {new Date().getFullYear()} PathPilot AI</p>
       </div>
 
-      {/* Form panel */}
-      <div className="flex items-center justify-center p-6 sm:p-10">
-        <div className="w-full max-w-md animate-fade-up">
-          <div className="mb-8 lg:hidden">
-            <Logo />
+      {/* Form panel — dark glassmorphism card floating on the animated backdrop */}
+      <div className="relative z-10 flex items-center justify-center p-6 sm:p-10">
+        <div className="auth-glass-card w-full max-w-md animate-fade-up p-8 sm:p-10">
+          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 border border-white/10">
+              <span className="text-white font-bold text-sm font-sans tracking-tight">PP</span>
+            </span>
+            <span className="font-serif font-bold text-white text-lg tracking-tight">PathPilot</span>
           </div>
-          <h2 className="font-display text-2xl font-bold text-ink">{title}</h2>
-          {subtitle && <p className="mt-1.5 text-sm text-muted">{subtitle}</p>}
+          <h2 className="font-display text-2xl font-bold text-white">{title}</h2>
+          {subtitle && <p className="mt-1.5 text-sm text-[#8A9B93]">{subtitle}</p>}
           <div className="mt-8">{children}</div>
         </div>
       </div>

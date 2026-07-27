@@ -18,7 +18,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { publicUrl } from '../middleware/upload.middleware.js';
 import { User } from '../models/User.js';
 import { Resume } from '../models/Resume.js';
-import { buildPathScore, collectStudentSkills } from '../services/pathScore.service.js';
+import { buildPathScore, collectStudentSkills, recomputePathScoreCache } from '../services/pathScore.service.js';
 
 /** Removes a previously stored local file on disk. */
 function removeLocalFile(publicPath) {
@@ -73,6 +73,16 @@ export const updateProfile = asyncHandler(async (req, res) => {
   if (skills !== undefined) user.profile.skills = skills;
 
   await user.save();
+
+  // Keep the cached Path Score warm — dreamRole/skills changes affect the score,
+  // and Peer Benchmarking / Smart Notifications both read from this cache.
+  try {
+    const latestResume = await Resume.findOne({ user: user._id }).sort({ createdAt: -1 });
+    await recomputePathScoreCache(user, latestResume);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to refresh Path Score cache after profile update:', err);
+  }
 
   return sendSuccess(res, {
     message: 'Profile updated',

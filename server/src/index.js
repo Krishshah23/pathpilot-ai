@@ -32,6 +32,7 @@ import { createApp } from './app.js';
 import { connectDB } from './config/db.js';
 import { env } from './config/env.js';
 import { startJobMarketCron } from './services/jobMarketCron.js';
+import { startNotificationCron } from './services/notificationCron.js';
 
 /**
  * Main bootstrap function. Called immediately at the bottom of this file.
@@ -58,6 +59,10 @@ async function bootstrap() {
   // This runs independently in the background on a schedule (see jobMarketCron.js).
   // It populates the jobmarketsnapshots collection used by the Market Intelligence panel.
   startJobMarketCron();
+
+  // Step 4b: Start Smart Notification triggers (job alerts, stale resume reminders,
+  // skill trend alerts, weekly digest). See services/notificationCron.js.
+  startNotificationCron();
 
   // Step 5: Register graceful shutdown handlers.
   // These intercept process termination signals so we can clean up before exiting.

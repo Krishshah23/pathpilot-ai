@@ -14,6 +14,7 @@ import { useState, useEffect, useRef } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
+import { InterviewAnalytics } from '@/components/interview/InterviewAnalytics';
 import { api, errorMessage } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { DREAM_ROLES } from '@/config/careerData';
@@ -21,6 +22,7 @@ import { cn } from '@/lib/cn';
 
 export default function InterviewPrepPage() {
   const { user, refreshUser } = useAuth();
+  const [view, setView] = useState('practice'); // practice | analytics
   const [stage, setStage] = useState('setup'); // setup | loading | active | evaluating | result | complete
   const [resume, setResume] = useState(null);
   const [loadingResume, setLoadingResume] = useState(true);
@@ -181,6 +183,7 @@ export default function InterviewPrepPage() {
         question: questionData.question,
         answer: responseText,
         gapAddressed: questionData.gapAddressed || '',
+        questionType: questionData.questionType || 'general',
         totalScore: evalData.totalScore,
         grade: evalData.grade || '',
         strengths: evalData.strengths || [],
@@ -262,6 +265,29 @@ export default function InterviewPrepPage() {
           })()}
         </div>
 
+        {/* ── Practice / Analytics Toggle ── */}
+        <div className="inline-flex items-center gap-1 rounded-xl border border-line bg-surface-2 p-1">
+          {[
+            { key: 'practice', label: 'Practice', icon: <Icon.Sparkles size={13} /> },
+            { key: 'analytics', label: 'Analytics', icon: <Icon.ChartBar size={13} /> },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setView(tab.key)}
+              className={cn(
+                'flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-colors',
+                view === tab.key ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'
+              )}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {view === 'analytics' && <InterviewAnalytics />}
+
+        {view === 'practice' && (
+        <>
         {error && (
           <div className="flex items-center gap-2.5 rounded-xl border border-[#E8C4B8] bg-[#FDF5F3] px-4 py-3 text-sm text-[#B85A3C]">
             <Icon.AlertTriangle size={16} /> {error}
@@ -272,15 +298,15 @@ export default function InterviewPrepPage() {
         {stage === 'setup' && (
           <div className="max-w-2xl mx-auto">
             <div className="card p-10 text-center">
-              <h2 className="font-serif text-2xl font-bold text-[#171717]">Ready to practice?</h2>
-              <p className="mt-3 text-sm text-[#525252] max-w-md mx-auto leading-relaxed">
+              <h2 className="font-serif text-2xl font-bold text-ink">Ready to practice?</h2>
+              <p className="mt-3 text-sm text-muted max-w-md mx-auto leading-relaxed">
                 Gemini will generate questions targeting your actual resume gaps for{' '}
-                <span className="font-semibold text-[#171717]">{selectedRole}</span>.
+                <span className="font-semibold text-ink">{selectedRole}</span>.
               </p>
 
               {/* Role selector */}
               <div className="mt-5 max-w-xs mx-auto">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3] mb-1.5">Target Role</label>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-faint mb-1.5">Target Role</label>
                 <select
                   value={selectedRole}
                   onChange={(e) => setSelectedRole(e.target.value)}
@@ -301,15 +327,15 @@ export default function InterviewPrepPage() {
                     {keyGaps.length} gap{keyGaps.length > 1 ? 's' : ''} identified — questions will target these
                   </p>
                   {keyGaps.slice(0, 3).map((gap, i) => (
-                    <p key={i} className="text-xs text-[#525252] mt-1 flex items-start gap-1.5">
+                    <p key={i} className="text-xs text-muted mt-1 flex items-start gap-1.5">
                       <span className="font-bold text-[#B85A3C] shrink-0">{i + 1}.</span> {gap}
                     </p>
                   ))}
-                  {keyGaps.length > 3 && <p className="text-xs text-[#A3A3A3] mt-1">+{keyGaps.length - 3} more</p>}
+                  {keyGaps.length > 3 && <p className="text-xs text-faint mt-1">+{keyGaps.length - 3} more</p>}
                 </div>
               ) : (
-                <div className="mt-6 text-left rounded-xl border border-[#EAEAE5] bg-[#F5F5F3] p-4">
-                  <p className="text-xs text-[#525252]">
+                <div className="mt-6 text-left rounded-xl border border-line bg-surface-2 p-4">
+                  <p className="text-xs text-muted">
                     {resume
                       ? 'No specific gaps detected — general role questions will be generated.'
                       : 'No resume analyzed yet — questions will be based on your target role only. Upload a resume for gap-specific practice.'}
@@ -323,22 +349,22 @@ export default function InterviewPrepPage() {
                   { label: 'Evaluation', value: 'Gemini AI' },
                   { label: 'Questions', value: keyGaps.length > 0 ? 'Gap-targeted' : 'Role-based' },
                 ].map(({ label, value }) => (
-                  <div key={label} className="rounded-xl border border-[#EAEAE5] p-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3]">{label}</p>
-                    <p className="mt-1 text-xs font-semibold text-[#171717]">{value}</p>
+                  <div key={label} className="rounded-xl border border-line p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-faint">{label}</p>
+                    <p className="mt-1 text-xs font-semibold text-ink">{value}</p>
                   </div>
                 ))}
               </div>
 
               {avgScore !== null && (
-                <p className="mt-4 text-xs text-[#525252]">
+                <p className="mt-4 text-xs text-muted">
                   Session avg so far: <span className="font-bold text-[#2B4C3F]">{avgScore}/100</span> ({sessionScores.length} question{sessionScores.length > 1 ? 's' : ''})
                 </p>
               )}
 
               <button
                 onClick={startSession}
-                className="mt-8 h-12 px-10 rounded-xl bg-[#171717] text-white font-semibold hover:bg-[#2a2a2a] transition-colors flex items-center gap-2 mx-auto"
+                className="mt-8 h-12 px-10 rounded-xl bg-brand text-white font-semibold hover:bg-brand-soft transition-colors flex items-center gap-2 mx-auto"
               >
                 <Icon.Sparkles size={16} /> Start Session
               </button>
@@ -351,9 +377,9 @@ export default function InterviewPrepPage() {
           <div className="max-w-2xl mx-auto">
             <div className="card p-6">
               <div className="flex items-center gap-2 mb-4">
-                <Icon.History size={16} className="text-[#525252]" />
-                <h3 className="font-semibold text-sm text-[#171717]">Past Sessions</h3>
-                <span className="ml-auto text-[10px] text-[#A3A3A3]">{pastSessions.length} session{pastSessions.length !== 1 ? 's' : ''}</span>
+                <Icon.History size={16} className="text-muted" />
+                <h3 className="font-semibold text-sm text-ink">Past Sessions</h3>
+                <span className="ml-auto text-[10px] text-faint">{pastSessions.length} session{pastSessions.length !== 1 ? 's' : ''}</span>
               </div>
               <div className="space-y-2">
                 {pastSessions.slice(0, 5).map((s) => {
@@ -362,19 +388,19 @@ export default function InterviewPrepPage() {
                   });
                   const scoreColor = s.averageScore >= 75 ? '#2B4C3F' : s.averageScore >= 50 ? '#92400E' : '#B85A3C';
                   return (
-                    <div key={s._id} className="flex items-center gap-4 rounded-xl border border-[#EAEAE5] bg-[#F9F9F8] px-4 py-3">
+                    <div key={s._id} className="flex items-center gap-4 rounded-xl border border-line bg-canvas px-4 py-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl shrink-0"
                         style={{ backgroundColor: `${scoreColor}18` }}>
                         <span className="text-sm font-bold" style={{ color: scoreColor }}>{s.averageScore}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-[#171717] truncate">{s.targetRole}</p>
-                        <p className="text-[10px] text-[#A3A3A3] mt-0.5">
+                        <p className="text-xs font-semibold text-ink truncate">{s.targetRole}</p>
+                        <p className="text-[10px] text-faint mt-0.5">
                           {s.totalQuestions} question{s.totalQuestions !== 1 ? 's' : ''}
                           {s.gapsAddressed?.length > 0 && ` · ${s.gapsAddressed.length} gap${s.gapsAddressed.length !== 1 ? 's' : ''} covered`}
                         </p>
                       </div>
-                      <span className="text-[10px] text-[#A3A3A3] shrink-0">{date}</span>
+                      <span className="text-[10px] text-faint shrink-0">{date}</span>
                     </div>
                   );
                 })}
@@ -387,7 +413,7 @@ export default function InterviewPrepPage() {
         {stage === 'loading' && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <Spinner className="h-8 w-8 text-[#2B4C3F]" />
-            <p className="text-sm text-[#525252]">Gemini is preparing your question…</p>
+            <p className="text-sm text-muted">Gemini is preparing your question…</p>
           </div>
         )}
 
@@ -400,34 +426,34 @@ export default function InterviewPrepPage() {
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#2B4C3F] bg-[#F0F5F3] border border-[#C8DDD6] px-2.5 py-1 rounded-full">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#2B4C3F] animate-pulse" /> Live Question
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3] bg-[#F5F5F3] border border-[#EAEAE5] px-2 py-1 rounded-full">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-faint bg-surface-2 border border-line px-2 py-1 rounded-full">
                   {questionData.questionType}
                 </span>
               </div>
 
-              <p className="text-sm font-semibold text-[#171717] leading-relaxed">{questionData.question}</p>
+              <p className="text-sm font-semibold text-ink leading-relaxed">{questionData.question}</p>
 
               {questionData.gapAddressed && (
                 <div className="rounded-lg border border-[#E8C4B8] bg-[#FDF5F3] px-3 py-2">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-[#B85A3C] mb-1">Testing gap</p>
-                  <p className="text-xs text-[#525252]">{questionData.gapAddressed}</p>
+                  <p className="text-xs text-muted">{questionData.gapAddressed}</p>
                 </div>
               )}
 
               {questionData.hint && (
                 <details className="group">
-                  <summary className="text-xs text-[#A3A3A3] cursor-pointer hover:text-[#525252] transition-colors">
+                  <summary className="text-xs text-faint cursor-pointer hover:text-muted transition-colors">
                     💡 Show hint
                   </summary>
-                  <p className="mt-2 text-xs text-[#525252] pl-4 border-l-2 border-[#EAEAE5]">{questionData.hint}</p>
+                  <p className="mt-2 text-xs text-muted pl-4 border-l-2 border-line">{questionData.hint}</p>
                 </details>
               )}
             </div>
 
             {/* Response console */}
             <div className="card p-8 flex flex-col">
-              <div className="flex items-center justify-between border-b border-[#EAEAE5] pb-4 mb-5">
-                <h3 className="text-sm font-bold text-[#171717]">Your Response</h3>
+              <div className="flex items-center justify-between border-b border-line pb-4 mb-5">
+                <h3 className="text-sm font-bold text-ink">Your Response</h3>
                 <div className="flex items-center gap-2">
                   {isListening && (
                     <span className="text-xs font-semibold text-[#B85A3C] flex items-center gap-1.5">
@@ -441,7 +467,7 @@ export default function InterviewPrepPage() {
                       'flex h-8 w-8 items-center justify-center rounded-lg border transition-colors',
                       isListening
                         ? 'border-[#E8C4B8] bg-[#FDF5F3] text-[#B85A3C]'
-                        : 'border-[#EAEAE5] bg-white text-[#525252] hover:bg-[#F5F5F3]'
+                        : 'border-line bg-surface text-muted hover:bg-surface-2'
                     )}
                   >
                     <Icon.Mic size={14} />
@@ -455,17 +481,17 @@ export default function InterviewPrepPage() {
                 value={responseText}
                 onChange={(e) => setResponseText(e.target.value)}
                 placeholder="Type your answer here, or click the mic to dictate…"
-                className="flex-1 min-h-[200px] resize-none rounded-xl border border-[#EAEAE5] bg-[#FBFBFA] p-4 text-sm text-[#171717] placeholder-[#D0D0CA] focus:outline-none focus:border-[#2B4C3F] focus:ring-2 focus:ring-[#2B4C3F]/10 transition-colors"
+                className="flex-1 min-h-[200px] resize-none rounded-xl border border-line bg-canvas p-4 text-sm text-ink placeholder-[#D0D0CA] focus:outline-none focus:border-[#2B4C3F] focus:ring-2 focus:ring-[#2B4C3F]/10 transition-colors"
               />
 
-              <div className="flex items-center justify-between mt-5 pt-5 border-t border-[#EAEAE5]">
-                <button onClick={endSession} className="text-sm text-[#A3A3A3] hover:text-[#B85A3C] transition-colors">
+              <div className="flex items-center justify-between mt-5 pt-5 border-t border-line">
+                <button onClick={endSession} className="text-sm text-faint hover:text-[#B85A3C] transition-colors">
                   End session
                 </button>
                 <button
                   onClick={submitAnswer}
                   disabled={!responseText.trim()}
-                  className="h-10 px-6 rounded-xl bg-[#171717] text-white text-sm font-semibold hover:bg-[#2a2a2a] disabled:opacity-40 transition-colors"
+                  className="h-10 px-6 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-soft disabled:opacity-40 transition-colors"
                 >
                   Submit Answer
                 </button>
@@ -478,7 +504,7 @@ export default function InterviewPrepPage() {
         {stage === 'evaluating' && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <Spinner className="h-8 w-8 text-[#2B4C3F]" />
-            <p className="text-sm text-[#525252]">Gemini is evaluating your answer…</p>
+            <p className="text-sm text-muted">Gemini is evaluating your answer…</p>
           </div>
         )}
 
@@ -497,10 +523,10 @@ export default function InterviewPrepPage() {
                 {/* Score gauge and speech metrics */}
                 <div className="space-y-6">
                   <div className="card p-6 flex flex-col items-center justify-center text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3] mb-4">Overall Score</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-faint mb-4">Overall Score</p>
                     <div className="relative flex items-center justify-center">
                       <svg className="w-28 h-28 -rotate-90" viewBox="0 0 112 112">
-                        <circle cx="56" cy="56" r="48" stroke="#EAEAE5" strokeWidth="7" fill="none" />
+                        <circle cx="56" cy="56" r="48" stroke="var(--line-border)" strokeWidth="7" fill="none" />
                         <circle
                           cx="56" cy="56" r="48"
                           stroke={evaluation.totalScore >= 80 ? '#2B4C3F' : evaluation.totalScore >= 60 ? '#92400E' : '#B85A3C'}
@@ -510,8 +536,8 @@ export default function InterviewPrepPage() {
                         />
                       </svg>
                       <div className="absolute text-center">
-                        <span className="font-serif text-3xl font-black text-[#171717]">{evaluation.totalScore}</span>
-                        <p className="text-[10px] font-bold text-[#A3A3A3]">/100</p>
+                        <span className="font-serif text-3xl font-black text-ink">{evaluation.totalScore}</span>
+                        <p className="text-[10px] font-bold text-faint">/100</p>
                       </div>
                     </div>
                     <span className={cn(
@@ -523,29 +549,29 @@ export default function InterviewPrepPage() {
                       {evaluation.grade}
                     </span>
                     {evaluation.encouragement && (
-                      <p className="mt-3 text-xs text-[#525252] leading-relaxed">{evaluation.encouragement}</p>
+                      <p className="mt-3 text-xs text-muted leading-relaxed">{evaluation.encouragement}</p>
                     )}
                   </div>
 
                   {/* Speech Fluency card */}
                   <div className="card p-6 space-y-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-1.5">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-ink flex items-center gap-1.5">
                       <Icon.Mic size={14} className="text-[#2B4C3F]" /> Speech Fluency
                     </h4>
                     <div className="space-y-3">
-                      <div className="rounded-xl border border-[#EAEAE5] bg-[#F9F9F8] p-3 flex justify-between items-center">
+                      <div className="rounded-xl border border-line bg-canvas p-3 flex justify-between items-center">
                         <div>
-                          <p className="text-[10px] uppercase font-bold text-[#A3A3A3]">Speaking Pace</p>
-                          <p className="text-sm font-semibold text-[#171717] mt-0.5">{wpm} WPM</p>
+                          <p className="text-[10px] uppercase font-bold text-faint">Speaking Pace</p>
+                          <p className="text-sm font-semibold text-ink mt-0.5">{wpm} WPM</p>
                         </div>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{ backgroundColor: `${paceColor}15`, color: paceColor }}>
                           {paceStatus}
                         </span>
                       </div>
-                      <div className="rounded-xl border border-[#EAEAE5] bg-[#F9F9F8] p-3 flex justify-between items-center">
+                      <div className="rounded-xl border border-line bg-canvas p-3 flex justify-between items-center">
                         <div>
-                          <p className="text-[10px] uppercase font-bold text-[#A3A3A3]">Filler Words</p>
-                          <p className="text-sm font-semibold text-[#171717] mt-0.5">{fillers} detected</p>
+                          <p className="text-[10px] uppercase font-bold text-faint">Filler Words</p>
+                          <p className="text-sm font-semibold text-ink mt-0.5">{fillers} detected</p>
                         </div>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{ backgroundColor: fillers > 3 ? '#B85A3C15' : '#2B4C3F15', color: fillers > 3 ? '#B85A3C' : '#2B4C3F' }}>
                           {fillers > 3 ? 'High' : 'Optimal'}
@@ -557,28 +583,28 @@ export default function InterviewPrepPage() {
 
                 {/* Detailed feedback + Rubric table */}
                 <div className="card p-8 space-y-6">
-                  <h3 className="text-sm font-bold text-[#171717] flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-ink flex items-center gap-2">
                     <Icon.Shield size={16} className="text-[#2B4C3F]" /> AI Evaluation Report
                   </h3>
 
                   {/* Rubric Table */}
-                  <div className="overflow-hidden rounded-xl border border-[#EAEAE5]">
-                    <table className="min-w-full divide-y divide-[#EAEAE5]">
-                      <thead className="bg-[#F9F9F8]">
+                  <div className="overflow-hidden rounded-xl border border-line">
+                    <table className="min-w-full divide-y divide-line">
+                      <thead className="bg-canvas">
                         <tr>
-                          <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3]">Evaluated Metric</th>
-                          <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3]">Score</th>
-                          <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3]">Max</th>
+                          <th className="px-4 py-2.5 text-left text-[10px] font-bold uppercase tracking-wider text-faint">Evaluated Metric</th>
+                          <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-faint">Score</th>
+                          <th className="px-4 py-2.5 text-right text-[10px] font-bold uppercase tracking-wider text-faint">Max</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#EAEAE5] bg-white text-xs">
+                      <tbody className="divide-y divide-line bg-surface text-xs">
                         {Object.entries(evaluation.scores || {}).map(([metric, score]) => {
                           const maxVal = metric === 'depth' ? 40 : 30;
                           return (
                             <tr key={metric}>
-                              <td className="px-4 py-2.5 font-medium text-[#171717] capitalize">{metric}</td>
+                              <td className="px-4 py-2.5 font-medium text-ink capitalize">{metric}</td>
                               <td className="px-4 py-2.5 text-right font-bold text-[#2B4C3F]">{score}</td>
-                              <td className="px-4 py-2.5 text-right text-[#A3A3A3]">{maxVal}</td>
+                              <td className="px-4 py-2.5 text-right text-faint">{maxVal}</td>
                             </tr>
                           );
                         })}
@@ -591,7 +617,7 @@ export default function InterviewPrepPage() {
                       <p className="text-[10px] font-bold uppercase tracking-wider text-[#2B4C3F] mb-2">What you did well</p>
                       <ul className="space-y-1.5">
                         {evaluation.strengths.map((s, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm text-[#525252]">
+                          <li key={i} className="flex items-start gap-2 text-sm text-muted">
                             <Icon.Check size={14} className="text-[#2B4C3F] shrink-0 mt-0.5" /> {s}
                           </li>
                         ))}
@@ -604,7 +630,7 @@ export default function InterviewPrepPage() {
                       <p className="text-[10px] font-bold uppercase tracking-wider text-[#B85A3C] mb-2">What to improve</p>
                       <ul className="space-y-1.5">
                         {evaluation.improvements.map((s, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm text-[#525252]">
+                          <li key={i} className="flex items-start gap-2 text-sm text-muted">
                             <Icon.ArrowRight size={14} className="text-[#B85A3C] shrink-0 mt-0.5" /> {s}
                           </li>
                         ))}
@@ -613,9 +639,9 @@ export default function InterviewPrepPage() {
                   )}
 
                   {evaluation.modelAnswer && (
-                    <div className="rounded-lg border border-[#EAEAE5] bg-[#F5F5F3] p-4">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#A3A3A3] mb-2">Model Answer Approach</p>
-                      <p className="text-xs text-[#525252] leading-relaxed">{evaluation.modelAnswer}</p>
+                    <div className="rounded-lg border border-line bg-surface-2 p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-faint mb-2">Model Answer Approach</p>
+                      <p className="text-xs text-muted leading-relaxed">{evaluation.modelAnswer}</p>
                     </div>
                   )}
                 </div>
@@ -625,13 +651,13 @@ export default function InterviewPrepPage() {
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 card px-6 py-5">
                 <button
                   onClick={endSession}
-                  className="w-full sm:w-auto h-10 px-6 rounded-xl border border-[#EAEAE5] text-sm font-medium text-[#525252] hover:bg-[#F5F5F3] transition-colors"
+                  className="w-full sm:w-auto h-10 px-6 rounded-xl border border-line text-sm font-medium text-muted hover:bg-surface-2 transition-colors"
                 >
                   End Session
                 </button>
                 <button
                   onClick={nextQuestion}
-                  className="w-full sm:w-auto h-10 px-6 rounded-xl bg-[#171717] text-white text-sm font-semibold hover:bg-[#2a2a2a] transition-colors flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto h-10 px-6 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-soft transition-colors flex items-center justify-center gap-2"
                 >
                   <Icon.ArrowRight size={15} /> Next Question
                 </button>
@@ -644,7 +670,7 @@ export default function InterviewPrepPage() {
         {savingSession && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <Spinner className="h-8 w-8 text-[#2B4C3F]" />
-            <p className="text-sm text-[#525252]">Saving your session...</p>
+            <p className="text-sm text-muted">Saving your session...</p>
           </div>
         )}
 
@@ -690,6 +716,8 @@ export default function InterviewPrepPage() {
               </div>
             </div>
           </div>
+        )}
+        </>
         )}
 
       </div>

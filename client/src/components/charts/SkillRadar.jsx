@@ -45,7 +45,7 @@ export function SkillRadar({ data, height = 300 }) {
         {/* Category labels around the outside of the radar */}
         <PolarAngleAxis
           dataKey="category"
-          tick={{ fill: '#9aa3b6', fontSize: 11 }}
+          tick={{ fill: 'var(--color-muted)', fontSize: 11 }}
         />
 
         {/* The filled polygon — violet colour with 35% opacity fill */}

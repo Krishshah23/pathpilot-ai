@@ -472,6 +472,121 @@ function getLocalResumeFallback(parsedData, targetRole) {
   };
 }
 
+// ── Resume Builder AI Features ────────────────────────────────────────────────
+
+/** Rewrites a single resume bullet to be stronger, action-verb-first, and measurable. */
+export async function geminiRewriteBullet({ bullet, targetRole, context = '' }) {
+  const prompt = `You are a professional resume writer helping a candidate targeting: ${targetRole}
+
+Rewrite this single resume bullet point to be stronger: start with a powerful action verb, be specific, and include a measurable result or impact wherever plausible. Keep it to one line, no more than 28 words. Do not invent specific numbers that weren't implied — instead use a placeholder like "[X]%" if a metric is clearly missing but appropriate.
+
+${context ? `Additional context from the candidate: ${context}\n` : ''}
+ORIGINAL BULLET:
+"${bullet}"
+
+Return ONLY a JSON object:
+{
+  "rewritten": "<the improved bullet, one line>",
+  "changeSummary": "<one short phrase describing what improved, e.g. 'Added action verb and quantified impact'>"
+}`;
+
+  return generateJson(prompt);
+}
+
+/** Generates a professional resume summary targeting the candidate's dream role. */
+export async function geminiGenerateResumeSummary({ targetRole, skills = [], experience = [], projects = [] }) {
+  const prompt = `You are a professional resume writer. Write a 2-3 sentence professional summary for a candidate targeting: ${targetRole}
+
+CANDIDATE BACKGROUND:
+- Skills: ${skills.join(', ') || 'Not specified'}
+- Experience highlights: ${experience.slice(0, 3).join(' | ') || 'None listed'}
+- Project highlights: ${projects.slice(0, 3).join(' | ') || 'None listed'}
+
+Write a confident, specific, non-generic summary (no "results-driven professional with a passion for..." clichés). Return ONLY a JSON object:
+{
+  "summary": "<the 2-3 sentence summary>"
+}`;
+
+  const result = await generateJson(prompt);
+  return result?.summary || '';
+}
+
+/**
+ * Scans the full resume draft and returns section-scoped improvement suggestions —
+ * NOT a single opaque rewritten blob, so the editor can show a before/after diff
+ * per bullet instead of silently replacing everything the user wrote.
+ */
+export async function geminiOptimizeResume({ targetRole, summary, experience, skills, missingKeywords = [] }) {
+  const bulletList = (experience || []).flatMap((e, ei) =>
+    (e.bullets || []).map((b, bi) => ({ id: `${ei}-${bi}`, text: b }))
+  );
+
+  const prompt = `You are a resume optimization expert reviewing a draft for a candidate targeting: ${targetRole}
+
+CURRENT SUMMARY: ${summary || '(none written yet)'}
+CURRENT SKILLS: ${(skills || []).join(', ') || 'None'}
+MISSING ATS KEYWORDS FOR THIS ROLE: ${missingKeywords.join(', ') || 'None identified'}
+
+CURRENT BULLETS (each tagged with an id):
+${bulletList.map((b) => `[${b.id}] ${b.text}`).join('\n') || '(no bullets written yet)'}
+
+Identify the WEAKEST bullets (vague, no metrics, passive, or missing action verbs — up to 5) and rewrite them. Also suggest 2-3 of the missing ATS keywords that could be woven naturally into the summary or a bullet. Flag any recruiter red flags you notice (e.g. no quantified results anywhere, summary too generic, skills list too short).
+
+Return ONLY a JSON object:
+{
+  "bulletRewrites": [
+    { "id": "<bullet id from above>", "original": "<original text>", "rewritten": "<improved version>" }
+  ],
+  "keywordSuggestions": ["<keyword to weave in>"],
+  "redFlags": ["<short flag description>"],
+  "summaryFeedback": "<one sentence on the summary's quality, or null if no summary exists>"
+}`;
+
+  return generateJson(prompt);
+}
+
+/** Compares resume content against a pasted job description; returns matched/missing keywords. */
+export async function geminiMatchJobDescription({ jobDescription, resumeText, targetRole }) {
+  const prompt = `You are an ATS keyword matching engine. Compare this candidate's resume content against the job description below for a ${targetRole} role.
+
+JOB DESCRIPTION:
+"""
+${jobDescription.slice(0, 4000)}
+"""
+
+RESUME CONTENT:
+"""
+${resumeText.slice(0, 4000)}
+"""
+
+Extract the specific skills, tools, and qualifications this job description asks for, then determine which are present vs missing in the resume content.
+
+Return ONLY a JSON object:
+{
+  "jdKeywords": ["<keyword the JD asks for>"],
+  "matchedKeywords": ["<keyword present in the resume>"],
+  "missingKeywords": ["<keyword the JD asks for but resume lacks>"],
+  "matchPercent": <0-100 integer>
+}`;
+
+  return generateJson(prompt);
+}
+
+/** Weaves a list of missing keywords naturally into the resume summary. */
+export async function geminiInsertKeywords({ summary, targetRole, keywords }) {
+  const prompt = `You are a resume writer. Rewrite this professional summary for a ${targetRole} candidate to naturally incorporate these missing keywords, without making it feel like a keyword-stuffed list: ${keywords.join(', ')}
+
+CURRENT SUMMARY: ${summary || '(empty — write a new 2-3 sentence summary that includes these keywords naturally)'}
+
+Return ONLY a JSON object:
+{
+  "summary": "<the updated 2-3 sentence summary with keywords woven in naturally>"
+}`;
+
+  const result = await generateJson(prompt);
+  return result?.summary || summary;
+}
+
 /** Fallback parser using Gemini when the local extraction/Django parses less than 30 words. */
 export async function geminiParseFallback(rawText) {
   const prompt = `You are a high-fidelity resume extraction parser. 
@@ -524,5 +639,90 @@ Return ONLY a JSON object of this structure:
     // eslint-disable-next-line no-console
     console.error('[Gemini Fallback Parser] Failed:', err);
     return null;
+  }
+}
+
+/**
+ * Post-parse sanity check. Django's regex parser (and the Gemini fallback above)
+ * can still misfire on multi-column layouts, tables, or skills listed inline
+ * within a job-description-style bullet — merging fields together or garbling
+ * project titles. This does one lightweight pass comparing the parsed fields
+ * back against the raw text, correcting obvious mistakes and flagging fields
+ * it's still not confident about (surfaced in the UI as a "please verify" hint).
+ *
+ * Best-effort only: on any failure, returns the original fields unchanged
+ * rather than blocking the analyze pipeline.
+ */
+/** Flattens a value into a single readable line — handles the case where Gemini
+ *  returns a structured object (e.g. {degree, institution, years}) instead of
+ *  the plain string the [String] schema fields require. */
+function toReadableLine(entry) {
+  if (typeof entry === 'string') return entry;
+  if (Array.isArray(entry)) return entry.map(toReadableLine).filter(Boolean).join('; ');
+  if (entry && typeof entry === 'object') {
+    return Object.values(entry).map(toReadableLine).filter(Boolean).join(' — ');
+  }
+  return entry == null ? '' : String(entry);
+}
+
+function coerceStringArray(arr) {
+  return (Array.isArray(arr) ? arr : []).map(toReadableLine).map((s) => s.trim()).filter(Boolean);
+}
+
+function coerceProjects(arr) {
+  return (Array.isArray(arr) ? arr : []).map((p) => (
+    typeof p === 'string'
+      ? { title: p, description: '' }
+      : { title: toReadableLine(p?.title), description: toReadableLine(p?.description) }
+  ));
+}
+
+export async function geminiValidateParsedResume({ rawText, parsed }) {
+  const original = {
+    skills: coerceStringArray(parsed.skills),
+    education: coerceStringArray(parsed.education),
+    experience: coerceStringArray(parsed.experience),
+    projects: coerceProjects(parsed.projects),
+  };
+
+  const prompt = `You are a resume-parsing QA reviewer. A previous parser extracted structured fields from a resume's raw text below. Parsers commonly make mistakes on multi-column layouts, tables, or skills listed inline within job descriptions — merging unrelated text together, garbling project titles, or misassigning content to the wrong section.
+
+RAW RESUME TEXT (reference only, may be noisy):
+"""
+${rawText.slice(0, 6000)}
+"""
+
+PARSED FIELDS TO REVIEW:
+skills: ${JSON.stringify(original.skills)}
+education: ${JSON.stringify(original.education)}
+experience: ${JSON.stringify(original.experience)}
+projects: ${JSON.stringify(original.projects)}
+
+Correct obvious extraction errors ONLY — don't rewrite content that's already fine, and don't invent information not present in the raw text. Then list which of these four field names (skills, education, experience, projects) you're still not fully confident about after cleanup.
+
+IMPORTANT: "education" and "experience" must each be a flat array of PLAIN STRINGS (one line per entry, e.g. "B.Tech Computer Science, IIT Delhi (2022-2026)") — never nested objects.
+
+Return ONLY a JSON object:
+{
+  "skills": ["<corrected skill list>"],
+  "education": ["<corrected education entry as one plain string>"],
+  "experience": ["<corrected experience entry as one plain string>"],
+  "projects": [{ "title": "<corrected title>", "description": "<corrected description>" }],
+  "lowConfidenceFields": ["<field name(s) from: skills, education, experience, projects>"]
+}`;
+
+  try {
+    const result = await generateJson(prompt);
+    return {
+      skills: coerceStringArray(Array.isArray(result?.skills) ? result.skills : original.skills),
+      education: coerceStringArray(Array.isArray(result?.education) ? result.education : original.education),
+      experience: coerceStringArray(Array.isArray(result?.experience) ? result.experience : original.experience),
+      projects: coerceProjects(Array.isArray(result?.projects) ? result.projects : original.projects),
+      lowConfidenceFields: Array.isArray(result?.lowConfidenceFields) ? result.lowConfidenceFields : [],
+    };
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[Resume Sanity Check] Failed, keeping original parsed fields:', err);
+    return { ...original, lowConfidenceFields: [] };
   }
 }

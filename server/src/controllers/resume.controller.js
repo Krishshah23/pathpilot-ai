@@ -24,8 +24,14 @@ import { publicUrl } from '../middleware/upload.middleware.js';
 import { extractResumeText } from '../services/resumeText.service.js';
 import { aiService } from '../services/ai.service.js';
 import { detectRedFlags } from '../services/resumeRedFlags.js';
-import { geminiAnalyzeResume, geminiExplainScore, geminiParseFallback } from '../services/gemini.service.js';
-import { buildPathScore } from '../services/pathScore.service.js';
+import { geminiAnalyzeResume, geminiExplainScore, geminiParseFallback, geminiValidateParsedResume } from '../services/gemini.service.js';
+import { buildPathScore, recomputePathScoreCache } from '../services/pathScore.service.js';
+import { notify, notifyOnce } from '../services/notification.service.js';
+
+// Minimum displayScore change (points) before a "your score changed" notification fires.
+// Below this, day-to-day noise (e.g. a re-upload with near-identical content) wouldn't
+// be a meaningful enough signal to interrupt the user.
+const SIGNIFICANT_SCORE_DELTA = 5;
 
 /**
  * POST /api/resume/analyze
@@ -60,6 +66,24 @@ export const analyzeResume = asyncHandler(async (req, res) => {
     throw new ApiError(502, 'AI service returned no analysis and fallback parsing failed.');
   }
 
+  // Step 3b: Lightweight sanity check — catches multi-column/table parsing
+  // mistakes (merged skills, garbled project titles) before we persist.
+  // Skipped for essentially-empty parses (nothing worth validating) and never
+  // blocks the pipeline if the check itself fails.
+  let lowConfidenceFields = [];
+  const hasContentToValidate = (parsed.skills?.length || parsed.projects?.length || parsed.experience?.length || parsed.education?.length);
+  if (hasContentToValidate) {
+    const validated = await geminiValidateParsedResume({ rawText: text, parsed });
+    parsed = {
+      ...parsed,
+      skills: validated.skills,
+      education: validated.education,
+      experience: validated.experience,
+      projects: validated.projects,
+    };
+    lowConfidenceFields = validated.lowConfidenceFields;
+  }
+
   // Step 4: Red flag detection heuristics
   const redFlags = detectRedFlags(text, parsed);
 
@@ -89,6 +113,7 @@ export const analyzeResume = asyncHandler(async (req, res) => {
     redFlags,
     wordCount: parsed.wordCount,
     lowText: parsed.lowText,
+    lowConfidenceFields,
     roleFitScore: geminiInsights.roleFitScore ?? null,
     keyGaps: geminiInsights.keyGaps ?? [],
     strengthAreas: geminiInsights.strengthAreas ?? [],
@@ -102,8 +127,8 @@ export const analyzeResume = asyncHandler(async (req, res) => {
   await req.user.save();
 
   // Step 8: Pre-generate Path Score explanation narrative
+  let pathScore = buildPathScore(req.user, resume);
   try {
-    const pathScore = buildPathScore(req.user, resume);
     const explanation = await geminiExplainScore({ user: req.user, resume, pathScore });
     if (explanation) {
       resume.aiNarrative = explanation;
@@ -114,13 +139,45 @@ export const analyzeResume = asyncHandler(async (req, res) => {
     console.error('Failed to pre-generate Gemini narrative:', err);
   }
 
-  // Step 9: Emit notification
+  // Step 9: Refresh cached Path Score + emit notifications
   await Notification.create({
     user: req.user._id,
     title: 'Resume Processed',
     message: `Your resume analysis is ready with score ${resume.healthScore}.`,
     type: 'success',
   });
+
+  // Milestone: first resume ever analyzed (this Resume doc was just created, so a
+  // count of 1 means it's the first).
+  const resumeCount = await Resume.countDocuments({ user: req.user._id });
+  if (resumeCount === 1) {
+    await notifyOnce(req.user._id, {
+      title: 'Milestone: first resume analyzed',
+      message: "You've analyzed your first resume on PathPilot — that's the foundation your whole readiness score builds on.",
+      type: 'success',
+      actionLink: '/dashboard',
+      lookbackDays: 3650,
+    });
+  }
+
+  try {
+    const { previous, current } = await recomputePathScoreCache(req.user, resume);
+    if (previous) {
+      const delta = current.displayScore - previous.displayScore;
+      if (Math.abs(delta) >= SIGNIFICANT_SCORE_DELTA) {
+        const direction = delta > 0 ? 'up' : 'down';
+        await notify(req.user._id, {
+          type: delta > 0 ? 'success' : 'warning',
+          title: `Path Score ${direction === 'up' ? 'increased' : 'decreased'} ${Math.abs(delta)} points`,
+          message: `Your Path Score is now ${current.displayScore}/100 (was ${previous.displayScore}), driven mainly by this resume analysis.`,
+          actionLink: '/dashboard',
+        });
+      }
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to refresh Path Score cache / send delta notification:', err);
+  }
 
   return sendSuccess(res, {
     statusCode: 201,

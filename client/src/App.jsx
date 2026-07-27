@@ -50,6 +50,7 @@ const OverviewPage       = lazy(() => import('@/pages/OverviewPage'));        //
 const TalentAnalyzerPage = lazy(() => import('@/pages/TalentAnalyzerPage')); // /talent-analyzer (Resume + Gap)
 const ExecutionEnginePage= lazy(() => import('@/pages/ExecutionEnginePage')); // /execution-engine (Roadmap + Jobs)
 const InterviewPrepPage  = lazy(() => import('@/pages/InterviewPrepPage'));   // /interview-prep (Mock interview)
+const ResumeBuilderPage  = lazy(() => import('@/pages/ResumeBuilderPage'));   // /resume-builder (Build/edit/export resume)
 const AdminPage          = lazy(() => import('@/pages/AdminPage'));
 const PublicProfilePage  = lazy(() => import('@/pages/PublicProfilePage'));   // shareable career card
 const ProfilePage        = lazy(() => import('@/pages/ProfilePage'));
@@ -95,6 +96,7 @@ export default function App() {
                 <Route path="/talent-analyzer"  element={<TalentAnalyzerPage />} />
                 <Route path="/execution-engine" element={<ExecutionEnginePage />} />
                 <Route path="/interview-prep"   element={<InterviewPrepPage />} />
+                <Route path="/resume-builder"   element={<ResumeBuilderPage />} />
                 <Route path="/report"           element={<CareerReportPage />} />
 
                 {/* ── Legacy redirect map (old routes → new hubs) ── */}

@@ -17,6 +17,7 @@ import { getMarketDataForRole } from '../services/jobMarket.service.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
+import { notifyOnce } from '../services/notification.service.js';
 
 /**
  * POST /api/gap/analyze
@@ -88,6 +89,20 @@ export const analyzeGap = asyncHandler(async (req, res) => {
   }
 
   ensureGapRecommendations(gap);
+
+  // Milestone: first gap analysis ever run. notifyOnce with a multi-year lookback
+  // is the "has this ever fired before" guard — this endpoint has no persisted
+  // gap-analysis history to count against, unlike resume uploads.
+  notifyOnce(req.user._id, {
+    title: 'Milestone: first gap analysis complete',
+    message: `You've mapped your skill gaps for ${targetRole} — check your roadmap to start closing them.`,
+    type: 'success',
+    actionLink: '/execution-engine',
+    lookbackDays: 3650,
+  }).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error('Failed to send gap analysis milestone notification:', err);
+  });
 
   return sendSuccess(res, {
     data: {

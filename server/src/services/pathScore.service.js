@@ -117,6 +117,16 @@ export function collectStudentSkills(user, resume) {
   return uniqueSkills(user?.profile?.skills || [], resume?.skills || []);
 }
 
+// How old the cached score can be before GET /api/path-score opportunistically refreshes it.
+const CACHE_STALE_MS = 10 * 60 * 1000; // 10 minutes
+
+/** True if the user's cached Path Score is missing or older than the staleness window. */
+export function isPathScoreCacheStale(user) {
+  const computedAt = user?.pathScoreCache?.computedAt;
+  if (!computedAt) return true;
+  return Date.now() - new Date(computedAt).getTime() > CACHE_STALE_MS;
+}
+
 /**
  * Builds the complete weighted Path Score breakdown object.
  *
@@ -204,4 +214,42 @@ export function buildPathScore(user, resume) {
         }
       : null,
   };
+}
+
+/**
+ * Recomputes the canonical Path Score and refreshes `user.pathScoreCache`.
+ * Returns both the previous and current cached snapshot so callers can detect
+ * a significant change (e.g. Smart Notifications' score-delta trigger) without
+ * having to separately track history.
+ *
+ * @param {object} user - User document (will be mutated + saved unless persist=false)
+ * @param {object} [resume] - Latest analyzed Resume document
+ * @param {object} [options]
+ * @param {boolean} [options.persist=true] - Whether to write the new cache to MongoDB
+ * @returns {Promise<{pathScore: object, previous: object|null, current: object}>}
+ */
+export async function recomputePathScoreCache(user, resume, { persist = true } = {}) {
+  const pathScore = buildPathScore(user, resume);
+
+  const previous = user.pathScoreCache?.computedAt
+    ? {
+        score: user.pathScoreCache.score,
+        displayScore: user.pathScoreCache.displayScore,
+        readinessLabel: user.pathScoreCache.readinessLabel,
+        computedAt: user.pathScoreCache.computedAt,
+      }
+    : null;
+
+  const current = {
+    score: pathScore.score,
+    displayScore: pathScore.displayScore,
+    readinessLabel: pathScore.readiness?.label || '',
+    factors: pathScore.factors,
+    computedAt: new Date(),
+  };
+
+  user.pathScoreCache = current;
+  if (persist) await user.save();
+
+  return { pathScore, previous, current };
 }

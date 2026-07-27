@@ -24,6 +24,11 @@ import {
   geminiGenerateQuestion,
   geminiEvaluateAnswer,
 } from '../services/gemini.service.js';
+import { notify, notifyOnce } from '../services/notification.service.js';
+
+// Session counts at which a milestone notification fires (in addition to the
+// per-session encouragement notification that always fires).
+const INTERVIEW_MILESTONES = [1, 5];
 
 /** Fallback narrative builder if Gemini API fails during score explanation. */
 function buildFallbackNarrative({ user, resume, pathScore }) {
@@ -257,6 +262,29 @@ export const saveInterviewSession = asyncHandler(async (req, res) => {
     completedAt: new Date(),
   });
 
+  // Encouraging notification — fires every time a session is completed.
+  await notify(user._id, {
+    type: 'success',
+    title: 'Mock interview complete',
+    message: `You scored ${averageScore}/100 across ${totalQuestions} question${totalQuestions === 1 ? '' : 's'}. Review your feedback to sharpen your next answer.`,
+    actionLink: '/interview-prep',
+  });
+
+  // Milestone notification — fires once at 1st and 5th completed sessions.
+  const sessionCount = await InterviewSession.countDocuments({ user: user._id });
+  if (INTERVIEW_MILESTONES.includes(sessionCount)) {
+    await notifyOnce(user._id, {
+      title: sessionCount === 1 ? 'Milestone: first mock interview done' : `Milestone: ${sessionCount} mock interviews done`,
+      message:
+        sessionCount === 1
+          ? "You've completed your first mock interview — consistent practice is what moves the needle."
+          : `${sessionCount} sessions in — your interview stamina is building. Keep going.`,
+      type: 'success',
+      actionLink: '/interview-prep',
+      lookbackDays: 3650,
+    });
+  }
+
   return sendSuccess(res, {
     statusCode: 201,
     message: 'Session saved',
@@ -266,13 +294,111 @@ export const saveInterviewSession = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/ai-coach/interview/sessions
- * Retrieves past interview session history for the candidate.
+ * Retrieves past interview session history for the candidate (summary only —
+ * no question/answer detail, see getInterviewSessionDetail for that).
  */
 export const getInterviewSessions = asyncHandler(async (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 20, 50);
   const sessions = await InterviewSession.find({ user: req.user._id })
     .sort({ createdAt: -1 })
-    .limit(10)
+    .limit(limit)
     .select('targetRole averageScore totalQuestions gapsAddressed completedAt createdAt');
 
   return sendSuccess(res, { data: { sessions } });
+});
+
+/**
+ * GET /api/ai-coach/interview/sessions/:id
+ * Retrieves one full session including every question, answer, and AI feedback —
+ * powers the "Review" button on the Interview Analytics history table.
+ */
+export const getInterviewSessionDetail = asyncHandler(async (req, res) => {
+  const session = await InterviewSession.findOne({ _id: req.params.id, user: req.user._id });
+  if (!session) throw ApiError.notFound('Interview session not found');
+  return sendSuccess(res, { data: { session } });
+});
+
+// Question categories tracked for the topic breakdown radar chart. 'general' covers
+// sessions saved before questionType was persisted, or fallback questions.
+const TOPIC_CATEGORIES = ['technical', 'behavioral', 'situational', 'general'];
+const TOPIC_LABELS = {
+  technical: 'Technical',
+  behavioral: 'Behavioral',
+  situational: 'Situational',
+  general: 'General',
+};
+
+/**
+ * GET /api/ai-coach/interview/analytics
+ * Computes score-over-time, topic breakdown, and improvement insights across every
+ * completed session. Degrades gracefully (hasData: false) for users with no sessions.
+ */
+export const getInterviewAnalytics = asyncHandler(async (req, res) => {
+  const sessions = await InterviewSession.find({ user: req.user._id }).sort({ completedAt: 1 });
+
+  if (sessions.length === 0) {
+    return sendSuccess(res, { data: { analytics: { hasData: false, totalSessions: 0 } } });
+  }
+
+  const scoreOverTime = sessions.map((s, i) => ({
+    index: i + 1,
+    date: s.completedAt,
+    score: s.averageScore,
+    role: s.targetRole,
+  }));
+
+  // Flatten every question across every session, tagged with its session index
+  // (chronological order) so we can compare "earlier" vs "recent" per topic.
+  const allQuestions = sessions.flatMap((s, sessionIdx) =>
+    (s.questions || []).map((q) => ({
+      ...q.toObject(),
+      sessionIdx,
+    }))
+  );
+
+  const topicBreakdown = TOPIC_CATEGORIES.map((key) => {
+    const qs = allQuestions.filter((q) => (q.questionType || 'general') === key);
+    const avgScore = qs.length
+      ? Math.round(qs.reduce((sum, q) => sum + (q.totalScore || 0), 0) / qs.length)
+      : 0;
+    return { key, category: TOPIC_LABELS[key], avgScore, count: qs.length };
+  }).filter((t) => t.count > 0);
+
+  // Improvement highlight: for the topic with the most data, compare the average of
+  // its most recent 3 answers vs the 3 before that. Needs 6+ answers in one topic.
+  let improvementHighlight = null;
+  const richestTopic = [...topicBreakdown].sort((a, b) => b.count - a.count)[0];
+  if (richestTopic && richestTopic.count >= 6) {
+    const topicQuestions = allQuestions.filter((q) => (q.questionType || 'general') === richestTopic.key);
+    const recent3 = topicQuestions.slice(-3);
+    const prior3 = topicQuestions.slice(-6, -3);
+    const recentAvg = recent3.reduce((sum, q) => sum + (q.totalScore || 0), 0) / recent3.length;
+    const priorAvg = prior3.reduce((sum, q) => sum + (q.totalScore || 0), 0) / prior3.length;
+    if (priorAvg > 0) {
+      const pctChange = Math.round(((recentAvg - priorAvg) / priorAvg) * 100);
+      if (pctChange >= 10) {
+        improvementHighlight = `Your ${richestTopic.category} answers improved ${pctChange}% over your last 3 sessions in that category.`;
+      }
+    }
+  }
+
+  // Recommended focus: the topic with the lowest average score (among topics with data).
+  let recommendedFocus = null;
+  if (topicBreakdown.length > 0) {
+    const weakest = [...topicBreakdown].sort((a, b) => a.avgScore - b.avgScore)[0];
+    recommendedFocus = `Based on your performance, focus on ${weakest.category} questions next.`;
+  }
+
+  return sendSuccess(res, {
+    data: {
+      analytics: {
+        hasData: true,
+        totalSessions: sessions.length,
+        scoreOverTime,
+        topicBreakdown,
+        improvementHighlight,
+        recommendedFocus,
+      },
+    },
+  });
 });

@@ -109,7 +109,14 @@ const userSchema = new Schema(
     // select: false means this field is EXCLUDED from all query results by default.
     // To include it, use: User.findOne({ email }).select('+password')
     // This prevents accidentally returning the password hash in API responses.
-    password: { type: String, required: true, minlength: 8, select: false },
+    // Optional (null) for accounts created via Google OAuth, which have no password.
+    password: { type: String, default: null, minlength: 8, select: false },
+
+    // Firebase UID for accounts created/linked via Google Sign-In.
+    googleId: { type: String, default: null, sparse: true, index: true },
+
+    // How the account authenticates — 'local' (email+password) or 'google' (Firebase OAuth).
+    authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
 
     // User role — determines what routes/features are accessible
     // 'student': the default role for all registrations
@@ -142,6 +149,26 @@ const userSchema = new Schema(
 
     // Timestamp of the most recent successful login — shown in the admin panel
     lastLoginAt: { type: Date, default: null },
+
+    // Cached snapshot of the candidate's last computed Path Score.
+    // Path Score itself is NEVER persisted as the source of truth — buildPathScore()
+    // in pathScore.service.js always recomputes it live from current profile + resume data.
+    // This cache exists purely so two cross-cutting features don't have to recompute
+    // buildPathScore() for every user on every request:
+    //   1. Smart Notifications — detecting a significant score change requires knowing
+    //      the *previous* score, which live computation has no memory of.
+    //   2. Peer Benchmarking — aggregating scores across every user targeting the same
+    //      dream role would otherwise mean recomputing buildPathScore() per peer per request.
+    // Refreshed via recomputePathScoreCache() in pathScore.service.js at natural trigger
+    // points (resume analyzed, profile/dream role updated, onboarding completed) and
+    // opportunistically warmed on GET /api/path-score if stale.
+    pathScoreCache: {
+      score: { type: Number, default: 0 },
+      displayScore: { type: Number, default: 0 },
+      readinessLabel: { type: String, default: '' },
+      factors: { type: Array, default: [] },
+      computedAt: { type: Date, default: null },
+    },
   },
   // timestamps: true automatically adds `createdAt` and `updatedAt` fields
   // Mongoose manages these — never set them manually in controllers
@@ -167,7 +194,8 @@ userSchema.pre('save', async function hashPassword(next) {
   }
 
   // Skip hashing if password hasn't changed (e.g. updating profile, not password)
-  if (!this.isModified('password')) return next();
+  // or if there's no password to hash (Google OAuth accounts).
+  if (!this.isModified('password') || !this.password) return next();
 
   // Hash the plaintext password with bcrypt cost factor 12
   this.password = await bcrypt.hash(this.password, 12);
@@ -186,6 +214,7 @@ userSchema.pre('save', async function hashPassword(next) {
  * @returns {Promise<boolean>} true if password matches, false if not
  */
 userSchema.methods.comparePassword = function comparePassword(candidate) {
+  if (!this.password) return Promise.resolve(false); // Google-only accounts have no password
   return bcrypt.compare(candidate, this.password);
 };
 
@@ -205,6 +234,7 @@ userSchema.methods.comparePassword = function comparePassword(candidate) {
 userSchema.methods.toSafeJSON = function toSafeJSON() {
   const obj = this.toObject(); // Convert Mongoose Document → plain JS object
   delete obj.password;         // Remove password hash (sensitive)
+  delete obj.googleId;         // Remove Firebase UID (internal identifier)
   delete obj.__v;              // Remove Mongoose internal version key (__v)
   return obj;
 };

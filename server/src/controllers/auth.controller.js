@@ -47,7 +47,7 @@ const refreshCookieOptions = {
  * @param {object} user - User document
  * @returns {string} Access token string
  */
-function issueSession(res, user) {
+export function issueSession(res, user) {
   const accessToken = signAccessToken(user);
   const refreshToken = signRefreshToken(user);
   res.cookie(REFRESH_COOKIE, refreshToken, refreshCookieOptions);

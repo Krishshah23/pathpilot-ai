@@ -73,6 +73,10 @@ const notificationSchema = new Schema(
     // Whether the user has opened/acknowledged this notification
     // The notification badge count is: Notification.countDocuments({ user, read: false })
     read: { type: Boolean, default: false },
+
+    // Optional client-side route to navigate to when the notification is clicked
+    // (e.g. '/talent-analyzer', '/interview-prep'). Empty string = not clickable.
+    actionLink: { type: String, default: '' },
   },
   { timestamps: true } // createdAt used for "5 minutes ago" relative timestamps in UI
 );

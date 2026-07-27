@@ -22,6 +22,7 @@
  */
 
 import dotenv from 'dotenv';
+import { z } from 'zod';
 
 // Load .env file into process.env. This is a no-op if .env doesn't exist.
 // In production (Render, Railway, etc.), env vars are injected by the platform
@@ -38,6 +39,26 @@ if (missing.length) {
   console.warn(
     `⚠️  Missing env vars: ${missing.join(', ')}. Copy .env.example to .env and fill them in.`
   );
+}
+
+// Firebase Admin credentials are required for Google OAuth (POST /api/auth/google).
+// Validated separately (rather than added to `required`) so the app can still boot
+// without Google Sign-In configured — only that one route will fail.
+const firebaseEnvSchema = z.object({
+  FIREBASE_PROJECT_ID: z.string().min(1),
+  FIREBASE_CLIENT_EMAIL: z.string().email(),
+  FIREBASE_PRIVATE_KEY: z.string().min(1),
+});
+
+const firebaseEnvResult = firebaseEnvSchema.safeParse({
+  FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
+  FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
+  FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
+});
+
+if (!firebaseEnvResult.success) {
+  // eslint-disable-next-line no-console
+  console.warn('⚠️  Firebase Admin env vars missing/invalid — Google Sign-In will not work.');
 }
 
 /**
@@ -145,5 +166,14 @@ export const env = {
     // The specific Gemini model variant to use.
     // 'gemini-3.5-flash' is fast and cheap; use 'gemini-pro' for higher quality.
     model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+  },
+
+  // ── Firebase Admin (Google OAuth verification) ───────────────────────────────
+  // Used by config/firebase.js to initialize firebase-admin, which verifies
+  // Google idTokens sent from the client after signInWithPopup().
+  firebase: {
+    projectId: process.env.FIREBASE_PROJECT_ID || '',
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
+    privateKey: process.env.FIREBASE_PRIVATE_KEY || '',
   },
 };
