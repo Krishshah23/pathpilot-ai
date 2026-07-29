@@ -8,9 +8,23 @@
  * @react-pdf/renderer's own primitives, not DOM/Tailwind).
  */
 
+// Parser fallback placeholders (e.g. "present (label detected, no URL extracted)") must
+// never reach a live preview or exported document — they're internal signals, not content.
+function isRealValue(value) {
+  return Boolean(value) && !/label detected/i.test(value);
+}
+
 function contactLine(contact) {
-  return [contact.name && null, contact.email, contact.phone, contact.location, contact.linkedin, contact.github, contact.website]
-    .filter(Boolean)
+  return [
+    contact.name && null,
+    contact.email,
+    contact.phone,
+    contact.location,
+    contact.linkedin,
+    contact.github,
+    contact.website,
+  ]
+    .filter(isRealValue)
     .join('  ·  ');
 }
 

@@ -153,12 +153,17 @@ export async function runWeeklyDigest() {
   const users = await User.find({ onboardingCompleted: true }).select('_id profile.dreamRole pathScoreCache');
   for (const u of users) {
     try {
+      // Skip users whose Path Score cache hasn't been computed yet — a "Path Score: 0/100"
+      // digest is meaningless (and misleading once their real score exists) for someone who
+      // hasn't uploaded a resume or completed onboarding-time scoring.
+      if (!u.pathScoreCache?.computedAt) continue;
+
       const [sessionCount, latestResume] = await Promise.all([
         InterviewSession.countDocuments({ user: u._id, completedAt: { $gte: weekAgo } }),
         Resume.findOne({ user: u._id }).sort({ createdAt: -1 }).select('keyGaps'),
       ]);
 
-      const score = u.pathScoreCache?.displayScore ?? 0;
+      const score = u.pathScoreCache.displayScore ?? 0;
       const topGap = latestResume?.keyGaps?.[0];
 
       const parts = [`Path Score: ${score}/100`, `${sessionCount} interview session${sessionCount === 1 ? '' : 's'} this week`];

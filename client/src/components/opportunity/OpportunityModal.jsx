@@ -63,6 +63,7 @@ export function OpportunityModal({ open, onClose, onSubmit, initial = null, load
           </h2>
           <button
             onClick={onClose}
+            aria-label="Close dialog"
             className="rounded-lg p-1.5 text-faint transition hover:bg-surface-2 hover:text-ink"
           >
             <Icon.X size={18} />

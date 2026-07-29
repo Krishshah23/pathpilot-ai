@@ -38,6 +38,7 @@ const VARIANTS = {
   ghost:   'text-[#525252] hover:text-[#171717] hover:bg-[#F5F5F3]',
   danger:  'bg-[#B85A3C] text-white hover:bg-[#a04f34]',
   success: 'bg-[#2B4C3F] text-white hover:bg-[#3D6B59]',
+  mint:    'bg-[#34D399] text-[#0A0D12] hover:bg-[#2BBF89] shadow-[0_0_20px_-4px_#34D399]',
 };
 
 

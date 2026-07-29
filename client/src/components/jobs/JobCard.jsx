@@ -47,6 +47,8 @@ export function JobCard({ job, matchTier, saved, onToggleSave, variant = 'full' 
         <button
           onClick={() => onToggleSave(job)}
           title={saved ? 'Remove from saved' : 'Save job'}
+          aria-label={saved ? `Remove ${job.title} from saved jobs` : `Save ${job.title}`}
+          aria-pressed={saved}
           className={cn(
             'shrink-0 flex h-8 w-8 items-center justify-center rounded-lg border transition-colors',
             saved ? 'border-brand/40 bg-brand/10 text-brand' : 'border-line text-faint hover:text-ink hover:bg-surface-2'

@@ -58,25 +58,28 @@
   --ink-text: #171717;
   --muted-text: #525252;
   --faint-text: #A3A3A3;
-  --brand-color: #2B4C3F;
-  --brand-soft-color: #3D6B59;
+  --brand-color: #171717;
+  --brand-soft-color: #262626;
+
+  --brand-grad-from: #171717;
+  --brand-grad-to: #333333;
 }
 
 .dark {
-  --canvas-bg: #0A0E0B;
-  --surface-bg: #111A13;
-  --surface-2-bg: #1A2B1C;
-  --line-border: rgba(255, 255, 255, 0.08);
-  --line-soft-border: rgba(255, 255, 255, 0.05);
-  --ink-text: #F0F4F1;
-  --muted-text: #7A9080;
-  --faint-text: #6B8574;
-  --brand-color: #52B788;
-  --brand-soft-color: #74C69D;
+  --canvas-bg: #090B0E;
+  --surface-bg: #11151C;
+  --surface-2-bg: #181E29;
+  --line-border: #222B38;
+  --line-soft-border: #1B222D;
+  --ink-text: #F3F4F6;
+  --muted-text: #9CA3AF;
+  --faint-text: #6B7280;
+  --brand-color: #34D399;
+  --brand-soft-color: #10B981;
 
-  /* Brand gradient accent — dark-mode-only richer green range (2C) */
-  --brand-grad-from: #2D6A4F;
-  --brand-grad-to: #40916C;
+  /* Brand gradient accent — sleek mint emerald accent */
+  --brand-grad-from: #059669;
+  --brand-grad-to: #34D399;
 }
 
 @layer base {
@@ -223,13 +226,19 @@
 /* ─── Premium Banner (Smart CTA) ──────────────────────────────────── */
 
 .banner-premium {
-  background: linear-gradient(135deg, #1E362D 0%, #0F1C17 100%) !important;
-  border-left: 6px solid #C8DDD6 !important;
-  box-shadow:
-    0 16px 32px -12px rgba(30, 54, 45, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+  background: linear-gradient(135deg, #18181B 0%, #09090B 100%) !important;
+  border-left: 6px solid #10B981 !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.25) !important;
   border-top-left-radius: 0px !important;
   border-bottom-left-radius: 0px !important;
+}
+
+.dark .banner-premium {
+  background: linear-gradient(135deg, #131A24 0%, #090B0E 100%) !important;
+  border-left: 6px solid #34D399 !important;
+  color: #ffffff !important;
+  box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.6) !important;
 }
 
 /* ─── Buttons ──────────────────────────────────────────────────────── */
@@ -272,27 +281,75 @@
 .input {
   display: block;
   width: 100%;
-  height: 2.75rem;
   padding-inline: 1rem;
+  padding-block: 0.5rem;
   border-radius: var(--radius-xl);
-  border: 1px solid var(--color-line);
-  background: var(--color-surface);
-  color: var(--color-ink);
+  border: 1px solid var(--line-border);
+  background-color: var(--surface-bg);
+  color: var(--ink-text);
   font-size: 0.875rem;
   font-family: var(--font-sans);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
 }
-.input::placeholder { color: var(--color-faint); }
-.input:focus {
+
+input.input:not(textarea),
+select.input {
+  height: 2.75rem;
+}
+
+.input::placeholder,
+input::placeholder {
+  color: var(--faint-text);
+}
+
+.input:focus,
+select:focus,
+input:focus {
   outline: none;
-  border-color: var(--color-brand);
-  box-shadow: 0 0 0 3px rgba(43, 76, 63, 0.1);
-  background-color: #FFFFFF;
+  border-color: var(--brand-color) !important;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.18) !important;
+  background-color: var(--surface-bg) !important;
+  color: var(--ink-text) !important;
 }
-.input:hover:not(:focus) {
-  border-color: #D5D5CD;
+
+.input:hover:not(:focus),
+select:hover:not(:focus),
+input:hover:not(:focus) {
+  border-color: var(--brand-soft-color);
 }
-textarea.input { height: auto; padding-block: 0.75rem; }
+
+/* Ensure native select option dropdowns inherit dark/light surface and text colors */
+select option {
+  background-color: var(--surface-bg) !important;
+  color: var(--ink-text) !important;
+}
+
+.dark select option {
+  background-color: #11151C !important;
+  color: #F3F4F6 !important;
+}
+
+/* Fix browser autofill overrides (preventing white background with white text on autofill) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-bg) inset !important;
+  -webkit-text-fill-color: var(--ink-text) !important;
+  caret-color: var(--ink-text);
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.dark input:-webkit-autofill,
+.dark input:-webkit-autofill:hover,
+.dark input:-webkit-autofill:focus,
+.dark select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #11151C inset !important;
+  -webkit-text-fill-color: #F3F4F6 !important;
+  caret-color: #F3F4F6;
+}
+
+textarea.input { height: auto; padding-block: 0.625rem; }
 
 /* ─── Typography Helpers ───────────────────────────────────────────── */
 
@@ -394,8 +451,8 @@ textarea.input { height: auto; padding-block: 0.75rem; }
 }
 
 .dark .nav-frosted {
-  background-color: rgba(9, 13, 11, 0.85) !important;
-  border-bottom-color: rgba(35, 50, 42, 0.8) !important;
+  background-color: rgba(9, 11, 14, 0.85) !important;
+  border-bottom-color: #1E2530 !important;
 }
 
 /* ─── Theme-aware surface (used for cards that need light/dark contrast) ── */
@@ -807,3 +864,130 @@ textarea.input { height: auto; padding-block: 0.75rem; }
     animation: copy-success 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
+
+/* ─── Flight Deck Auth Cockpit (Login/Register) ─────────────────────── */
+/* Always-dark cockpit aesthetic, independent of the site's light/dark
+   toggle — same convention as the rest of the auth flow. */
+
+.flight-deck-bg {
+  background-color: #0A0D12;
+}
+
+@keyframes hud-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.85); }
+}
+.hud-pulse-dot { animation: hud-pulse 2s ease-in-out infinite; }
+
+.hud-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: #34D399;
+  pointer-events: none;
+}
+
+@keyframes radar-sweep-spin {
+  to { transform: rotate(360deg); }
+}
+.radar-sweep {
+  animation: radar-sweep-spin 6s linear infinite;
+}
+
+@keyframes radar-ping {
+  0%        { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
+  70%, 100% { box-shadow: 0 0 0 16px rgba(52, 211, 153, 0); }
+}
+.radar-core-ping {
+  animation: radar-ping 3s ease-out infinite;
+}
+
+@keyframes panel-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.panel-fade-in {
+  animation: panel-fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.hud-focus:focus-visible {
+  outline: 2px solid #34D399;
+  outline-offset: 2px;
+}
+
+.hud-card .input,
+.hud-card input:not(.oauth-btn-mono *),
+.hud-card select {
+  background-color: #0D1117 !important;
+  border: 1px solid #1E2530 !important;
+  color: #FFFFFF !important;
+  border-radius: 0.375rem !important;
+}
+.hud-card .input::placeholder,
+.hud-card input::placeholder {
+  color: #4B5563 !important;
+}
+.hud-card .input:focus,
+.hud-card input:focus,
+.hud-card select:focus {
+  outline: none !important;
+  border-color: #34D399 !important;
+  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.3) !important;
+  background-color: #0D1117 !important;
+}
+.hud-card label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #7C8695 !important;
+}
+
+.hud-card button.text-faint {
+  color: #7C8695 !important;
+}
+.hud-card button.text-faint:hover {
+  color: #FFFFFF !important;
+}
+
+.hud-card input:-webkit-autofill,
+.hud-card input:-webkit-autofill:hover,
+.hud-card input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #0D1117 inset !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+  caret-color: #FFFFFF;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+.oauth-btn-mono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  width: 100%;
+  height: 3rem;
+  border-radius: 0.375rem;
+  background-color: transparent;
+  color: #FFFFFF;
+  font-weight: 500;
+  font-size: 0.875rem;
+  border: 1px solid #2A3340;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.oauth-btn-mono:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+  border-color: #3A4657;
+}
+.oauth-btn-mono:active { transform: scale(0.99); }
+.oauth-btn-mono:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-pulse-dot,
+  .radar-sweep,
+  .radar-core-ping,
+  .panel-fade-in {
+    animation: none !important;
+  }
+}
+

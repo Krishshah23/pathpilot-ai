@@ -2,9 +2,14 @@
  * pages/OnboardingPage.jsx — Candidate Onboarding Setup Wizard Page (/onboarding)
  *
  * ARCHITECTURAL ROLE:
- * Streamlined 2-step setup wizard required before accessing candidate features:
+ * A 4-step wizard required before accessing candidate features:
+ *   - Step 0: Welcome — value-prop framing before asking for any input, so the user
+ *     understands what they're about to get (Path Score, gap map, roadmap, interview coach)
+ *     instead of being dropped straight into a bare form.
  *   - Step 1: Goal Selection (`dreamRole`) — Drives Path Score calculation, Skill Roadmap, and Interview Prep.
  *   - Step 2: Skill Seeding (`skills`) — Pre-populates baseline candidate skills array for gap analysis.
+ *   - Step 3: First Action — instead of always dropping the user on a generic dashboard,
+ *     let them pick what they want to do right now and route them straight into that flow.
  *
  * Stores payload via `PUT /api/onboarding` and marks `user.onboardingCompleted = true`.
  */
@@ -22,16 +27,48 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
 import { DREAM_ROLES, COMMON_SKILLS } from '@/config/careerData';
+import { cn } from '@/lib/cn';
 
-const STEPS = ['Goal', 'Skills'];
+const STEPS = ['Welcome', 'Goal', 'Skills', 'Start'];
+
+const VALUE_PROPS = [
+  { icon: <Icon.Gauge size={18} />, title: 'Path Score', desc: 'A 0–100 career readiness score computed from your resume, skills, and projects.' },
+  { icon: <Icon.Target size={18} />, title: 'Skill gap map', desc: 'See exactly which skills separate you from your target role — backed by live job-market data.' },
+  { icon: <Icon.Route size={18} />, title: 'Weekly roadmap', desc: 'An AI-built, week-by-week plan that closes your gaps, and remembers your progress.' },
+  { icon: <Icon.Award size={18} />, title: 'AI interview coach', desc: 'Practice with questions targeting your actual gaps, scored in real time.' },
+];
+
+const FIRST_ACTIONS = [
+  {
+    key: 'upload',
+    icon: <Icon.Upload size={22} />,
+    title: 'Upload my resume',
+    desc: 'Get an instant AI audit — health score, gaps, and ATS keywords in under a minute.',
+    route: '/talent-analyzer',
+    accent: '#10B981',
+  },
+  {
+    key: 'build',
+    icon: <Icon.FileText size={22} />,
+    title: 'Build one from scratch',
+    desc: "Don't have a resume yet? Start the guided builder with AI writing help.",
+    route: '/resume-builder',
+    accent: '#3B82F6',
+  },
+  {
+    key: 'explore',
+    icon: <Icon.Sparkles size={22} />,
+    title: 'Just explore first',
+    desc: 'Take a look around the dashboard before committing to anything.',
+    route: '/dashboard',
+    accent: '#8B5CF6',
+  },
+];
 
 /**
- * Streamlined onboarding wizard.
- * Only captures the two fields that actually drive the app:
- *   1. Dream Role  — personalises Path Score, Skill Roadmap, Interview Prep
- *   2. Current Skills — seeds the gap analysis
- * Resume upload is intentionally skipped here; users do it properly
- * inside Resume Strategy where they get full AI feedback immediately.
+ * Onboarding wizard. Captures the two fields that actually drive the app
+ * (dream role, current skills), then routes the user directly into whichever
+ * flow they say they want next instead of always landing on a bare dashboard.
  */
 export default function OnboardingPage() {
   const navigate = useNavigate();
@@ -39,7 +76,7 @@ export default function OnboardingPage() {
   const toast = useToast();
 
   const [step, setStep] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(null); // holds the chosen action key while saving
   const [errors, setErrors] = useState({});
 
   const [form, setForm] = useState({
@@ -51,7 +88,7 @@ export default function OnboardingPage() {
 
   const validateStep = () => {
     const e = {};
-    if (step === 0 && form.dreamRole.trim().length < 2) {
+    if (step === 1 && form.dreamRole.trim().length < 2) {
       e.dreamRole = 'Pick a target role to continue';
     }
     setErrors(e);
@@ -64,8 +101,8 @@ export default function OnboardingPage() {
   };
   const back = () => setStep((s) => Math.max(s - 1, 0));
 
-  const finish = async () => {
-    setSubmitting(true);
+  const finish = async (action) => {
+    setSubmitting(action.key);
     try {
       await api.put('/onboarding', {
         dreamRole: form.dreamRole,
@@ -74,11 +111,10 @@ export default function OnboardingPage() {
 
       await refreshUser();
       toast.success('You\'re all set! Welcome to PathPilot.');
-      navigate('/dashboard', { replace: true });
+      navigate(action.route, { replace: true });
     } catch (err) {
       toast.error(errorMessage(err, 'Could not save onboarding'));
-    } finally {
-      setSubmitting(false);
+      setSubmitting(null);
     }
   };
 
@@ -94,8 +130,31 @@ export default function OnboardingPage() {
         </div>
 
         <Card className="animate-fade-up">
-          {/* ── Step 0: Dream Role ── */}
+          {/* ── Step 0: Welcome / value prop ── */}
           {step === 0 && (
+            <StepShell
+              title="Welcome to PathPilot 👋"
+              desc="Here's what we'll build for you in the next couple of minutes."
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                {VALUE_PROPS.map((v, i) => (
+                  <div
+                    key={v.title}
+                    className={cn('rounded-xl border border-line bg-surface-2/60 p-4 animate-fade-up', `stagger-${i + 1}`)}
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand/10 text-brand border border-brand/20 mb-2.5">
+                      {v.icon}
+                    </span>
+                    <p className="text-sm font-bold text-ink">{v.title}</p>
+                    <p className="text-xs text-muted mt-1 leading-relaxed">{v.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </StepShell>
+          )}
+
+          {/* ── Step 1: Dream Role ── */}
+          {step === 1 && (
             <StepShell
               title="What's your target role?"
               desc="We'll personalise your Path Score, Skill Roadmap, and Interview Prep around this. You can change it anytime."
@@ -115,11 +174,12 @@ export default function OnboardingPage() {
                     key={r}
                     type="button"
                     onClick={() => set('dreamRole', r)}
-                    className={`rounded-lg border px-3 py-1.5 text-xs transition ${
+                    className={cn(
+                      'rounded-lg border px-3 py-1.5 text-xs transition',
                       form.dreamRole === r
-                        ? 'border-[#2B4C3F]/40 bg-[#F0F5F3] text-[#2B4C3F] font-semibold'
-                        : 'border-[#EAEAE5] text-[#525252] hover:text-[#171717] hover:bg-[#F5F5F3]'
-                    }`}
+                        ? 'border-brand/40 bg-brand/10 text-brand font-semibold'
+                        : 'border-line text-muted hover:text-ink hover:bg-surface-2'
+                    )}
                   >
                     {r}
                   </button>
@@ -128,8 +188,8 @@ export default function OnboardingPage() {
             </StepShell>
           )}
 
-          {/* ── Step 1: Skills ── */}
-          {step === 1 && (
+          {/* ── Step 2: Skills ── */}
+          {step === 2 && (
             <StepShell
               title="What skills do you already have?"
               desc="Add what you're comfortable with. This seeds your skill gap analysis — you can refine anytime."
@@ -146,9 +206,42 @@ export default function OnboardingPage() {
             </StepShell>
           )}
 
+          {/* ── Step 3: First action ── */}
+          {step === 3 && (
+            <StepShell
+              title="What do you want to do first?"
+              desc="Pick one — you can always reach the others from the nav bar."
+            >
+              <div className="grid gap-3 sm:grid-cols-3">
+                {FIRST_ACTIONS.map((a) => {
+                  const isPending = submitting === a.key;
+                  return (
+                    <button
+                      key={a.key}
+                      type="button"
+                      onClick={() => finish(a)}
+                      disabled={!!submitting}
+                      aria-label={`${a.title} — ${a.desc}`}
+                      className="text-left rounded-xl border border-line bg-surface p-4 hover:border-brand/40 hover:bg-surface-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <span
+                        className="flex h-10 w-10 items-center justify-center rounded-xl text-white mb-3"
+                        style={{ background: a.accent }}
+                      >
+                        {isPending ? <Icon.RotateCw size={16} className="animate-spin" /> : a.icon}
+                      </span>
+                      <p className="text-sm font-bold text-ink">{a.title}</p>
+                      <p className="text-xs text-muted mt-1 leading-relaxed">{a.desc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </StepShell>
+          )}
+
           {/* ── Navigation ── */}
           <div className="mt-8 flex items-center justify-between border-t border-line pt-6">
-            <Button variant="ghost" onClick={back} disabled={step === 0 || submitting}>
+            <Button variant="ghost" onClick={back} disabled={step === 0 || !!submitting}>
               Back
             </Button>
 
@@ -157,9 +250,7 @@ export default function OnboardingPage() {
                 Continue <Icon.ChevronRight size={16} />
               </Button>
             ) : (
-              <Button onClick={finish} loading={submitting}>
-                Get started
-              </Button>
+              <p className="text-xs text-faint">Choose an option above to continue</p>
             )}
           </div>
         </Card>

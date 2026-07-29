@@ -33,6 +33,7 @@ const NAV_LINKS = [
   { label: 'Overview',        path: '/dashboard' },
   { label: 'Resume Builder',  path: '/resume-builder' },
   { label: 'Resume Strategy', path: '/talent-analyzer' },
+  { label: 'Live Jobs',       path: '/live-jobs', live: true },
   { label: 'Skill Roadmap',   path: '/execution-engine' },
   { label: 'Interview Prep',  path: '/interview-prep' },
 ];
@@ -93,13 +94,19 @@ function TopNav({ user, onOpenContact, onStartTour }) {
               data-tour={`nav-${link.path.replace('/', '')}`}
               className={({ isActive }) =>
                 cn(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150',
+                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150 flex items-center gap-1.5',
                   isActive
                     ? 'nav-gradient-active text-white shadow-sm'
                     : 'text-muted hover:text-ink hover:bg-surface-2'
                 )
               }
             >
+              {link.live && (
+                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand" />
+                </span>
+              )}
               {link.label}
             </NavLink>
           ))}
@@ -490,7 +497,7 @@ function AICoachDrawer({ onClose, explainType, clearExplainType, messages, setMe
               </span>
             </div>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink">
+          <button onClick={onClose} aria-label="Close AI Career Coach" className="rounded-lg p-1.5 text-faint hover:bg-surface-2 hover:text-ink">
             <Icon.X size={18} />
           </button>
         </div>
@@ -600,15 +607,44 @@ function AICoachDrawer({ onClose, explainType, clearExplainType, messages, setMe
 
 /* ─── App Shell ───────────────────────────────────────────────────── */
 
+const DEFAULT_GREETING = { role: 'assistant', content: "Hi! I'm your AI Career Coach. Ask me anything about your resume, skill gaps, or career readiness." };
+
+// Notifications the Coach proactively surfaces instead of leaving them to sit
+// silently in the notification drawer — milestones and score-change alerts are
+// exactly the moments a "coach" (rather than a plain notification feed) should
+// speak up about.
+function isNudgeWorthy(n) {
+  return !n.read && (n.title?.startsWith('Milestone:') || n.title?.includes('Path Score'));
+}
+
 export function AppShell({ children }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [coachOpen, setCoachOpen] = useState(false);
   const [explainType, setExplainType] = useState(null);
   const [contactOpen, setContactOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState([
-    { role: 'assistant', content: "Hi! I'm your AI Career Coach. Ask me anything about your resume, skill gaps, or career readiness." }
-  ]);
+  const [proactiveNotif, setProactiveNotif] = useState(null);
+
+  const chatStorageKey = user?._id ? `pp_coach_chat_${user._id}` : null;
+
+  // Restore the conversation on mount/user-change instead of always resetting
+  // to the greeting — a "coach" who forgets every conversation on refresh
+  // doesn't feel like an ongoing relationship.
+  const [chatMessages, setChatMessages] = useState(() => {
+    if (!chatStorageKey) return [DEFAULT_GREETING];
+    try {
+      const saved = JSON.parse(localStorage.getItem(chatStorageKey));
+      return Array.isArray(saved) && saved.length ? saved : [DEFAULT_GREETING];
+    } catch {
+      return [DEFAULT_GREETING];
+    }
+  });
+
+  useEffect(() => {
+    if (!chatStorageKey) return;
+    // Cap stored history so localStorage doesn't grow unbounded over a long relationship.
+    localStorage.setItem(chatStorageKey, JSON.stringify(chatMessages.slice(-60)));
+  }, [chatMessages, chatStorageKey]);
 
   useEffect(() => {
     const handleOpenCoach = (e) => {
@@ -618,6 +654,36 @@ export function AppShell({ children }) {
     window.addEventListener('open-ai-coach', handleOpenCoach);
     return () => window.removeEventListener('open-ai-coach', handleOpenCoach);
   }, []);
+
+  // Lightweight, independent poll (separate from the notification bell's own
+  // fetch) purely to detect a milestone/score-change event worth proactively
+  // surfacing through the Coach FAB, without turning every notification into
+  // a chat interruption.
+  useEffect(() => {
+    if (user?.role === 'admin') return;
+    let cancelled = false;
+    const checkForNudge = async () => {
+      try {
+        const { data } = await api.get('/notifications');
+        const seen = JSON.parse(localStorage.getItem('pp_coach_nudge_seen') || '[]');
+        const candidate = (data?.data?.notifications || []).find((n) => isNudgeWorthy(n) && !seen.includes(n._id));
+        if (!cancelled && candidate) setProactiveNotif(candidate);
+      } catch { /* silent */ }
+    };
+    checkForNudge();
+    const interval = setInterval(checkForNudge, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [user?.role]);
+
+  const openCoach = () => {
+    setCoachOpen(true);
+    if (proactiveNotif) {
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: `${proactiveNotif.message} Want me to explain what this means for you?` }]);
+      const seen = JSON.parse(localStorage.getItem('pp_coach_nudge_seen') || '[]');
+      localStorage.setItem('pp_coach_nudge_seen', JSON.stringify([...seen, proactiveNotif._id].slice(-100)));
+      setProactiveNotif(null);
+    }
+  };
 
   const startTour = () => {
     localStorage.setItem('pp_tour_requested', '1');
@@ -641,13 +707,19 @@ export function AppShell({ children }) {
       {user?.role !== 'admin' && (
         <button
           data-tour="coach-button"
-          onClick={() => setCoachOpen(true)}
+          onClick={openCoach}
           className="fixed bottom-6 right-6 z-40 flex items-center justify-center rounded-full bg-brand text-white transition-all duration-300 hover:scale-110 active:scale-95 group"
           style={{ height: '56px', width: '56px', boxShadow: '0 8px 32px -4px rgba(43, 76, 63, 0.4), 0 2px 8px rgba(0, 0, 0, 0.15)' }}
-          aria-label="Open AI Career Coach"
+          aria-label={proactiveNotif ? 'Open AI Career Coach — new update about your progress' : 'Open AI Career Coach'}
         >
           <span className="absolute inset-0 rounded-full border-2 border-brand/30 animate-ping" />
           <Icon.MessageSquare size={22} className="relative z-10" />
+          {proactiveNotif && !coachOpen && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 z-20">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex h-4 w-4 rounded-full bg-amber-400 border-2 border-surface" />
+            </span>
+          )}
         </button>
       )}
 

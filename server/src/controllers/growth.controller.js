@@ -137,3 +137,83 @@ export const toggleTask = asyncHandler(async (req, res) => {
   await plan.save();
   return sendSuccess(res, { message: 'Progress updated', data: { plan: withProgress(plan) } });
 });
+
+const CUSTOM_GOAL_KEY_PREFIX = 'custom-';
+const CUSTOM_GOALS_WEEK_TITLE = 'Custom Goals';
+
+function slugify(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-+|-+$)/g, '');
+}
+
+/**
+ * POST /api/growth/tasks
+ * Adds a manually-created task under a "Custom Goals" week. The curated
+ * roadmap runs on a small, fixed skill-requirement list (see ai-service/ml/data/roles.py),
+ * so a strong candidate can exhaust every generated task quickly — this lets
+ * them keep extending their own plan instead of hitting a dead end.
+ */
+export const addCustomTask = asyncHandler(async (req, res) => {
+  const { title, skill, estimatedHours } = req.body;
+  if (!title?.trim()) throw ApiError.badRequest('A task title is required');
+
+  const plan = await GrowthPlan.findOne({ user: req.user._id });
+  if (!plan) throw ApiError.notFound('No active roadmap. Generate one first.');
+
+  const hours = Number(estimatedHours) > 0 ? Math.min(Number(estimatedHours), 80) : 2;
+  const task = {
+    key: `${CUSTOM_GOAL_KEY_PREFIX}${slugify(title)}-${Date.now()}`,
+    skill: skill?.trim() || title.trim(),
+    title: title.trim(),
+    priority: 'supporting',
+    difficulty: 'Intermediate',
+    estimatedHours: hours,
+    completed: false,
+    completedAt: null,
+  };
+
+  let customWeek = plan.weeks.find((w) => w.title === CUSTOM_GOALS_WEEK_TITLE);
+  if (!customWeek) {
+    plan.weeks.push({ week: plan.weeks.length + 1, title: CUSTOM_GOALS_WEEK_TITLE, focusHours: 0, tasks: [] });
+    plan.totalWeeks = (plan.totalWeeks || plan.weeks.length - 1) + 1;
+    customWeek = plan.weeks[plan.weeks.length - 1];
+  }
+  customWeek.tasks.push(task);
+  customWeek.focusHours = customWeek.tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+  plan.totalHours = (plan.totalHours || 0) + hours;
+
+  await plan.save();
+  return sendSuccess(res, { statusCode: 201, message: 'Goal added to your roadmap', data: { plan: withProgress(plan) } });
+});
+
+/**
+ * DELETE /api/growth/tasks/:key
+ * Removes a manually-added custom task. Only tasks under the "Custom Goals"
+ * week are user-deletable — curated/AI gap tasks stay tied to the roadmap
+ * generation that produced them.
+ */
+export const removeCustomTask = asyncHandler(async (req, res) => {
+  const { key } = req.params;
+  if (!key.startsWith(CUSTOM_GOAL_KEY_PREFIX)) {
+    throw ApiError.badRequest('Only custom goals can be removed');
+  }
+
+  const plan = await GrowthPlan.findOne({ user: req.user._id });
+  if (!plan) throw ApiError.notFound('No active roadmap.');
+
+  const customWeek = plan.weeks.find((w) => w.title === CUSTOM_GOALS_WEEK_TITLE);
+  const task = customWeek?.tasks.find((t) => t.key === key);
+  if (!customWeek || !task) throw ApiError.notFound('Custom goal not found');
+
+  customWeek.tasks = customWeek.tasks.filter((t) => t.key !== key);
+  customWeek.focusHours = customWeek.tasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0);
+  plan.totalHours = Math.max(0, (plan.totalHours || 0) - (task.estimatedHours || 0));
+
+  // Drop the whole week once it's empty so an empty "Custom Goals" section doesn't linger.
+  if (customWeek.tasks.length === 0) {
+    plan.weeks = plan.weeks.filter((w) => w.title !== CUSTOM_GOALS_WEEK_TITLE);
+    plan.totalWeeks = Math.max(0, (plan.totalWeeks || plan.weeks.length + 1) - 1);
+  }
+
+  await plan.save();
+  return sendSuccess(res, { message: 'Goal removed', data: { plan: withProgress(plan) } });
+});

@@ -202,6 +202,7 @@ export function Editor({ resumeBuilder, setResumeBuilder, onSwitchMode, initiali
           <button
             onClick={handleBack}
             title="Back to start"
+            aria-label="Back to start"
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-line text-muted hover:bg-surface-2 hover:text-ink transition-colors"
           >
             <Icon.ChevronLeft size={16} />
@@ -314,6 +315,10 @@ function ModeSwitcher({ onSwitchMode, initializing }) {
         onClick={() => setOpen((o) => !o)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         disabled={initializing}
+        aria-label="Start over from a different mode"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title="Start over from a different mode"
         className="h-9 px-3 rounded-xl border border-line text-xs font-semibold text-muted hover:bg-surface-2 transition-colors flex items-center gap-1"
       >
         <Icon.RotateCw size={13} />
@@ -337,7 +342,7 @@ function OptimizeResults({ result, onApplyBullet, onDismiss }) {
     <div className="card p-5 space-y-4 border-brand/30">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-ink flex items-center gap-2"><Icon.Sparkles size={15} className="text-brand" /> AI Optimization Scan</h3>
-        <button onClick={onDismiss} className="text-faint hover:text-ink"><Icon.X size={16} /></button>
+        <button onClick={onDismiss} aria-label="Dismiss optimization results" className="text-faint hover:text-ink"><Icon.X size={16} /></button>
       </div>
       {!hasContent && <p className="text-xs text-muted">No issues found — your resume looks solid.</p>}
       {result.summaryFeedback && <p className="text-xs text-muted italic">{result.summaryFeedback}</p>}
@@ -427,19 +432,34 @@ function BulletList({ bullets, onChange, onRewrite, rewritingId, idPrefix }) {
           <div key={i} className="flex items-start gap-1.5">
             <textarea
               value={b}
-              onChange={(e) => setBullet(i, e.target.value)}
+              onChange={(e) => {
+                setBullet(i, e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
               rows={1}
-              className="input flex-1 !h-auto py-2 text-xs resize-none"
+              ref={(el) => {
+                if (el) {
+                  el.style.height = 'auto';
+                  el.style.height = `${el.scrollHeight}px`;
+                }
+              }}
+              className="flex-1 min-h-[38px] rounded-xl border border-line bg-surface px-3 py-2 text-xs leading-relaxed text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-colors resize-none overflow-hidden"
             />
             <button
               onClick={() => onRewrite(() => bullets[i], (v) => setBullet(i, v), id)}
               disabled={rewritingId === id}
               title="Rewrite with AI"
+              aria-label="Rewrite this bullet with AI"
               className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg border border-line text-faint hover:text-brand hover:border-brand/40 transition-colors"
             >
               {rewritingId === id ? <Spinner className="h-3.5 w-3.5" /> : <Icon.Sparkles size={13} />}
             </button>
-            <button onClick={() => removeBullet(i)} className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg text-faint hover:text-danger">
+            <button
+              onClick={() => removeBullet(i)}
+              aria-label="Remove this bullet"
+              className="shrink-0 flex h-8 w-8 items-center justify-center rounded-lg text-faint hover:text-danger"
+            >
               <Icon.X size={14} />
             </button>
           </div>
@@ -465,7 +485,7 @@ function ExperienceSection({ experience, onChange, onRewrite, rewritingId }) {
         {experience.map((e, i) => (
           <div key={i} className="rounded-xl border border-line p-4">
             <div className="flex justify-end">
-              <button onClick={() => removeEntry(i)} className="text-faint hover:text-danger"><Icon.Trash size={13} /></button>
+              <button onClick={() => removeEntry(i)} aria-label="Remove this experience entry" className="text-faint hover:text-danger"><Icon.Trash size={13} /></button>
             </div>
             <div className="grid grid-cols-2 gap-2.5">
               <input value={e.title} onChange={(ev) => setEntry(i, { title: ev.target.value })} placeholder="Job Title" className="input text-sm" />
@@ -519,7 +539,7 @@ function ProjectsSection({ projects, onChange, onRewrite, rewritingId }) {
         {projects.map((p, i) => (
           <div key={i} className="rounded-xl border border-line p-4">
             <div className="flex justify-end">
-              <button onClick={() => removeEntry(i)} className="text-faint hover:text-danger"><Icon.Trash size={13} /></button>
+              <button onClick={() => removeEntry(i)} aria-label="Remove this project" className="text-faint hover:text-danger"><Icon.Trash size={13} /></button>
             </div>
             <div className="grid grid-cols-2 gap-2.5">
               <input value={p.title} onChange={(ev) => setEntry(i, { title: ev.target.value })} placeholder="Project Title" className="input text-sm" />
@@ -549,7 +569,7 @@ function EducationSection({ education, onChange }) {
         {education.map((e, i) => (
           <div key={i} className="rounded-xl border border-line p-4">
             <div className="flex justify-end">
-              <button onClick={() => removeEntry(i)} className="text-faint hover:text-danger"><Icon.Trash size={13} /></button>
+              <button onClick={() => removeEntry(i)} aria-label="Remove this education entry" className="text-faint hover:text-danger"><Icon.Trash size={13} /></button>
             </div>
             <div className="grid grid-cols-2 gap-2.5">
               <input value={e.degree} onChange={(ev) => setEntry(i, { degree: ev.target.value })} placeholder="Degree" className="input text-sm" />

@@ -97,6 +97,7 @@ export function LandingModes({ onSelect, initializing, onContinue }) {
               variants={fadeInUp}
               onClick={() => handleClick(m.key)}
               disabled={initializing}
+              aria-label={`${m.title} — ${m.desc}`}
               className="card card-hover btn-press card-top-stripe group relative text-left p-6 disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ '--stripe-color': m.accent }}
             >

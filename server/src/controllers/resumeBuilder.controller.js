@@ -65,6 +65,15 @@ function mapLegacyEducation(text) {
   return { degree: text.slice(0, 160), institution: '', location: '', startDate: '', endDate: '', gpa: '' };
 }
 
+// The resume parser sometimes can't find an actual URL but detects a "LinkedIn"/"GitHub"
+// label in the text — it fills that field with an internal placeholder string
+// ('present (label detected, no URL extracted)') rather than leaving it blank. That string
+// must never be copied into user-editable/exportable content, so we drop it here at import
+// time — the field just starts empty and the user can paste the real link in.
+function realLinkOrEmpty(value) {
+  return value && !/label detected/i.test(value) ? value : '';
+}
+
 /** Builds the initial section data for 'import' and 'migrate' modes from parsed resume data. */
 function buildSectionsFromParsed({ skills, experience, projects, education, contact }, user) {
   return {
@@ -73,8 +82,8 @@ function buildSectionsFromParsed({ skills, experience, projects, education, cont
       email: contact?.email || user.email || '',
       phone: contact?.phone || '',
       location: '',
-      linkedin: contact?.linkedin || '',
-      github: contact?.github || '',
+      linkedin: realLinkOrEmpty(contact?.linkedin),
+      github: realLinkOrEmpty(contact?.github),
       website: '',
     },
     summary: '',

@@ -20,9 +20,15 @@ const h = React.createElement;
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
+// Parser fallback placeholders (e.g. "present (label detected, no URL extracted)") must
+// never reach an exported document — they're internal signals, not resume content.
+function isRealValue(value) {
+  return Boolean(value) && !/label detected/i.test(value);
+}
+
 function contactLine(contact) {
   return [contact.email, contact.phone, contact.location, contact.linkedin, contact.github, contact.website]
-    .filter(Boolean)
+    .filter(isRealValue)
     .join('  ·  ');
 }
 

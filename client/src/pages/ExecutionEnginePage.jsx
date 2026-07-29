@@ -13,6 +13,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
@@ -119,6 +120,30 @@ export default function ExecutionEnginePage() {
     } catch (err) {
       setPlan((prev) => applyToggle(prev, key, !next));
       toast.error(errorMessage(err, 'Could not update task'));
+    }
+  };
+
+  const addCustomGoal = async ({ title, skill, estimatedHours }) => {
+    try {
+      const { data } = await api.post('/growth/tasks', { title, skill, estimatedHours });
+      if (data?.data?.plan) setPlan(data.data.plan);
+      toast.success('Added to your roadmap');
+      return true;
+    } catch (err) {
+      toast.error(errorMessage(err, 'Could not add that goal'));
+      return false;
+    }
+  };
+
+  const deleteCustomGoal = async (key) => {
+    const prevPlan = plan;
+    setPlan((p) => removeTaskLocally(p, key));
+    try {
+      const { data } = await api.delete(`/growth/tasks/${key}`);
+      if (data?.data?.plan) setPlan(data.data.plan);
+    } catch (err) {
+      setPlan(prevPlan);
+      toast.error(errorMessage(err, 'Could not remove that goal'));
     }
   };
 
@@ -241,7 +266,7 @@ export default function ExecutionEnginePage() {
           ) : !plan ? (
             <GeneratePanel role={planRole} setRole={setPlanRole} roleOptions={roleOptions} generating={generating} onGenerate={generatePlan} />
           ) : (
-            <RoadmapView plan={plan} role={planRole} setRole={setPlanRole} roleOptions={roleOptions} generating={generating} onGenerate={generatePlan} onToggle={toggleTask} />
+            <RoadmapView plan={plan} role={planRole} setRole={setPlanRole} roleOptions={roleOptions} generating={generating} onGenerate={generatePlan} onToggle={toggleTask} onAddGoal={addCustomGoal} onDeleteGoal={deleteCustomGoal} />
           )}
         </section>
 
@@ -258,11 +283,14 @@ export default function ExecutionEnginePage() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-            {/* Kanban Board */}
-            <div className="card p-4 overflow-hidden">
+            {/* Kanban Board — desktop/tablet only. Below lg, native HTML5 drag-and-drop
+                doesn't work on touch and a 7-column horizontal-scroll board is hard to
+                scan on a phone, so a stacked collapsible list (MobileKanbanStages) takes
+                over instead. */}
+            <div className="card p-4 overflow-hidden hidden lg:block">
               {loadingOpp ? (
                 <div className="flex h-40 items-center justify-center">
-                  <Spinner className="h-6 w-6 text-[#2B4C3F]" />
+                  <Spinner className="h-6 w-6 text-brand" />
                 </div>
               ) : (
                 <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
@@ -326,16 +354,36 @@ export default function ExecutionEnginePage() {
               )}
             </div>
 
+            {/* Mobile Kanban — stacked, collapsible-by-stage list. Stage changes go
+                through KanbanCard's built-in <select>, which already works on touch. */}
+            <div className="lg:hidden">
+              {loadingOpp ? (
+                <div className="card flex h-40 items-center justify-center">
+                  <Spinner className="h-6 w-6 text-brand" />
+                </div>
+              ) : (
+                <MobileKanbanStages
+                  grouped={grouped}
+                  onEdit={(o) => { setEditing(o); setModalOpen(true); }}
+                  onDelete={handleDelete}
+                  onStageChange={handleStageChange}
+                />
+              )}
+            </div>
+
             {/* Active Market Radar */}
             <div className="card overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-line">
                 <div>
                   <h3 className="text-sm font-bold text-ink flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-[#2B4C3F] animate-pulse" />
+                    <span className="h-2 w-2 rounded-full bg-brand animate-pulse" />
                     Active Market Radar
                   </h3>
                   <p className="text-[11px] text-faint mt-0.5">Live openings for your role</p>
                 </div>
+                <Link to="/live-jobs" className="text-xs font-semibold text-brand hover:underline shrink-0">
+                  View all →
+                </Link>
               </div>
 
               <div className="divide-y divide-line max-h-[480px] overflow-y-auto">
@@ -399,7 +447,7 @@ function GeneratePanel({ role, setRole, roleOptions, generating, onGenerate }) {
 }
 
 /* ── Roadmap View ── */
-function RoadmapView({ plan, role, setRole, generating, onGenerate, onToggle }) {
+function RoadmapView({ plan, role, setRole, generating, onGenerate, onToggle, onAddGoal, onDeleteGoal }) {
   if (!plan || typeof plan !== 'object') return null;
   const pct = plan.progress?.percent || 0;
   const weeks = Array.isArray(plan.weeks) ? plan.weeks : [];
@@ -412,11 +460,11 @@ function RoadmapView({ plan, role, setRole, generating, onGenerate, onToggle }) 
             <p className="text-sm font-semibold text-ink">{plan.targetRole || role || 'Target Role'} Roadmap</p>
             <p className="text-xs text-faint mt-0.5">{plan.totalWeeks || weeks.length} weeks · {plan.totalHours || 0} hrs estimated</p>
           </div>
-          <span className="font-serif text-3xl font-black text-[#2B4C3F]">{pct}%</span>
+          <span className="font-serif text-3xl font-black text-brand">{pct}%</span>
         </div>
         <div className="h-2 rounded-full progress-ruler overflow-hidden">
           <div
-            className="h-full rounded-full bg-[#2B4C3F] transition-all duration-700"
+            className="h-full rounded-full bg-brand transition-all duration-700"
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -428,14 +476,89 @@ function RoadmapView({ plan, role, setRole, generating, onGenerate, onToggle }) 
       {/* Week cards */}
       <div className="space-y-3">
         {weeks.map((week, idx) => (
-          <WeekCard key={week?.week || idx} week={week} index={idx} onToggle={onToggle} />
+          <WeekCard key={week?.week || idx} week={week} index={idx} onToggle={onToggle} onDeleteGoal={onDeleteGoal} />
         ))}
       </div>
+
+      {/* Add a custom goal — keeps the roadmap extensible once curated gaps run out */}
+      <AddCustomGoalCard onAdd={onAddGoal} />
     </div>
   );
 }
 
-function WeekCard({ week, index = 0, onToggle }) {
+/** Inline "add a custom goal" card — collapsed to a single button until clicked. */
+function AddCustomGoalCard({ onAdd }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [hours, setHours] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setSaving(true);
+    const ok = await onAdd({ title: title.trim(), estimatedHours: hours ? Number(hours) : undefined });
+    setSaving(false);
+    if (ok) {
+      setTitle('');
+      setHours('');
+      setOpen(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center justify-center gap-2 h-11 rounded-xl border-2 border-dashed border-line text-sm font-semibold text-muted hover:border-brand/40 hover:text-brand hover:bg-brand/5 transition-colors"
+      >
+        <Icon.Plus size={15} /> Add a custom goal
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="card p-4 space-y-3">
+      <p className="text-xs font-bold uppercase tracking-wider text-faint">Add a custom goal</p>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <input
+          autoFocus
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Contribute to an open-source project"
+          className="input flex-1 text-sm h-10"
+        />
+        <input
+          type="number"
+          min="1"
+          max="80"
+          value={hours}
+          onChange={(e) => setHours(e.target.value)}
+          placeholder="Hours"
+          className="input w-full sm:w-24 text-sm h-10"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="submit"
+          disabled={saving || !title.trim()}
+          className="h-9 px-4 rounded-lg bg-brand text-white text-xs font-semibold hover:bg-brand-soft disabled:opacity-50 transition-colors flex items-center gap-1.5"
+        >
+          {saving ? <Spinner className="h-3.5 w-3.5" /> : <Icon.Plus size={13} />} Add goal
+        </button>
+        <button
+          type="button"
+          onClick={() => { setOpen(false); setTitle(''); setHours(''); }}
+          className="h-9 px-3 rounded-lg text-xs font-semibold text-faint hover:text-ink transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function WeekCard({ week, index = 0, onToggle, onDeleteGoal }) {
   if (!week || typeof week !== 'object') return null;
   const [open, setOpen] = useState(week.week === 1 || index === 0);
   const tasks = Array.isArray(week.tasks) ? week.tasks : [];
@@ -510,6 +633,7 @@ function WeekCard({ week, index = 0, onToggle }) {
                 difficulty={difficulty}
                 skillLabel={skillLabel}
                 onToggle={onToggle}
+                onDeleteGoal={key.startsWith('custom-') ? onDeleteGoal : null}
               />
             );
           })}
@@ -520,41 +644,53 @@ function WeekCard({ week, index = 0, onToggle }) {
 }
 
 /* ── Task Row (with Learning Resources disclosure) ── */
-function TaskRow({ taskKey, title, hours, completed, difficulty, skillLabel, onToggle }) {
+function TaskRow({ taskKey, title, hours, completed, difficulty, skillLabel, onToggle, onDeleteGoal }) {
   const [resourcesOpen, setResourcesOpen] = useState(false);
   const resources = useMemo(() => getLearningResources(skillLabel), [skillLabel]);
 
   return (
     <div className={cn(
       'rounded-xl border transition-all duration-200',
-      completed ? 'border-[#C8DDD6] bg-[#F0F5F3]' : 'border-line bg-surface'
+      completed ? 'border-brand/30 bg-brand/10' : 'border-line bg-surface'
     )}>
-      <button
-        onClick={() => onToggle(taskKey, !completed)}
-        className="flex w-full items-center gap-3 p-3 text-left"
-        title={completed ? 'Mark as not learned' : 'Mark as learned'}
-      >
-        <span className={cn(
-          'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors',
-          completed ? 'border-[#2B4C3F] bg-[#2B4C3F] text-white' : 'border-line-soft'
-        )}>
-          {completed && <Icon.Check size={11} />}
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className={cn('text-sm font-medium truncate', completed ? 'text-faint line-through' : 'text-ink')}>
-            {title}
-          </p>
-          <p className="text-xs text-faint">{hours} hrs</p>
-        </div>
-        <span className={cn(
-          'shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg border',
-          difficulty === 'Beginner' ? 'border-[#C8DDD6] text-[#2B4C3F] bg-[#F0F5F3]' :
-          difficulty === 'Advanced' ? 'border-[#E8C4B8] text-[#B85A3C] bg-[#FDF5F3]' :
-          'border-[#E8D8A8] text-[#92400E] bg-[#FEFBF0]'
-        )}>
-          {difficulty}
-        </span>
-      </button>
+      <div className="flex w-full items-center gap-3 p-3 text-left">
+        <button
+          onClick={() => onToggle(taskKey, !completed)}
+          className="flex flex-1 items-center gap-3 text-left min-w-0"
+          title={completed ? 'Mark as not learned' : 'Mark as learned'}
+        >
+          <span className={cn(
+            'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors',
+            completed ? 'border-brand bg-brand text-white' : 'border-line-soft'
+          )}>
+            {completed && <Icon.Check size={11} />}
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className={cn('text-sm font-medium truncate', completed ? 'text-faint line-through' : 'text-ink')}>
+              {title}
+            </p>
+            <p className="text-xs text-faint">{hours} hrs</p>
+          </div>
+          <span className={cn(
+            'shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg border',
+            difficulty === 'Beginner' ? 'border-brand/30 text-brand bg-brand/10' :
+            difficulty === 'Advanced' ? 'border-danger/30 text-danger bg-danger/10' :
+            'border-warning/30 text-warning bg-warning/10'
+          )}>
+            {difficulty}
+          </span>
+        </button>
+        {onDeleteGoal && (
+          <button
+            onClick={() => onDeleteGoal(taskKey)}
+            aria-label={`Remove custom goal: ${title}`}
+            title="Remove custom goal"
+            className="shrink-0 flex h-7 w-7 items-center justify-center rounded-lg text-faint hover:text-danger hover:bg-danger/10 transition-colors"
+          >
+            <Icon.Trash size={13} />
+          </button>
+        )}
+      </div>
 
       {resources.length > 0 && (
         <div className="border-t border-line/60 px-3 py-2">
@@ -596,6 +732,68 @@ function TaskRow({ taskKey, title, hours, completed, difficulty, skillLabel, onT
   );
 }
 
+/* ── Mobile Kanban: stacked, collapsible-by-stage list (< lg breakpoint) ── */
+function MobileKanbanStages({ grouped, onEdit, onDelete, onStageChange }) {
+  // Default: expand every stage that already has cards, collapse empty ones —
+  // avoids forcing the user to open 7 sections just to find the 1-2 that matter.
+  const [collapsed, setCollapsed] = useState(() => {
+    const initial = {};
+    for (const stage of STAGES) {
+      initial[stage.value] = (grouped[stage.value] || []).length === 0;
+    }
+    return initial;
+  });
+  const toggle = (key) => setCollapsed((c) => ({ ...c, [key]: !c[key] }));
+
+  return (
+    <div className="space-y-2.5">
+      {STAGES.map((stage) => {
+        const cards = grouped[stage.value] || [];
+        const isCollapsed = collapsed[stage.value];
+        return (
+          <div key={stage.value} className="card overflow-hidden !p-0">
+            <button
+              onClick={() => toggle(stage.value)}
+              className="w-full flex items-center justify-between px-4 py-3"
+              aria-expanded={!isCollapsed}
+            >
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
+                <span className="text-sm font-semibold text-ink">{stage.label}</span>
+                <span className="text-[10px] font-bold text-faint bg-surface-2 px-1.5 py-0.5 rounded">
+                  {cards.length}
+                </span>
+              </div>
+              <Icon.ChevronDown size={16} className={cn('text-faint transition-transform', !isCollapsed && 'rotate-180')} />
+            </button>
+            {!isCollapsed && (
+              <div className="flex flex-col gap-2 px-3 pb-3 border-t border-line pt-3">
+                {cards.length === 0 ? (
+                  <div className="rounded-xl border-2 border-dashed border-line py-5 px-3 flex flex-col items-center justify-center text-center gap-1 bg-canvas">
+                    <Icon.Layers size={16} className="text-faint mb-0.5" />
+                    <p className="text-xs font-medium text-ink">No applications yet</p>
+                    <p className="text-[10px] text-muted">Track roles as you apply — they'll show up here.</p>
+                  </div>
+                ) : (
+                  cards.map((opp, oIdx) => (
+                    <KanbanCard
+                      key={opp?._id || opp?.id || oIdx}
+                      opp={opp}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      onStageChange={onStageChange}
+                    />
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── Kanban Card ── */
 function KanbanCard({ opp, onEdit, onDelete, onStageChange }) {
   if (!opp || typeof opp !== 'object') return null;
@@ -618,11 +816,19 @@ function KanbanCard({ opp, onEdit, onDelete, onStageChange }) {
           <p className="text-xs font-semibold text-ink truncate">{company}</p>
           <p className="text-[11px] text-faint truncate mt-0.5">{role}</p>
         </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-          <button onClick={() => onEdit(opp)} className="rounded p-1 hover:bg-surface-2 text-faint hover:text-ink">
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity shrink-0">
+          <button
+            onClick={() => onEdit(opp)}
+            aria-label={`Edit ${company} — ${role}`}
+            className="rounded p-1 hover:bg-surface-2 text-faint hover:text-ink"
+          >
             <Icon.Edit size={11} />
           </button>
-          <button onClick={() => onDelete(oppId)} className="rounded p-1 hover:bg-[#FDF5F3] text-faint hover:text-[#B85A3C]">
+          <button
+            onClick={() => onDelete(oppId)}
+            aria-label={`Delete ${company} — ${role}`}
+            className="rounded p-1 hover:bg-danger/10 text-faint hover:text-danger"
+          >
             <Icon.Trash size={11} />
           </button>
         </div>
@@ -690,4 +896,13 @@ function applyToggle(plan, key, completed) {
       percent: plan.totalTasks ? Math.round((completedTasks / plan.totalTasks) * 100) : 0,
     },
   };
+}
+
+/** Optimistically drops a task by key (used for custom-goal deletion) ahead of server confirmation. */
+function removeTaskLocally(plan, key) {
+  if (!plan || !Array.isArray(plan.weeks)) return plan;
+  const weeks = plan.weeks
+    .map((w) => ({ ...w, tasks: (w.tasks || []).filter((t) => t?.key !== key) }))
+    .filter((w) => w.title !== 'Custom Goals' || w.tasks.length > 0);
+  return { ...plan, weeks };
 }

@@ -31,6 +31,21 @@ import { useAuth } from '@/context/AuthContext';
 
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
+import { useCollapsedSections } from '@/lib/useCollapsedSections';
+
+/** Small persisted collapse/expand toggle for secondary dashboard cards. */
+function CollapseToggle({ collapsed, onClick, label }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={collapsed ? `Expand ${label}` : `Collapse ${label}`}
+      aria-expanded={!collapsed}
+      className="shrink-0 flex h-6 w-6 items-center justify-center rounded-md text-faint hover:text-ink hover:bg-surface-2 transition-colors"
+    >
+      <Icon.ChevronDown size={14} className={cn('transition-transform', collapsed && '-rotate-90')} />
+    </button>
+  );
+}
 
 /** Animates a number from 0 up to `target` using an ease-out curve. */
 function useCountUp(target, duration = 1000) {
@@ -152,6 +167,7 @@ export default function OverviewPage() {
   const [hasResumeBuilder, setHasResumeBuilder] = useState(false);
   const [liveJobs, setLiveJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
+  const { isCollapsed, toggle: toggleSection } = useCollapsedSections();
 
   useEffect(() => {
     if (loading) return;
@@ -344,15 +360,15 @@ export default function OverviewPage() {
           {/* Path Score Card — luxury dark card with glowing border */}
           <div
             data-tour="path-score-card"
-            className="relative overflow-hidden rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center border border-[#2B4C3F]/40"
+            className="relative overflow-hidden rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center border border-[#1E2530]"
             style={{
-              background: 'linear-gradient(160deg, #0C1810 0%, #0F2318 50%, #0A1A10 100%)',
-              boxShadow: '0 0 0 1px rgba(127,181,160,0.08), 0 20px 50px -12px rgba(10,26,16,0.6)',
+              background: 'linear-gradient(160deg, #0F1319 0%, #141A24 50%, #0D1117 100%)',
+              boxShadow: '0 0 0 1px rgba(52,211,153,0.12), 0 20px 50px -12px rgba(0,0,0,0.7)',
             }}
           >
             <span
               className="absolute top-4 right-4 inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm"
-              style={{ background: 'linear-gradient(135deg, var(--brand-grad-from, #2D6A4F), var(--brand-grad-to, #40916C))' }}
+              style={{ background: 'linear-gradient(135deg, #059669, #34D399)' }}
             >
               {readiness?.label ?? 'Score'}
             </span>
@@ -393,65 +409,87 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* Peer Benchmarking Card */}
-        <PeerBenchmarkCard benchmark={peerBenchmark} loading={loadingBenchmark} />
-
-        {/* Live Opportunities Widget (9B) */}
+        {/* Live Opportunities Widget — promoted above the fold since real-time job
+            matches are one of the highest-value, most action-ready signals on the
+            dashboard; previously buried below Peer Benchmarking. */}
         {user?.profile?.dreamRole && (loadingJobs || liveJobs.length > 0) && (
-          <div className="card p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="card p-6 border-brand/25 relative overflow-hidden">
+            <div
+              className="absolute inset-x-0 top-0 h-0.5"
+              style={{ background: 'linear-gradient(90deg, transparent, #10B981, transparent)' }}
+            />
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-2 text-brand border border-line">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10 text-brand border border-brand/20">
                   <Icon.Briefcase size={15} />
                 </span>
-                <h3 className="section-heading-accent text-sm font-bold text-ink">Live Opportunities</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="section-heading-accent text-sm font-bold text-ink">Live Opportunities</h3>
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand" />
+                  </span>
+                </div>
                 {!loadingJobs && (
-                  <span className="text-[10px] font-bold text-faint bg-surface-2 border border-line px-2 py-0.5 rounded-full">
-                    {liveJobs.length} live job{liveJobs.length === 1 ? '' : 's'} for {dreamRole}
+                  <span className="text-[10px] font-bold text-brand bg-brand/10 border border-brand/20 px-2 py-0.5 rounded-full">
+                    {liveJobs.length} open now for {dreamRole}
                   </span>
                 )}
               </div>
-              <button
-                onClick={() => navigate('/talent-analyzer')}
-                className="text-xs font-semibold text-brand hover:underline shrink-0"
-              >
-                View All →
-              </button>
+              <div className="flex items-center gap-3 shrink-0">
+                <button
+                  onClick={() => navigate('/live-jobs')}
+                  className="text-xs font-semibold text-brand hover:underline"
+                >
+                  View All Live Jobs →
+                </button>
+                <CollapseToggle collapsed={isCollapsed('liveJobs')} onClick={() => toggleSection('liveJobs')} label="Live Opportunities" />
+              </div>
             </div>
 
-            {loadingJobs ? (
-              <div className="space-y-2">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="h-10 rounded-lg bg-surface-2 animate-pulse" />
-                ))}
-              </div>
-            ) : (
-              <div className="divide-y divide-line">
-                {liveJobs.slice(0, 3).map((job) => (
-                  <JobCard key={job.id} job={job} matchTier={matchJobToSkills(user?.profile?.skills, job)} variant="compact" />
-                ))}
-              </div>
+            {!isCollapsed('liveJobs') && (
+              loadingJobs ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="h-10 rounded-lg bg-surface-2 animate-pulse" />
+                  ))}
+                </div>
+              ) : (
+                <div className="divide-y divide-line">
+                  {liveJobs.slice(0, 3).map((job) => (
+                    <JobCard key={job.id} job={job} matchTier={matchJobToSkills(user?.profile?.skills, job)} variant="compact" />
+                  ))}
+                </div>
+              )
             )}
           </div>
         )}
 
+        {/* Peer Benchmarking Card */}
+        <PeerBenchmarkCard benchmark={peerBenchmark} loading={loadingBenchmark} />
+
         {/* AI Score Audit Card */}
         {hasResume && (
           <div className="card p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-2 text-ink">
-                <Icon.MessageSquare size={16} />
-              </span>
-              <h3 className="section-heading-accent text-sm font-bold text-ink">AI Career Audit Narrative</h3>
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-2 text-ink">
+                  <Icon.MessageSquare size={16} />
+                </span>
+                <h3 className="section-heading-accent text-sm font-bold text-ink">AI Career Audit Narrative</h3>
+              </div>
+              <CollapseToggle collapsed={isCollapsed('aiNarrative')} onClick={() => toggleSection('aiNarrative')} label="AI Career Audit Narrative" />
             </div>
-            {loadingAi ? (
-              <div className="py-6 flex items-center justify-center">
-                <Spinner className="h-6 w-6 text-brand" />
-              </div>
-            ) : (
-              <div className="prose prose-sm max-w-none text-muted text-xs leading-relaxed space-y-3 whitespace-pre-line">
-                {aiExplanation || 'Your AI audit is being generated...'}
-              </div>
+            {!isCollapsed('aiNarrative') && (
+              loadingAi ? (
+                <div className="py-6 flex items-center justify-center">
+                  <Spinner className="h-6 w-6 text-brand" />
+                </div>
+              ) : (
+                <div className="prose prose-sm max-w-none text-muted text-xs leading-relaxed space-y-3 whitespace-pre-line">
+                  {aiExplanation || 'Your AI audit is being generated...'}
+                </div>
+              )
             )}
           </div>
         )}
@@ -470,13 +508,18 @@ export default function OverviewPage() {
                 </span>
               </div>
               <h4 className="text-sm font-bold text-ink">{dreamRole} Salary Range</h4>
-              <p className="text-[10px] text-muted mt-0.5">Estimated from live job postings · Data may vary</p>
+              {!isCollapsed('salary') && (
+                <p className="text-[10px] text-muted mt-0.5">Estimated from live job postings · Data may vary</p>
+              )}
             </div>
-            <div className="text-right shrink-0">
-              <span className="text-lg font-bold font-mono text-brand">
-                ₹{marketSalary.min}L – ₹{marketSalary.max}L
-              </span>
-              <p className="text-[10px] text-muted mt-0.5">per annum</p>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="text-right">
+                <span className="text-lg font-bold font-mono text-brand">
+                  ₹{marketSalary.min}L – ₹{marketSalary.max}L
+                </span>
+                {!isCollapsed('salary') && <p className="text-[10px] text-muted mt-0.5">per annum</p>}
+              </div>
+              <CollapseToggle collapsed={isCollapsed('salary')} onClick={() => toggleSection('salary')} label="Salary Range" />
             </div>
           </div>
         )}

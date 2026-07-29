@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { errorMessage } from '@/lib/api';
-import { GoogleGLogo } from '@/components/ui/GoogleLogo';
+import { GoogleGLogoMono } from '@/components/ui/GoogleLogo';
 
 /** Scores a password 0-4 based on length and character variety, for the strength bar. */
 function scorePassword(password) {
@@ -19,11 +19,11 @@ function scorePassword(password) {
 }
 
 const STRENGTH_LEVELS = [
-  { label: 'Too weak', color: '#B85A3C' },
-  { label: 'Weak', color: '#B85A3C' },
-  { label: 'Fair', color: '#C9A227' },
-  { label: 'Good', color: '#4A8067' },
-  { label: 'Strong', color: '#7FB5A0' },
+  { label: 'Too weak', color: '#EF4444' },
+  { label: 'Weak', color: '#F59E0B' },
+  { label: 'Fair', color: '#10B981' },
+  { label: 'Good', color: '#34D399' },
+  { label: 'Strong', color: '#34D399' },
 ];
 
 function PasswordStrengthBar({ password }) {
@@ -97,18 +97,20 @@ export default function RegisterPage() {
   };
 
   return (
-    <AuthLayout title="Create your account" subtitle="Start building your path to job-ready.">
+    <AuthLayout title="Create your account" subtitle="Start building your path to job-ready." activeTab="register">
       <button
         type="button"
         onClick={onGoogleLogin}
         disabled={googleSubmitting}
-        className="oauth-btn"
+        className="oauth-btn-mono hud-focus"
       >
-        <GoogleGLogo />
+        <GoogleGLogoMono />
         {googleSubmitting ? 'Signing in…' : 'Continue with Google'}
       </button>
 
-      <div className="auth-divider">Or continue with email</div>
+      <div className="auth-divider my-6 text-center">
+        <span>or create with email</span>
+      </div>
 
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <Input
@@ -146,14 +148,20 @@ export default function RegisterPage() {
           <PasswordStrengthBar password={form.password} />
         </div>
 
-        <Button type="submit" className="w-full" size="lg" loading={submitting}>
+        <Button
+          type="submit"
+          variant="mint"
+          className="w-full hud-focus focus-visible:!ring-[#34D399]/40"
+          size="lg"
+          loading={submitting}
+        >
           Create account
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-[#8A9B93]">
+      <p className="mt-6 text-center text-sm text-white/60">
         Already have an account?{' '}
-        <Link to="/login" className="font-semibold text-[#7FB5A0] hover:underline">
+        <Link to="/login" className="hud-focus rounded font-semibold text-[#34D399] hover:underline">
           Log in
         </Link>
       </p>
