@@ -158,9 +158,9 @@ export default function ProfilePage() {
   };
 
   const handleLogout = async () => {
+    navigate('/', { replace: true });
     await logout();
     toast.info('Logged out successfully');
-    navigate('/');
   };
 
   const handleResendVerification = async () => {

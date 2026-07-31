@@ -64,9 +64,9 @@ function TopNav({ user, onOpenContact, onStartTour }) {
 
   const handleLogout = async () => {
     setDropdownOpen(false);
+    navigate('/', { replace: true });
     await logout();
     toast.info('Logged out successfully');
-    navigate('/');
   };
 
   return (
