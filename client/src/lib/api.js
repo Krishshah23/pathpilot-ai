@@ -51,11 +51,16 @@ export function getAccessToken() {
 
 /**
  * The Axios instance all API calls use.
- * - baseURL: '/api' means all requests go to the same origin (Vite proxies /api → Node backend)
- * - withCredentials: true sends the HttpOnly refresh cookie on every request automatically
+ * - baseURL: in dev, '/api' is relative — Vite proxies it to the local Node
+ *   backend (see vite.config.js). In production the client and server are
+ *   deployed as separate services on different domains, so VITE_API_URL
+ *   (set at build time) points straight at the deployed server's /api.
+ * - withCredentials: true sends the HttpOnly refresh cookie on every request
+ *   automatically — required for this to work cross-site in prod (see the
+ *   sameSite:'none' cookie config on the server, auth.controller.js).
  */
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api',
   withCredentials: true, // required for the refresh cookie to be sent
 });
 
