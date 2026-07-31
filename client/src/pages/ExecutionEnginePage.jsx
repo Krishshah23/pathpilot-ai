@@ -155,7 +155,7 @@ export default function ExecutionEnginePage() {
 
           {loadingPlan ? (
             <div className="flex h-32 items-center justify-center">
-              <Spinner className="h-6 w-6 text-brand" />
+              <Spinner className="h-6 w-6 text-muted" />
             </div>
           ) : !plan ? (
             <GeneratePanel role={planRole} setRole={setPlanRole} roleOptions={roleOptions} generating={generating} onGenerate={generatePlan} />
@@ -167,7 +167,7 @@ export default function ExecutionEnginePage() {
         {/* ── Section 2: Application Tracking ─────────────────────── */}
         <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-line bg-surface-2 p-6">
           <div className="flex items-start gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-brand border border-line">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-ink border border-line">
               <Icon.Briefcase size={18} />
             </span>
             <div>

@@ -59,7 +59,7 @@ export default function LiveJobsPage() {
             <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Live · Refreshed every 6 hours</span>
           </div>
           <h1 className="font-serif text-3xl font-bold text-ink flex items-center gap-2.5">
-            <Icon.Briefcase size={26} className="text-brand" />
+            <Icon.Briefcase size={26} className="text-ink" />
             Live Jobs
           </h1>
           <p className="mt-2 text-sm text-muted max-w-lg">

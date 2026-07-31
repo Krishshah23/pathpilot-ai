@@ -69,7 +69,7 @@ export function JdMatcher({ onMatch, onInsertKeywords, applying }) {
           {result && (
             <div className="space-y-3 pt-2">
               <p className="text-xs text-muted">
-                Match: <span className="font-bold text-brand">{result.matchPercent}%</span> ({result.matchedKeywords?.length || 0} of {result.jdKeywords?.length || 0} keywords)
+                Match: <span className="font-bold text-ink">{result.matchPercent}%</span> ({result.matchedKeywords?.length || 0} of {result.jdKeywords?.length || 0} keywords)
               </p>
 
               {result.matchedKeywords?.length > 0 && (

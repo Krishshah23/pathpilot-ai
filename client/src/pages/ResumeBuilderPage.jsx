@@ -69,7 +69,7 @@ export default function ResumeBuilderPage() {
     return (
       <AppShell>
         <div className="flex h-96 items-center justify-center">
-          <Spinner className="h-8 w-8 text-brand" />
+          <Spinner className="h-8 w-8 text-muted" />
         </div>
       </AppShell>
     );

@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
 
-const MINT_BTN = '!bg-[#34D399] !text-[#0A0D12] hover:!bg-[#2BBF89] shadow-[0_0_20px_-4px_#34D399] hud-focus focus-visible:!ring-[#34D399]/40';
-
 export default function ForgotPasswordPage() {
   const toast = useToast();
   const [email, setEmail] = useState('');
@@ -30,17 +28,17 @@ export default function ForgotPasswordPage() {
   if (sent) {
     return (
       <SimpleAuthLayout title="Check your inbox" subtitle="We've sent you a password reset link.">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#34D399] text-xl text-[#0A0D12]">
+        <div className="rounded-2xl border border-line bg-surface-2 p-6 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand text-xl text-white">
             ✉
           </div>
-          <p className="text-sm text-white/60">
-            If an account exists for <span className="font-medium text-white">{email}</span>, a reset
+          <p className="text-sm text-muted">
+            If an account exists for <span className="font-medium text-ink">{email}</span>, a reset
             link is on its way. It expires in 1 hour.
           </p>
         </div>
-        <p className="mt-6 text-center text-sm text-white/60">
-          <Link to="/login" className="hud-focus rounded font-semibold text-[#34D399] hover:underline">
+        <p className="mt-6 text-center text-sm text-muted">
+          <Link to="/login" className="rounded font-semibold text-brand hover:underline">
             Back to login
           </Link>
         </p>
@@ -61,14 +59,14 @@ export default function ForgotPasswordPage() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        <Button type="submit" className={`w-full ${MINT_BTN}`} size="lg" loading={submitting}>
+        <Button type="submit" className="w-full" size="lg" loading={submitting}>
           Send reset link
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-white/60">
+      <p className="mt-6 text-center text-sm text-muted">
         Remembered it?{' '}
-        <Link to="/login" className="hud-focus rounded font-semibold text-[#34D399] hover:underline">
+        <Link to="/login" className="rounded font-semibold text-brand hover:underline">
           Back to login
         </Link>
       </p>

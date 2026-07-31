@@ -92,7 +92,7 @@ function EmptyStateHero({ navigate }) {
   return (
     <div className="card p-10 sm:p-14 text-center max-w-2xl mx-auto">
       <span
-        className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-white mb-5 shadow-sm"
+        className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-white mb-5 shadow-sm"
       >
         <Icon.Sparkles size={24} />
       </span>
@@ -105,7 +105,7 @@ function EmptyStateHero({ navigate }) {
         {ONBOARDING_STEPS.map((s) => (
           <div key={s.n} className="rounded-xl border border-line bg-surface-2 p-4">
             <div className="flex items-center gap-2 mb-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface border border-line text-brand text-xs font-bold">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface border border-line text-ink text-xs font-bold">
                 {s.n}
               </span>
               <span className="text-muted">{s.icon}</span>
@@ -222,7 +222,7 @@ export default function OverviewPage() {
     return (
       <AppShell>
         <div className="flex h-96 items-center justify-center">
-          <Spinner className="h-8 w-8 text-brand" />
+          <Spinner className="h-8 w-8 text-muted" />
         </div>
       </AppShell>
     );
@@ -325,7 +325,7 @@ export default function OverviewPage() {
             /* Slim smart-action prompt — light system, not a heavy dark banner */
             <div className="mt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-line bg-surface-2 px-5 py-4">
               <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface text-brand border border-line">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface text-ink border border-line">
                   {smartCta.icon}
                 </span>
                 <div>
@@ -440,11 +440,11 @@ export default function OverviewPage() {
                         {isActive && (
                           <motion.span
                             layoutId="insight-tab-indicator"
-                            className="absolute inset-0 -z-10 rounded-full bg-brand"
+                            className="absolute inset-0 rounded-full bg-brand"
                             transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                           />
                         )}
-                        <span className="relative flex items-center gap-1.5"><SIcon size={13} /> {s.label}</span>
+                        <span className="relative z-10 flex items-center gap-1.5"><SIcon size={13} /> {s.label}</span>
                       </button>
                     );
                   })}
@@ -456,7 +456,7 @@ export default function OverviewPage() {
               {activeInsight === 'ai' && (
                 loadingAi ? (
                   <div className="py-6 flex items-center justify-center">
-                    <Spinner className="h-6 w-6 text-brand" />
+                    <Spinner className="h-6 w-6 text-muted" />
                   </div>
                 ) : (
                   <div className="prose prose-sm max-w-none text-muted text-xs leading-relaxed space-y-3 whitespace-pre-line">
@@ -479,7 +479,7 @@ export default function OverviewPage() {
                     <p className="text-[10px] text-muted mt-0.5">Estimated from live job postings · Data may vary</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <span className="text-lg font-bold font-mono text-brand">
+                    <span className="text-lg font-bold font-mono text-ink">
                       ₹{marketSalary.min}L – ₹{marketSalary.max}L
                     </span>
                     <p className="text-[10px] text-muted mt-0.5">per annum</p>

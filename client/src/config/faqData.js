@@ -12,7 +12,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'How does the AI analyze my resume?',
-    a: 'Gemini AI parses your resume and compares it against live market requirements for your target role, surfacing gaps, strengths, and ATS keyword matches.',
+    a: 'Our AI parses your resume and compares it against live market requirements for your target role, surfacing gaps, strengths, and ATS keyword matches.',
   },
   {
     q: 'Is my resume data private?',

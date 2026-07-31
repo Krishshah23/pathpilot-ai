@@ -366,9 +366,9 @@ function ModeSwitcher({ onSwitchMode, initializing }) {
 function OptimizeResults({ result, onApplyBullet, onDismiss }) {
   const hasContent = result.bulletRewrites?.length || result.keywordSuggestions?.length || result.redFlags?.length;
   return (
-    <div className="card p-5 space-y-4 border-brand/30">
+    <div className="card p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-ink flex items-center gap-2"><Icon.Sparkles size={15} className="text-brand" /> AI Optimization Scan</h3>
+        <h3 className="text-sm font-bold text-ink flex items-center gap-2"><Icon.Sparkles size={15} className="text-muted" /> AI Optimization Scan</h3>
         <button onClick={onDismiss} aria-label="Dismiss optimization results" className="text-faint hover:text-ink"><Icon.X size={16} /></button>
       </div>
       {!hasContent && <p className="text-xs text-muted">No issues found — your resume looks solid.</p>}

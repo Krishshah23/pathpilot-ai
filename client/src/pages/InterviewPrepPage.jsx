@@ -244,12 +244,12 @@ export default function InterviewPrepPage() {
 
         {/* ── Branded Premium Banner ── */}
         <div className="banner-premium rounded-2xl p-8 text-white flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
-          <div className="absolute -right-10 -bottom-10 w-44 h-44 bg-brand opacity-35 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -right-10 -bottom-10 w-44 h-44 bg-white opacity-10 rounded-full blur-3xl pointer-events-none" />
           <div className="relative z-10">
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/70 mb-1.5">Interview Prep</p>
             <h1 className="font-serif text-3xl font-black text-white">AI Mock Interview Coach</h1>
             <p className="mt-2 text-sm text-white/70 max-w-xl">
-              Practice role-specific scenarios generated from your resume gaps. Get real-time Gemini evaluation and use voice dictation to answer.
+              Practice role-specific scenarios generated from your resume gaps. Get real-time AI evaluation and use voice dictation to answer.
             </p>
           </div>
           {stage === 'active' && (() => {
@@ -285,11 +285,11 @@ export default function InterviewPrepPage() {
                 {isActive && (
                   <motion.span
                     layoutId="interview-tab-indicator"
-                    className="absolute inset-0 -z-10 rounded-full bg-surface shadow-sm"
+                    className="absolute inset-0 rounded-full bg-surface shadow-sm"
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                   />
                 )}
-                <span className="relative flex items-center gap-1.5">{tab.icon} {tab.label}</span>
+                <span className="relative z-10 flex items-center gap-1.5">{tab.icon} {tab.label}</span>
               </button>
             );
           })}
@@ -311,7 +311,7 @@ export default function InterviewPrepPage() {
             <div className="card p-10 text-center">
               <h2 className="font-serif text-2xl font-bold text-ink">Ready to practice?</h2>
               <p className="mt-3 text-sm text-muted max-w-md mx-auto leading-relaxed">
-                Gemini will generate questions targeting your actual resume gaps for{' '}
+                AI will generate questions targeting your actual resume gaps for{' '}
                 <span className="font-semibold text-ink">{selectedRole}</span>.
               </p>
 
@@ -331,7 +331,7 @@ export default function InterviewPrepPage() {
 
               {/* Gap preview */}
               {loadingResume ? (
-                <div className="mt-6 flex justify-center"><Spinner className="h-5 w-5 text-brand" /></div>
+                <div className="mt-6 flex justify-center"><Spinner className="h-5 w-5 text-muted" /></div>
               ) : keyGaps.length > 0 ? (
                 <div className="mt-6 text-left rounded-xl border border-line border-l-4 border-l-danger bg-surface-2 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-danger mb-2">
@@ -357,7 +357,7 @@ export default function InterviewPrepPage() {
               <div className="mt-6 grid sm:grid-cols-3 gap-3 text-left max-w-md mx-auto">
                 {[
                   { label: 'Target Role', value: selectedRole },
-                  { label: 'Evaluation', value: 'Gemini AI' },
+                  { label: 'Evaluation', value: 'AI-Powered' },
                   { label: 'Questions', value: keyGaps.length > 0 ? 'Gap-targeted' : 'Role-based' },
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-xl border border-line p-3">
@@ -369,7 +369,7 @@ export default function InterviewPrepPage() {
 
               {avgScore !== null && (
                 <p className="mt-4 text-xs text-muted">
-                  Session avg so far: <span className="font-bold text-brand">{avgScore}/100</span> ({sessionScores.length} question{sessionScores.length > 1 ? 's' : ''})
+                  Session avg so far: <span className="font-bold text-ink">{avgScore}/100</span> ({sessionScores.length} question{sessionScores.length > 1 ? 's' : ''})
                 </p>
               )}
 
@@ -423,8 +423,8 @@ export default function InterviewPrepPage() {
 
         {stage === 'loading' && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <Spinner className="h-8 w-8 text-brand" />
-            <p className="text-sm text-muted">Gemini is preparing your question…</p>
+            <Spinner className="h-8 w-8 text-muted" />
+            <p className="text-sm text-muted">AI is preparing your question…</p>
           </div>
         )}
 
@@ -434,8 +434,8 @@ export default function InterviewPrepPage() {
             {/* Question card */}
             <div className="card p-8 space-y-5">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-brand bg-brand/10 border border-brand/20 px-2.5 py-1 rounded-full">
-                  <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" /> Live Question
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted bg-surface-2 border border-line px-2.5 py-1 rounded-full">
+                  <span className="h-1.5 w-1.5 rounded-full bg-muted animate-pulse" /> Live Question
                 </span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-faint bg-surface-2 border border-line px-2 py-1 rounded-full">
                   {questionData.questionType}
@@ -514,8 +514,8 @@ export default function InterviewPrepPage() {
         {/* ── EVALUATING ── */}
         {stage === 'evaluating' && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <Spinner className="h-8 w-8 text-brand" />
-            <p className="text-sm text-muted">Gemini is evaluating your answer…</p>
+            <Spinner className="h-8 w-8 text-muted" />
+            <p className="text-sm text-muted">AI is evaluating your answer…</p>
           </div>
         )}
 
@@ -567,7 +567,7 @@ export default function InterviewPrepPage() {
                   {/* Speech Fluency card */}
                   <div className="card p-6 space-y-4">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-ink flex items-center gap-1.5">
-                      <Icon.Mic size={14} className="text-brand" /> Speech Fluency
+                      <Icon.Mic size={14} className="text-muted" /> Speech Fluency
                     </h4>
                     <div className="space-y-3">
                       <div className="rounded-xl border border-line bg-canvas p-3 flex justify-between items-center">
@@ -595,7 +595,7 @@ export default function InterviewPrepPage() {
                 {/* Detailed feedback + Rubric table */}
                 <div className="card p-8 space-y-6">
                   <h3 className="text-sm font-bold text-ink flex items-center gap-2">
-                    <Icon.Shield size={16} className="text-brand" /> AI Evaluation Report
+                    <Icon.Shield size={16} className="text-muted" /> AI Evaluation Report
                   </h3>
 
                   {/* Rubric Table */}
@@ -614,7 +614,7 @@ export default function InterviewPrepPage() {
                           return (
                             <tr key={metric}>
                               <td className="px-4 py-2.5 font-medium text-ink capitalize">{metric}</td>
-                              <td className="px-4 py-2.5 text-right font-bold text-brand">{score}</td>
+                              <td className="px-4 py-2.5 text-right font-bold text-ink">{score}</td>
                               <td className="px-4 py-2.5 text-right text-faint">{maxVal}</td>
                             </tr>
                           );
@@ -680,7 +680,7 @@ export default function InterviewPrepPage() {
         {/* ── SAVING ── */}
         {savingSession && (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <Spinner className="h-8 w-8 text-brand" />
+            <Spinner className="h-8 w-8 text-muted" />
             <p className="text-sm text-muted">Saving your session...</p>
           </div>
         )}

@@ -99,7 +99,7 @@ export function LandingModes({ onSelect, initializing, onContinue }) {
                   {m.badge}
                 </span>
               )}
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-white shadow-sm transition-all duration-300 group-hover:shadow-lg">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-ink text-white shadow-sm transition-all duration-300 group-hover:shadow-lg">
                 {m.icon}
               </div>
               <h3 className="text-sm font-bold text-ink mt-4">{m.title}</h3>

@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
 
-const MINT_BTN = '!bg-[#34D399] !text-[#0A0D12] hover:!bg-[#2BBF89] shadow-[0_0_20px_-4px_#34D399] hud-focus focus-visible:!ring-[#34D399]/40';
-
 export default function ResetPasswordPage() {
   const [params] = useSearchParams();
   const token = params.get('token') || '';
@@ -38,9 +36,9 @@ export default function ResetPasswordPage() {
   if (!token) {
     return (
       <SimpleAuthLayout title="Invalid link" subtitle="This reset link is missing or malformed.">
-        <p className="text-sm text-white/60">
+        <p className="text-sm text-muted">
           Please request a new link from the{' '}
-          <Link to="/forgot-password" className="hud-focus rounded font-semibold text-[#34D399] hover:underline">
+          <Link to="/forgot-password" className="rounded font-semibold text-brand hover:underline">
             forgot password
           </Link>{' '}
           page.
@@ -71,7 +69,7 @@ export default function ResetPasswordPage() {
           error={error}
           required
         />
-        <Button type="submit" className={`w-full ${MINT_BTN}`} size="lg" loading={submitting}>
+        <Button type="submit" className="w-full" size="lg" loading={submitting}>
           Reset password
         </Button>
       </form>

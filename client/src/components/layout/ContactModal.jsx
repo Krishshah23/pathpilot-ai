@@ -1,10 +1,10 @@
 /**
  * components/layout/ContactModal.jsx — "Contact & Feedback" Dropdown Modal
  *
- * Opened from the account dropdown in AppShell's TopNav. Dark glassmorphism
- * panel with developer contact links + a lightweight feedback form that hands
- * off to the user's mail client (mailto:) — no backend endpoint, per the
- * frontend-only scope of this task.
+ * Opened from the account dropdown in AppShell's TopNav. Project contact
+ * links + a lightweight feedback form that hands off to the user's mail
+ * client (mailto:) — no backend endpoint, per the frontend-only scope of
+ * this task.
  */
 
 import { useEffect, useState } from 'react';
@@ -16,8 +16,6 @@ const LINKS = [
   { label: 'Email', icon: 'Mail', href: 'mailto:krish23076@gmail.com' },
   { label: 'LinkedIn', icon: 'Linkedin', href: 'https://www.linkedin.com/in/kreesh' },
   { label: 'GitHub', icon: 'Github', href: 'https://github.com/Krishshah23' },
-  { label: 'Instagram', icon: 'Instagram', href: 'https://kreesh.me' },
-  { label: 'Portfolio', icon: 'Globe', href: 'https://www.kreesh.me' },
 ];
 
 export function ContactModal({ onClose }) {
@@ -47,31 +45,15 @@ export function ContactModal({ onClose }) {
         <div className="flex items-start justify-between px-6 pt-6">
           <div>
             <h3 className="font-serif text-lg font-bold text-ink">Get in Touch</h3>
-            <p className="text-xs text-muted mt-1">Built by Krish Shah · Open to feedback, collaboration, and opportunities</p>
+            <p className="text-xs text-muted mt-1">Got feedback, found a bug, or just want to say hi?</p>
           </div>
           <button onClick={onClose} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-faint hover:bg-surface-2 hover:text-ink transition-colors">
             <Icon.X size={18} />
           </button>
         </div>
 
-        {/* Developer card */}
-        <div className="mx-6 mt-5 rounded-xl border border-line bg-surface-2 p-4 flex items-center gap-3.5">
-          <span
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand text-white font-bold text-sm shadow-sm"
-          >
-            KS
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-ink">Krish Shah</p>
-            <p className="text-xs text-muted">Full Stack Developer &amp; AI Engineer</p>
-            <p className="text-[11px] text-faint flex items-center gap-1 mt-0.5">
-              <Icon.MapPin size={11} /> Ahmedabad, India
-            </p>
-          </div>
-        </div>
-
         {/* Social pills */}
-        <div className="px-6 mt-4 flex flex-wrap gap-2">
+        <div className="px-6 mt-5 flex flex-wrap gap-2">
           {LINKS.map((l) => {
             const LinkIcon = Icon[l.icon];
             return (

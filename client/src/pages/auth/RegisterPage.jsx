@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { errorMessage } from '@/lib/api';
-import { GoogleGLogoMono } from '@/components/ui/GoogleLogo';
+import { GoogleGLogo } from '@/components/ui/GoogleLogo';
 
 /** Scores a password 0-4 based on length and character variety, for the strength bar. */
 function scorePassword(password) {
@@ -19,11 +19,11 @@ function scorePassword(password) {
 }
 
 const STRENGTH_LEVELS = [
-  { label: 'Too weak', color: '#EF4444' },
-  { label: 'Weak', color: '#F59E0B' },
-  { label: 'Fair', color: '#10B981' },
-  { label: 'Good', color: '#34D399' },
-  { label: 'Strong', color: '#34D399' },
+  { label: 'Too weak', color: 'var(--color-danger)' },
+  { label: 'Weak', color: 'var(--color-warning)' },
+  { label: 'Fair', color: 'var(--color-warning)' },
+  { label: 'Good', color: 'var(--color-brand)' },
+  { label: 'Strong', color: 'var(--color-brand)' },
 ];
 
 function PasswordStrengthBar({ password }) {
@@ -38,7 +38,7 @@ function PasswordStrengthBar({ password }) {
           <div
             key={i}
             className="h-1 flex-1 rounded-full transition-colors duration-300"
-            style={{ backgroundColor: i < score ? level.color : 'rgba(255,255,255,0.12)' }}
+            style={{ backgroundColor: i < score ? level.color : 'var(--color-line)' }}
           />
         ))}
       </div>
@@ -102,9 +102,9 @@ export default function RegisterPage() {
         type="button"
         onClick={onGoogleLogin}
         disabled={googleSubmitting}
-        className="oauth-btn-mono hud-focus"
+        className="oauth-btn"
       >
-        <GoogleGLogoMono />
+        <GoogleGLogo />
         {googleSubmitting ? 'Signing in…' : 'Continue with Google'}
       </button>
 
@@ -148,19 +148,14 @@ export default function RegisterPage() {
           <PasswordStrengthBar password={form.password} />
         </div>
 
-        <Button
-          type="submit"
-          className="w-full hud-focus focus-visible:!ring-[#34D399]/40 !bg-[#34D399] !text-[#0A0D12] hover:!bg-[#2BBF89] shadow-[0_0_20px_-4px_#34D399]"
-          size="lg"
-          loading={submitting}
-        >
+        <Button type="submit" className="w-full" size="lg" loading={submitting}>
           Create account
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-white/60">
+      <p className="mt-6 text-center text-sm text-muted">
         Already have an account?{' '}
-        <Link to="/login" className="hud-focus rounded font-semibold text-[#34D399] hover:underline">
+        <Link to="/login" className="rounded font-semibold text-brand hover:underline">
           Log in
         </Link>
       </p>

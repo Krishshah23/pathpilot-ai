@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { errorMessage } from '@/lib/api';
-import { GoogleGLogoMono } from '@/components/ui/GoogleLogo';
+import { GoogleGLogo } from '@/components/ui/GoogleLogo';
 
 export default function LoginPage() {
   const { login, googleLogin } = useAuth();
@@ -54,9 +54,9 @@ export default function LoginPage() {
         type="button"
         onClick={onGoogleLogin}
         disabled={googleSubmitting}
-        className="oauth-btn-mono hud-focus"
+        className="oauth-btn"
       >
-        <GoogleGLogoMono />
+        <GoogleGLogo />
         {googleSubmitting ? 'Signing in…' : 'Continue with Google'}
       </button>
 
@@ -87,25 +87,20 @@ export default function LoginPage() {
             required
           />
           <div className="mt-2 text-right">
-            <Link to="/forgot-password" className="hud-focus rounded text-xs font-medium text-[#34D399] hover:underline">
+            <Link to="/forgot-password" className="rounded text-xs font-medium text-brand hover:underline">
               Forgot password?
             </Link>
           </div>
         </div>
 
-        <Button
-          type="submit"
-          className="w-full hud-focus focus-visible:!ring-[#34D399]/40 !bg-[#34D399] !text-[#0A0D12] hover:!bg-[#2BBF89] shadow-[0_0_20px_-4px_#34D399]"
-          size="lg"
-          loading={submitting}
-        >
+        <Button type="submit" className="w-full" size="lg" loading={submitting}>
           Log in
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-white/60">
+      <p className="mt-6 text-center text-sm text-muted">
         New to PathPilot?{' '}
-        <Link to="/register" className="hud-focus rounded font-semibold text-[#34D399] hover:underline">
+        <Link to="/register" className="rounded font-semibold text-brand hover:underline">
           Create an account
         </Link>
       </p>

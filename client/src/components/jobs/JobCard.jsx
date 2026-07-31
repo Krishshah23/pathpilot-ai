@@ -42,7 +42,7 @@ export function JobCard({ job, matchTier, saved, onToggleSave, status, onStatusC
     <div className="card p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-brand uppercase tracking-wide truncate">{job.company}</p>
+          <p className="text-xs font-semibold text-muted uppercase tracking-wide truncate">{job.company}</p>
           <h4 className="text-base font-bold text-ink mt-0.5 leading-snug">{job.title}</h4>
         </div>
         <button
@@ -71,7 +71,7 @@ export function JobCard({ job, matchTier, saved, onToggleSave, status, onStatusC
           </span>
         )}
         {job.salaryMin && job.salaryMax && (
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand bg-brand/10 border border-brand/20 px-2 py-1 rounded-full">
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted bg-surface-2 border border-line px-2 py-1 rounded-full">
             <Icon.DollarSign size={10} /> {job.salaryMin}–{job.salaryMax} LPA
           </span>
         )}

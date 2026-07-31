@@ -87,15 +87,9 @@ export function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-line px-6 sm:px-10 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <p className="text-[11px] text-faint text-center sm:text-left">
-          Powered by Google Gemini AI · Built with <span className="text-danger">❤</span> for engineering students
-        </p>
-        <p className="text-[11px] text-faint">
-          Made by{' '}
-          <a href="https://www.kreesh.me" target="_blank" rel="noopener noreferrer" className="font-medium text-muted hover:text-brand transition-colors">
-            Krish Shah
-          </a>
+      <div className="border-t border-line px-6 sm:px-10 py-4 flex items-center justify-center">
+        <p className="text-[11px] text-faint text-center">
+          Powered by advanced AI · Built with <span className="text-danger">❤</span> for engineering students
         </p>
       </div>
     </footer>

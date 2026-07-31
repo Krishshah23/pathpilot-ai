@@ -178,10 +178,10 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
 
       {/* Next Step Priority */}
       {nextStep && (
-        <div className="flex items-start gap-3 rounded-xl border border-brand/30 bg-brand/10 p-4">
-          <Icon.ArrowRight size={16} className="text-brand mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3 rounded-xl border border-line bg-ink/5 p-4">
+          <Icon.ArrowRight size={16} className="text-ink mt-0.5 shrink-0" />
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-brand mb-1">Top Priority Right Now</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-ink mb-1">Top Priority Right Now</p>
             <p className="text-sm text-ink font-medium">{nextStep}</p>
           </div>
         </div>
@@ -263,7 +263,7 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
             {aiRecommendations.map((rec, i) => (
               <li key={i} className="flex items-start justify-between rounded-xl border border-line bg-surface-2 px-4 py-3 text-sm text-muted">
                 <div className="flex items-start gap-3">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-bold text-white mt-0.5">{i + 1}</span>
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink text-xs font-bold text-white mt-0.5">{i + 1}</span>
                   <span>{rec}</span>
                 </div>
                 <button
@@ -382,7 +382,7 @@ export default function TalentAnalyzerPage() {
         <div className="space-y-4">
           {loadingResume ? (
             <div className="card flex h-64 items-center justify-center">
-              <Spinner className="h-6 w-6 text-brand" />
+              <Spinner className="h-6 w-6 text-muted" />
             </div>
           ) : !resume || replacing ? (
             <UploadZone
@@ -421,11 +421,11 @@ export default function TalentAnalyzerPage() {
                     {isActive && (
                       <motion.span
                         layoutId="talent-tab-indicator"
-                        className="absolute inset-0 -z-10 rounded-full bg-brand"
+                        className="absolute inset-0 rounded-full bg-brand"
                         transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                       />
                     )}
-                    <span className="relative">{tab}</span>
+                    <span className="relative z-10">{tab}</span>
                   </button>
                 );
               })}
@@ -518,12 +518,20 @@ function DocumentPanel({ resume, onReplace }) {
       <div className="px-6 py-5 border-b border-line">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-bold text-faint uppercase tracking-wider">Resume Health</span>
-          <span className="font-serif text-2xl font-black text-brand"><AnimatedScore target={resume.healthScore} /><span className="text-sm text-faint font-normal">/100</span></span>
+          <span
+            className="font-serif text-2xl font-black"
+            style={{ color: resume.healthScore >= 70 ? 'var(--color-brand)' : resume.healthScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)' }}
+          >
+            <AnimatedScore target={resume.healthScore} /><span className="text-sm text-faint font-normal">/100</span>
+          </span>
         </div>
         <div className="h-2 rounded-full progress-ruler overflow-hidden">
           <div
-            className="h-full rounded-full bg-brand transition-all duration-700"
-            style={{ width: `${resume.healthScore}%` }}
+            className="h-full rounded-full transition-all duration-700"
+            style={{
+              width: `${resume.healthScore}%`,
+              backgroundColor: resume.healthScore >= 70 ? 'var(--color-brand)' : resume.healthScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)',
+            }}
           />
         </div>
       </div>
@@ -659,7 +667,7 @@ function RecruiterFeedbackTab({ resume, onOpenFix }) {
     <div className="space-y-8">
       {/* Context callout — sets the "6 second scan" framing immediately */}
       <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-2 px-4 py-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface border border-line text-brand">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface border border-line text-muted">
           <Icon.Clock size={15} />
         </span>
         <p className="text-xs text-muted leading-relaxed">
@@ -723,7 +731,7 @@ function RecruiterFeedbackTab({ resume, onOpenFix }) {
             {suggestions.map((s, i) => (
               <li key={i} className="flex justify-between items-center rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm text-muted">
                 <div className="flex items-start gap-2.5">
-                  <Icon.ChevronRight size={16} className="mt-0.5 shrink-0 text-brand" />
+                  <Icon.ChevronRight size={16} className="mt-0.5 shrink-0 text-muted" />
                   <span>{s}</span>
                 </div>
                 <button
@@ -824,7 +832,7 @@ function MarketAlignmentTab({ gapData, loading, role, onRefresh }) {
 
       {loading ? (
         <div className="flex h-40 items-center justify-center">
-          <Spinner className="h-6 w-6 text-brand" />
+          <Spinner className="h-6 w-6 text-muted" />
         </div>
       ) : gapData ? (
         <>
@@ -959,9 +967,9 @@ function FixHelperDrawer({ target: fixTarget, onClose }) {
     suggestion: {
       label: 'Resume Improvement',
       reason: 'Addressing this will strengthen your resume\'s clarity and make your experience more compelling to hiring managers.',
-      borderColor: 'border-brand/30',
-      bgColor: 'bg-brand/10',
-      textColor: 'text-brand',
+      borderColor: 'border-line',
+      bgColor: 'bg-ink/5',
+      textColor: 'text-ink',
     },
     recommendation: {
       label: 'AI Recommendation',
@@ -989,7 +997,7 @@ function FixHelperDrawer({ target: fixTarget, onClose }) {
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-line bg-canvas">
           <div className="flex items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand text-white shadow-sm">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-ink text-white shadow-sm">
               <Icon.Sparkles size={16} />
             </span>
             <div>
@@ -1051,15 +1059,15 @@ function FixHelperDrawer({ target: fixTarget, onClose }) {
             {/* Section 3: Recommended fix */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-brand text-[10px] font-bold text-white">3</span>
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-surface-2 text-[10px] font-bold text-muted">3</span>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-faint">Recommended fix</span>
               </div>
-              <div className="rounded-xl border border-brand/30 bg-brand/10 p-4 fix-panel-shimmer relative overflow-hidden">
+              <div className="rounded-xl border border-line bg-surface-2 p-4 fix-panel-shimmer relative overflow-hidden">
                 <div className="flex items-center gap-1.5 mb-3">
-                  <Icon.Sparkles size={12} className="text-brand" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand">AI Suggestion</span>
+                  <Icon.Sparkles size={12} className="text-ink" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-ink">AI Suggestion</span>
                 </div>
-                <p className="text-[13px] text-brand leading-relaxed font-medium break-words whitespace-pre-wrap select-all">
+                <p className="text-[13px] text-ink leading-relaxed font-medium break-words whitespace-pre-wrap select-all">
                   {fixTarget.fix}
                 </p>
               </div>

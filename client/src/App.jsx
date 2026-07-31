@@ -20,6 +20,7 @@
  *     • StudentOnlyRoute → admin accounts are redirected away from student pages
  *
  * ROUTE STRUCTURE (nesting reflects the guard layers):
+ *   /                                     — marketing landing page (everyone)
  *   /login, /register, /forgot-password  — public only (guests)
  *   /reset-password, /verify-email       — always reachable (no session needed)
  *   /profile/:publicCardId               — always reachable (shareable URL)
@@ -45,6 +46,7 @@ import VerifyEmailPage from '@/pages/auth/VerifyEmailPage';
 // ── 4 Hub Pages (code-split) ─────────────────────────────────────────
 // These large pages are lazy-loaded: the browser downloads their JS only when
 // the user navigates to them, not before. This makes the initial app load faster.
+const LandingPage        = lazy(() => import('@/pages/LandingPage'));         // "/" marketing front door
 const OnboardingPage     = lazy(() => import('@/pages/OnboardingPage'));
 const OverviewPage       = lazy(() => import('@/pages/OverviewPage'));        // /dashboard
 const TalentAnalyzerPage = lazy(() => import('@/pages/TalentAnalyzerPage')); // /talent-analyzer (Resume + Gap)
@@ -124,8 +126,10 @@ export default function App() {
           </Route>
 
           {/* ── Root + catch-all ── */}
-          {/* Visiting "/" redirects to the dashboard */}
-          <Route path="/"  element={<Navigate to="/dashboard" replace />} />
+          {/* "/" is the marketing landing page — reachable by guests and logged-in
+              users alike (logged-in users just see a "Dashboard" CTA instead of
+              "Sign in"), same pattern most SaaS marketing sites use. */}
+          <Route path="/"  element={<LandingPage />} />
           {/* Any unrecognised URL shows the 404 page */}
           <Route path="*"  element={<NotFoundPage />} />
         </Routes>

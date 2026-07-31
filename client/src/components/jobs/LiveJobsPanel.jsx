@@ -102,7 +102,7 @@ export function LiveJobsPanel({ jobs, loading, role, setRole, onRefresh, fetched
 
       {loading ? (
         <div className="flex h-40 items-center justify-center">
-          <Spinner className="h-6 w-6 text-brand" />
+          <Spinner className="h-6 w-6 text-muted" />
         </div>
       ) : visibleJobs.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2">

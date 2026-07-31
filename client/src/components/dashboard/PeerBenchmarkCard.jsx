@@ -69,7 +69,7 @@ export function PeerBenchmarkCard({ benchmark, loading, bare = false }) {
       </>
     ) : (
       <>
-        <strong className="text-brand">{benchmark.peerCount}</strong> {benchmark.dreamRole} peers are
+        <strong className="text-ink">{benchmark.peerCount}</strong> {benchmark.dreamRole} peers are
         ahead of you on PathPilot right now — plenty of room to climb.
       </>
     );
@@ -82,7 +82,7 @@ export function PeerBenchmarkCard({ benchmark, loading, bare = false }) {
       >
         <div className="flex items-start gap-3">
           {!bare && (
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-brand border border-line">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-ink border border-line">
               <Icon.Users size={16} />
             </span>
           )}
