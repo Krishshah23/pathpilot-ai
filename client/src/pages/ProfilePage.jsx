@@ -160,7 +160,7 @@ export default function ProfilePage() {
   const handleLogout = async () => {
     await logout();
     toast.info('Logged out successfully');
-    navigate('/login');
+    navigate('/');
   };
 
   const handleResendVerification = async () => {
