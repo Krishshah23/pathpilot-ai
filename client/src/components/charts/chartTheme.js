@@ -29,11 +29,11 @@
 export const CHART = {
   grid:    'var(--color-line)',   // gridlines — warm/dark border colour depending on theme
   axis:    'var(--color-faint)',  // axis tick labels
-  brand:   '#2B4C3F',             // forest green — primary data colour (brand, constant across themes)
-  violet:  '#2B4C3F',             // alias — kept for API compatibility with existing chart props
-  success: '#2B4C3F',             // scores >= 75%
-  warning: '#92400E',             // scores 50-74%
-  danger:  '#B85A3C',             // scores < 50%
+  brand:   'var(--color-brand)',  // forest green — primary data colour (brand, constant across themes)
+  violet:  'var(--color-brand)',  // alias — kept for API compatibility with existing chart props
+  success: 'var(--color-brand)',  // scores >= 75%
+  warning: 'var(--color-warning)',// scores 50-74%
+  danger:  'var(--color-danger)', // scores < 50%
 };
 
 /**
@@ -51,5 +51,5 @@ export const tooltipStyle = {
   },
   labelStyle: { color: 'var(--color-muted)' },
   itemStyle:  { color: 'var(--color-ink)' },
-  cursor: { fill: 'rgba(43,76,63,0.08)' }, // faint brand-green hover column highlight
+  cursor: { fill: 'rgba(5,150,105,0.08)' }, // faint brand-green hover column highlight
 };

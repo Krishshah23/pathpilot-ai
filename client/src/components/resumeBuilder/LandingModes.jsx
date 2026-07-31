@@ -24,8 +24,6 @@ const MODES = [
     title: 'Create from Scratch',
     desc: "No resume yet? Start with a blank guided editor — AI helps you write strong bullets as you go.",
     cta: 'Start Blank',
-    accent: '#40916C', // emerald
-    badgeBg: 'linear-gradient(135deg, #2D6A4F, #40916C)',
   },
   {
     key: 'import',
@@ -33,8 +31,6 @@ const MODES = [
     title: 'Import & Edit Mine',
     desc: 'Already uploaded a resume on PathPilot? One click pulls in your parsed skills, experience, and projects.',
     cta: 'Import My Resume',
-    accent: '#3B82F6', // blue
-    badgeBg: 'linear-gradient(135deg, #1D4ED8, #3B82F6)',
     badge: 'Most Popular',
   },
   {
@@ -43,8 +39,6 @@ const MODES = [
     title: 'Migrate to Our Template',
     desc: 'Have a PDF resume but want a cleaner design? Upload it and we\'ll drop the same content into a professional template.',
     cta: 'Upload PDF',
-    accent: '#8B5CF6', // violet
-    badgeBg: 'linear-gradient(135deg, #6D28D9, #8B5CF6)',
   },
 ];
 
@@ -98,26 +92,19 @@ export function LandingModes({ onSelect, initializing, onContinue }) {
               onClick={() => handleClick(m.key)}
               disabled={initializing}
               aria-label={`${m.title} — ${m.desc}`}
-              className="card card-hover btn-press card-top-stripe group relative text-left p-6 disabled:opacity-60 disabled:cursor-not-allowed"
-              style={{ '--stripe-color': m.accent }}
+              className="card card-hover btn-press group relative text-left p-6 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {m.badge && (
-                <span
-                  className="absolute top-4 right-4 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm"
-                  style={{ background: m.badgeBg }}
-                >
+                <span className="absolute top-4 right-4 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white bg-ink shadow-sm">
                   {m.badge}
                 </span>
               )}
-              <div
-                className="flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-sm transition-all duration-300 group-hover:shadow-lg"
-                style={{ background: m.badgeBg, boxShadow: `0 4px 16px -4px ${m.accent}66` }}
-              >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-white shadow-sm transition-all duration-300 group-hover:shadow-lg">
                 {m.icon}
               </div>
               <h3 className="text-sm font-bold text-ink mt-4">{m.title}</h3>
               <p className="text-xs text-muted mt-1.5 leading-relaxed">{m.desc}</p>
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold mt-4" style={{ color: m.accent }}>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold mt-4 text-brand">
                 {isPending ? <Spinner className="h-3.5 w-3.5" /> : null}
                 {isPending ? 'Setting up…' : m.cta}
                 {!isPending && <Icon.ArrowRight size={13} />}

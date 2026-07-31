@@ -41,7 +41,7 @@ export function Stepper({ steps, current }) {
               <span
                 className={cn(
                   'flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold transition',
-                  done   && 'btn-brand border-transparent text-white',          // dark filled
+                  done   && 'bg-ink border-transparent text-white',            // dark filled
                   active && 'border-brand bg-brand/15 text-brand-soft',         // brand ring
                   !done && !active && 'border-line bg-surface-2 text-faint'     // grey
                 )}

@@ -13,6 +13,7 @@
 
 import { Icon } from '@/components/ui/icons';
 import { MATCH_TIERS } from '@/lib/jobMatch';
+import { JOB_STATUSES } from '@/lib/useSavedJobs';
 import { cn } from '@/lib/cn';
 
 function MatchBadge({ tier }) {
@@ -24,7 +25,7 @@ function MatchBadge({ tier }) {
   );
 }
 
-export function JobCard({ job, matchTier, saved, onToggleSave, variant = 'full' }) {
+export function JobCard({ job, matchTier, saved, onToggleSave, status, onStatusChange, variant = 'full' }) {
   if (variant === 'compact') {
     return (
       <div className="flex items-center gap-3 py-2">
@@ -76,6 +77,19 @@ export function JobCard({ job, matchTier, saved, onToggleSave, variant = 'full' 
         )}
       </div>
 
+      {saved && onStatusChange && (
+        <div className="flex items-center gap-2 mt-3">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-faint shrink-0">Status</span>
+          <select
+            value={status || 'wishlist'}
+            onChange={(e) => onStatusChange(job.id, e.target.value)}
+            className="flex-1 text-xs border border-line rounded-lg px-2 py-1 bg-surface-2 text-ink focus:outline-none cursor-pointer"
+          >
+            {JOB_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-line">
         <div className="flex flex-col gap-1">
           <MatchBadge tier={matchTier} />
@@ -86,7 +100,7 @@ export function JobCard({ job, matchTier, saved, onToggleSave, variant = 'full' 
             href={job.applyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-gradient inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-xs font-semibold"
+            className="bg-brand text-white hover:bg-brand-soft transition-colors inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-xs font-semibold"
           >
             Apply Now <Icon.ArrowRight size={12} />
           </a>

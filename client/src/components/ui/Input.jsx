@@ -64,7 +64,7 @@ export const Input = forwardRef(function Input(
         id={inputId}       // links to the label's htmlFor
         className={cn(
           'input',
-          error && '!border-[#B85A3C] !focus:ring-[#B85A3C]/20',
+          error && '!border-danger !focus:ring-danger/20',
           className
         )}
         {...props} // passes value, onChange, type, placeholder, required, etc.

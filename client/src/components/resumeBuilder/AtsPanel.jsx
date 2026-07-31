@@ -10,9 +10,9 @@
 import { Icon } from '@/components/ui/icons';
 
 function scoreColor(score) {
-  if (score >= 75) return '#2B4C3F';
-  if (score >= 50) return '#92400E';
-  return '#B85A3C';
+  if (score >= 75) return 'var(--color-brand)';
+  if (score >= 50) return 'var(--color-warning)';
+  return 'var(--color-danger)';
 }
 
 function SubScore({ label, value }) {

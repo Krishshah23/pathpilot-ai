@@ -63,7 +63,7 @@ export function FactorBars({ data, height = 260 }) {
           dataKey="label"
           width={120}
           stroke={CHART.axis}
-          tick={{ fontSize: 11, fill: '#9aa3b6' }}
+          tick={{ fontSize: 11, fill: 'var(--color-faint)' }}
           tickLine={false}
         />
 

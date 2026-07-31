@@ -12,9 +12,9 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/cn';
 
 export function scoreColor(score) {
-  if (score >= 75) return '#2B4C3F'; // brand forest green
-  if (score >= 50) return '#92400E'; // warning amber
-  return '#B85A3C';                  // danger rust
+  if (score >= 75) return 'var(--color-brand)';
+  if (score >= 50) return 'var(--color-warning)';
+  return 'var(--color-danger)';
 }
 
 export function scoreLabel(score) {
@@ -27,14 +27,10 @@ export function scoreLabel(score) {
 
 export function ScoreGauge({ score = 0, size = 180, label, dark = false }) {
   const safeScore = Math.min(100, Math.max(0, score));
-  // In the dark Path Score card, a strong score gets the richer emerald gradient
-  // treatment (2C); mid/low scores keep the amber/rust semantics so the color
-  // still communicates "needs work" rather than looking uniformly premium.
-  const useEmeraldGradient = dark && safeScore >= 75;
-  const color = useEmeraldGradient ? '#40C48A' : scoreColor(safeScore);
-  const colorSoft = useEmeraldGradient
-    ? '#7FE0B5'
-    : safeScore >= 75 ? '#3D6B59' : safeScore >= 50 ? '#D97706' : '#DC2626';
+  const color = scoreColor(safeScore);
+  const colorSoft = safeScore >= 75
+    ? 'var(--color-brand-soft)'
+    : safeScore >= 50 ? 'var(--color-warning)' : 'var(--color-danger)';
 
   const strokeWidth = 8;
   const radius = (size - strokeWidth * 2 - 16) / 2;
@@ -59,13 +55,6 @@ export function ScoreGauge({ score = 0, size = 180, label, dark = false }) {
 
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      {/* Soft pulsing glow behind the ring — dark Path Score card only */}
-      {dark && (
-        <span
-          className="absolute inset-2 rounded-full animate-pulse-glow pointer-events-none"
-          style={{ background: `radial-gradient(circle, ${color}33 0%, transparent 70%)` }}
-        />
-      )}
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rotate-[-90deg] relative">
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -79,7 +68,7 @@ export function ScoreGauge({ score = 0, size = 180, label, dark = false }) {
           cx={center}
           cy={center}
           r={radius}
-          stroke={dark ? 'rgba(255,255,255,0.08)' : '#EAEAE5'}
+          stroke={dark ? 'rgba(255,255,255,0.08)' : 'var(--color-line)'}
           strokeWidth={strokeWidth}
           fill="none"
           strokeLinecap="round"
@@ -93,7 +82,7 @@ export function ScoreGauge({ score = 0, size = 180, label, dark = false }) {
             y1={t.y1}
             x2={t.x2}
             y2={t.y2}
-            stroke={dark ? 'rgba(255,255,255,0.15)' : '#D0D0CA'}
+            stroke={dark ? 'rgba(255,255,255,0.15)' : 'var(--color-line)'}
             strokeWidth="1.5"
             strokeLinecap="round"
           />
@@ -118,10 +107,10 @@ export function ScoreGauge({ score = 0, size = 180, label, dark = false }) {
       {/* Centered Score Display */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <div className="metric-glow flex flex-col items-center justify-center">
-          <span className={cn('font-serif text-3xl sm:text-4xl font-extrabold animate-count-up leading-none', dark ? 'text-white' : 'text-[#171717]')}>
+          <span className={cn('font-serif text-3xl sm:text-4xl font-extrabold animate-count-up leading-none', dark ? 'text-white' : 'text-ink')}>
             {Math.round(safeScore)}
           </span>
-          <span className={cn('text-[10px] font-bold uppercase tracking-wider mt-1', dark ? 'text-white/40' : 'text-[#A3A3A3]')}>
+          <span className={cn('text-[10px] font-bold uppercase tracking-wider mt-1', dark ? 'text-white/40' : 'text-faint')}>
             /100
           </span>
         </div>

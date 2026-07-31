@@ -1,16 +1,13 @@
 /**
  * components/ui/Button.jsx — Reusable Button Component
  *
- * A single button component that covers all the button styles used in the app.
- * Instead of writing raw <button> tags with long class strings on every page,
- * you use <Button> and just pick a `variant` and `size`.
+ * The single source of truth for every button style in the app. Pick a
+ * `variant` and `size` instead of writing raw class strings.
  *
  * VARIANTS (controls colour/style):
- *   brand   — dark filled button (primary action, e.g. "Submit", "Save")
- *   outline — white with border (secondary action, e.g. "Cancel")
- *   ghost   — no background, text only (low-emphasis, e.g. "Back")
- *   danger  — red filled (destructive actions, e.g. "Delete")
- *   success — green filled (positive confirmation)
+ *   primary   — filled accent (the one main action on a screen, e.g. "Save")
+ *   secondary — outlined neutral (supporting actions, e.g. "Cancel")
+ *   tertiary  — text-only, low emphasis (e.g. "Back")
  *
  * SIZES:
  *   sm — compact (inside tables, tight layouts)
@@ -23,9 +20,8 @@
  *
  * USAGE:
  *   <Button>Default</Button>
- *   <Button variant="outline" size="sm">Cancel</Button>
+ *   <Button variant="secondary" size="sm">Cancel</Button>
  *   <Button loading={submitting}>Save changes</Button>
- *   <Button variant="danger" onClick={handleDelete}>Delete</Button>
  */
 
 import { cn } from '@/lib/cn';
@@ -33,14 +29,10 @@ import { Spinner } from './Spinner';
 
 // Map of variant names → Tailwind classes for background/text/hover colours
 const VARIANTS = {
-  brand:   'btn-editorial bg-[#171717] text-white hover:bg-[#262626]',
-  outline: 'border border-[#EAEAE5] bg-white text-[#171717] hover:bg-[#F5F5F3]',
-  ghost:   'text-[#525252] hover:text-[#171717] hover:bg-[#F5F5F3]',
-  danger:  'bg-[#B85A3C] text-white hover:bg-[#a04f34]',
-  success: 'bg-[#2B4C3F] text-white hover:bg-[#3D6B59]',
-  mint:    'bg-[#34D399] text-[#0A0D12] hover:bg-[#2BBF89] shadow-[0_0_20px_-4px_#34D399]',
+  primary:   'bg-brand text-white hover:bg-brand-soft',
+  secondary: 'border border-line bg-surface text-ink hover:bg-surface-2',
+  tertiary:  'text-muted hover:text-ink hover:bg-surface-2',
 };
-
 
 // Map of size names → Tailwind height/padding/text classes
 const SIZES = {
@@ -49,15 +41,14 @@ const SIZES = {
   lg: 'h-12 px-6 text-base',
 };
 
-/** Matte button — no gradients, solid colours only. */
 export function Button({
-  variant = 'brand',  // which colour scheme to use
-  size = 'md',        // which size to use
-  loading = false,    // shows spinner + disables button when true
-  disabled,           // standard HTML disabled attribute
-  className,          // extra classes passed from the parent
-  children,           // the button label / content
-  ...props            // any other HTML button attributes (onClick, type, etc.)
+  variant = 'primary', // which colour scheme to use
+  size = 'md',         // which size to use
+  loading = false,     // shows spinner + disables button when true
+  disabled,            // standard HTML disabled attribute
+  className,           // extra classes passed from the parent
+  children,            // the button label / content
+  ...props             // any other HTML button attributes (onClick, type, etc.)
 }) {
   return (
     <button
@@ -67,13 +58,11 @@ export function Button({
         // Base layout: inline flex so icon + text sit side by side
         'inline-flex items-center justify-center gap-2 rounded-xl font-semibold',
         // Smooth hover animation
-        'transition-all duration-200 cubic-bezier(0.16, 1, 0.3, 1)',
-        // Micro-interaction: slightly lifts on hover, shrinks on click
-        'hover:-translate-y-[1px] active:scale-[0.98]',
+        'transition-colors duration-200',
         // Keyboard accessibility: visible focus ring
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2B4C3F]/40',
-        // Disabled state: cursor changes, opacity fades, transform disabled
-        'disabled:cursor-not-allowed disabled:opacity-50 disabled:transform-none',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40',
+        // Disabled state: cursor changes, opacity fades
+        'disabled:cursor-not-allowed disabled:opacity-50',
         VARIANTS[variant], // apply the chosen colour scheme
         SIZES[size],       // apply the chosen size
         className          // allow parent to add extra classes

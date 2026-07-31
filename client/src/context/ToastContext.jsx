@@ -39,7 +39,7 @@ const ICONS = {
 const STYLES = {
   success: 'border-success/40 text-success',
   error: 'border-danger/40 text-danger',
-  info: 'border-info/40 text-info',
+  info: 'border-line text-ink',
   warning: 'border-warning/40 text-warning',
 };
 

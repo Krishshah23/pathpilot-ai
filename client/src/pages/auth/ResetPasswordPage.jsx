@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { AuthLayout } from '@/components/layout/AuthLayout';
+import { SimpleAuthLayout } from '@/components/layout/SimpleAuthLayout';
 import { PasswordInput } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
+
+const MINT_BTN = '!bg-[#34D399] !text-[#0A0D12] hover:!bg-[#2BBF89] shadow-[0_0_20px_-4px_#34D399] hud-focus focus-visible:!ring-[#34D399]/40';
 
 export default function ResetPasswordPage() {
   const [params] = useSearchParams();
@@ -35,20 +37,20 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <AuthLayout title="Invalid link" subtitle="This reset link is missing or malformed.">
-        <p className="text-sm text-muted">
+      <SimpleAuthLayout title="Invalid link" subtitle="This reset link is missing or malformed.">
+        <p className="text-sm text-white/60">
           Please request a new link from the{' '}
-          <Link to="/forgot-password" className="font-semibold text-brand-soft hover:underline">
+          <Link to="/forgot-password" className="hud-focus rounded font-semibold text-[#34D399] hover:underline">
             forgot password
           </Link>{' '}
           page.
         </p>
-      </AuthLayout>
+      </SimpleAuthLayout>
     );
   }
 
   return (
-    <AuthLayout title="Set a new password" subtitle="Choose a strong password you'll remember.">
+    <SimpleAuthLayout title="Set a new password" subtitle="Choose a strong password you'll remember.">
       <form onSubmit={onSubmit} className="space-y-4">
         <PasswordInput
           label="New password"
@@ -69,10 +71,10 @@ export default function ResetPasswordPage() {
           error={error}
           required
         />
-        <Button type="submit" className="w-full" size="lg" loading={submitting}>
+        <Button type="submit" className={`w-full ${MINT_BTN}`} size="lg" loading={submitting}>
           Reset password
         </Button>
       </form>
-    </AuthLayout>
+    </SimpleAuthLayout>
   );
 }

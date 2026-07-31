@@ -1,37 +1,18 @@
 /**
- * context/ThemeContext.jsx — Light / Dark Mode State
+ * context/ThemeContext.jsx — Theme State (light-only)
  *
- * Persists the user's theme choice in localStorage and toggles the `.dark`
- * class on <html>. Tailwind v4 theme variables in index.css react to that
- * class (see the `:root` / `.dark` blocks), so every themed color updates
- * automatically without touching individual components.
+ * The app ships a single light theme now. This context is kept as a thin
+ * shell so any remaining `useTheme()` call sites don't need to change,
+ * but there is no dark mode to toggle into.
  */
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext } from 'react';
 
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('pp_theme') || 'light';
-  });
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('pp_theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
-
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === 'dark' }}>
+    <ThemeContext.Provider value={{ theme: 'light', isDark: false }}>
       {children}
     </ThemeContext.Provider>
   );

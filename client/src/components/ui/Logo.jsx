@@ -27,7 +27,7 @@ export function Logo({ className, showText = true }) {
     <div className={cn('flex items-center gap-2.5', className)}>
 
       {/* Icon square — dark background with the compass needle SVG inside */}
-      <span className="relative flex h-9 w-9 items-center justify-center rounded-xl btn-brand text-white">
+      <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-ink text-white">
         <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5">
           {/* Compass needle: a pointed diamond shape pointing up and down */}
           <path

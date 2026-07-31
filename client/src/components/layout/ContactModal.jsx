@@ -10,7 +10,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from '@/components/ui/icons';
-import { cn } from '@/lib/cn';
+import { Button } from '@/components/ui/Button';
 
 const LINKS = [
   { label: 'Email', icon: 'Mail', href: 'mailto:krish23076@gmail.com' },
@@ -57,8 +57,7 @@ export function ContactModal({ onClose }) {
         {/* Developer card */}
         <div className="mx-6 mt-5 rounded-xl border border-line bg-surface-2 p-4 flex items-center gap-3.5">
           <span
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white font-bold text-sm shadow-sm"
-            style={{ background: 'linear-gradient(135deg, var(--brand-grad-from, #2D6A4F), var(--brand-grad-to, #40916C))' }}
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand text-white font-bold text-sm shadow-sm"
           >
             KS
           </span>
@@ -98,12 +97,13 @@ export function ContactModal({ onClose }) {
             placeholder="Share your thoughts about PathPilot…"
             className="input w-full min-h-[90px] resize-none text-sm"
           />
-          <button
+          <Button
             onClick={sendFeedback}
-            className={cn('btn-gradient mt-3 w-full h-11 rounded-xl text-sm font-semibold flex items-center justify-center gap-2')}
+            className="mt-3 w-full"
+            size="lg"
           >
             <Icon.Send size={14} /> Send Feedback
-          </button>
+          </Button>
         </div>
 
         <p className="px-6 py-5 text-[11px] text-faint text-center leading-relaxed">

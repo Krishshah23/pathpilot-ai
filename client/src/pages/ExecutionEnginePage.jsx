@@ -1,42 +1,28 @@
 /**
- * pages/ExecutionEnginePage.jsx — Skill Roadmap & Job Kanban Execution Engine Hub Page (/execution-engine)
+ * pages/ExecutionEnginePage.jsx — Skill Roadmap Execution Engine Hub Page (/execution-engine)
  *
  * ARCHITECTURAL ROLE:
- * Action-oriented hub combining week-by-week learning roadmap execution with a 7-stage job application Kanban pipeline.
+ * Action-oriented hub for week-by-week learning roadmap execution.
  *
  * FEATURES:
  * 1. Skill Roadmap Engine: Interactive week-by-week task checklist with hour tracking and progress bar calculations.
  *    Supports progress preservation across regenerations and Gemini AI gap week injection. Each task also surfaces
  *    2-3 curated learning resources (see config/learningResources.js) with a "Mark as Learned" toggle.
- * 2. Application Kanban Pipeline: 7-stage drag-and-drop opportunity cards (Wishlist -> Applied -> OA -> Interview -> HR -> Offer -> Rejected).
- * 3. Live Job Openings Feed: TheirStack API integration rendering role-specific active job openings with 1-click application tracking.
+ * 2. Application tracking lives on the saved job cards over on /live-jobs (see JobCard's status control),
+ *    not as a separate board here — this page just links out to it.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
-import { Select } from '@/components/ui/Select';
-import { OpportunityModal } from '@/components/opportunity/OpportunityModal';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { DREAM_ROLES } from '@/config/careerData';
 import { getLearningResources } from '@/config/learningResources';
-
-/* ── Kanban Stage config ── */
-const STAGES = [
-  { value: 'wishlist',  label: 'Wishlist',  color: '#A3A3A3' },
-  { value: 'applied',   label: 'Applied',   color: '#1E40AF' },
-  { value: 'oa',        label: 'OA',        color: '#92400E' },
-  { value: 'interview', label: 'Interview', color: '#2B4C3F' },
-  { value: 'hr',        label: 'HR',        color: '#525252' },
-  { value: 'offer',     label: 'Offer',     color: '#2B4C3F' },
-  { value: 'rejected',  label: 'Rejected',  color: '#B85A3C' },
-];
-const stageMap = Object.fromEntries(STAGES.map((s) => [s.value, s]));
 
 export default function ExecutionEnginePage() {
   const { user, refreshUser } = useAuth();
@@ -53,24 +39,9 @@ export default function ExecutionEnginePage() {
   const profileDreamRole = user?.profile?.dreamRole;
   const roleOptions = [...new Set([planRole, profileDreamRole, ...(DREAM_ROLES || [])].filter(Boolean))];
 
-  /* ── Kanban state ── */
-  const [opportunities, setOpportunities] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loadingOpp, setLoadingOpp] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [dragOverStage, setDragOverStage] = useState(null);
-
-  /* ── Live Jobs state ── */
-  const [liveJobs, setLiveJobs] = useState([]);
-  const [loadingJobs, setLoadingJobs] = useState(false);
-
-  /* ── Load everything ── */
+  /* ── Load roadmap ── */
   useEffect(() => {
     loadPlan();
-    loadOpportunities();
-    loadLiveJobs();
   }, []);
 
   const loadPlan = async () => {
@@ -147,83 +118,6 @@ export default function ExecutionEnginePage() {
     }
   };
 
-  const loadOpportunities = useCallback(async () => {
-    try {
-      const [oppRes, statsRes] = await Promise.all([
-        api.get('/opportunities').catch(() => ({ data: { data: { opportunities: [] } } })),
-        api.get('/opportunities/stats').catch(() => ({ data: { data: null } })),
-      ]);
-      setOpportunities(oppRes?.data?.data?.opportunities || []);
-      setStats(statsRes?.data?.data || null);
-    } catch {
-      setOpportunities([]);
-    } finally {
-      setLoadingOpp(false);
-    }
-  }, []);
-
-  const loadLiveJobs = async () => {
-    setLoadingJobs(true);
-    try {
-      const role = user?.profile?.dreamRole || 'Full Stack Developer';
-      const { data } = await api.get(`/live-jobs?role=${encodeURIComponent(role)}`);
-      setLiveJobs(data?.data?.jobs || []);
-    } catch {
-      setLiveJobs([]);
-    } finally {
-      setLoadingJobs(false);
-    }
-  };
-
-  /* ── Opportunity CRUD ── */
-  const handleCreate = async (form) => {
-    setSaving(true);
-    try {
-      await api.post('/opportunities', form);
-      setModalOpen(false);
-      loadOpportunities();
-    } catch (err) { toast.error(errorMessage(err)); }
-    finally { setSaving(false); }
-  };
-
-  const handleUpdate = async (form) => {
-    setSaving(true);
-    try {
-      await api.patch(`/opportunities/${editing._id}`, form);
-      setModalOpen(false);
-      setEditing(null);
-      loadOpportunities();
-    } catch (err) { toast.error(errorMessage(err)); }
-    finally { setSaving(false); }
-  };
-
-  const handleDelete = async (id) => {
-    try {
-      await api.delete(`/opportunities/${id}`);
-      loadOpportunities();
-    } catch (err) { toast.error(errorMessage(err)); }
-  };
-
-  const handleStageChange = async (id, newStage) => {
-    try {
-      await api.patch(`/opportunities/${id}`, { stage: newStage });
-      loadOpportunities();
-    } catch (err) { toast.error(errorMessage(err)); }
-  };
-
-  const grouped = useMemo(() => {
-    const map = {};
-    for (const s of STAGES) map[s.value] = [];
-    if (Array.isArray(opportunities)) {
-      for (const o of opportunities) {
-        if (o && map[o.stage]) map[o.stage].push(o);
-        else if (o) map.wishlist.push(o);
-      }
-    }
-    return map;
-  }, [opportunities]);
-
-
   return (
     <AppShell>
       <div className="space-y-10">
@@ -261,7 +155,7 @@ export default function ExecutionEnginePage() {
 
           {loadingPlan ? (
             <div className="flex h-32 items-center justify-center">
-              <Spinner className="h-6 w-6 text-[#2B4C3F]" />
+              <Spinner className="h-6 w-6 text-brand" />
             </div>
           ) : !plan ? (
             <GeneratePanel role={planRole} setRole={setPlanRole} roleOptions={roleOptions} generating={generating} onGenerate={generatePlan} />
@@ -270,153 +164,27 @@ export default function ExecutionEnginePage() {
           )}
         </section>
 
-        {/* ── Section 2: Application Pipeline + Market Radar ─────── */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="font-serif text-xl font-bold text-ink">Application Pipeline</h2>
-            <button
-              onClick={() => { setEditing(null); setModalOpen(true); }}
-              className="inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-soft transition-colors"
-            >
-              <Icon.Plus size={14} /> Add Application
-            </button>
+        {/* ── Section 2: Application Tracking ─────────────────────── */}
+        <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-line bg-surface-2 p-6">
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-brand border border-line">
+              <Icon.Briefcase size={18} />
+            </span>
+            <div>
+              <h2 className="text-sm font-bold text-ink">Application Pipeline</h2>
+              <p className="text-xs text-muted mt-1 max-w-md">
+                Save jobs and track their status — Wishlist, Applied, OA, Interview, Rejected — right from each job card on Live Jobs.
+              </p>
+            </div>
           </div>
-
-          <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-            {/* Kanban Board — desktop/tablet only. Below lg, native HTML5 drag-and-drop
-                doesn't work on touch and a 7-column horizontal-scroll board is hard to
-                scan on a phone, so a stacked collapsible list (MobileKanbanStages) takes
-                over instead. */}
-            <div className="card p-4 overflow-hidden hidden lg:block">
-              {loadingOpp ? (
-                <div className="flex h-40 items-center justify-center">
-                  <Spinner className="h-6 w-6 text-brand" />
-                </div>
-              ) : (
-                <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
-                  {STAGES.map((stage) => {
-                    const cards = grouped[stage.value] || [];
-                    const isOver = dragOverStage === stage.value;
-                    return (
-                      <div
-                        key={stage.value}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDragEnter={() => setDragOverStage(stage.value)}
-                        onDragLeave={() => {
-                          if (dragOverStage === stage.value) setDragOverStage(null);
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          setDragOverStage(null);
-                          const oppId = e.dataTransfer.getData('text/plain');
-                          if (oppId) handleStageChange(oppId, stage.value);
-                        }}
-                        className={cn(
-                          "flex w-52 shrink-0 flex-col rounded-xl border transition-all duration-200 bg-canvas",
-                          isOver ? "border-[#2B4C3F] bg-[#F0F5F3] scale-[1.02] shadow-md" : "border-line"
-                        )}
-                      >
-                        {/* Column header */}
-                        <div className="flex items-center justify-between px-3 py-2.5 border-b border-line">
-                          <div className="flex items-center gap-2">
-                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: stage.color }} />
-                            <span className="text-xs font-semibold text-ink">{stage.label}</span>
-                          </div>
-                          <span className="text-[10px] font-bold text-faint bg-surface-2 px-1.5 py-0.5 rounded">
-                            {cards.length}
-                          </span>
-                        </div>
-                        {/* Cards */}
-                        <div className="flex flex-col gap-2 p-2 overflow-y-auto" style={{ maxHeight: '50vh' }}>
-                          {cards.length === 0 ? (
-                            <div className="m-1 rounded-2xl border-2 border-dashed border-line py-6 px-3 flex flex-col items-center justify-center text-center gap-1 bg-canvas">
-                              <Icon.Layers size={18} className="text-faint mb-0.5" />
-                              <p className="text-xs font-medium text-ink">No applications yet</p>
-                              <p className="text-[10px] text-muted">Track roles as you apply — they'll show up here.</p>
-                            </div>
-                          ) : (
-                            cards.map((opp, oIdx) => (
-                              <KanbanCard
-                                key={opp?._id || opp?.id || oIdx}
-                                opp={opp}
-                                onEdit={(o) => { setEditing(o); setModalOpen(true); }}
-                                onDelete={handleDelete}
-                                onStageChange={handleStageChange}
-                              />
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                </div>
-              )}
-            </div>
-
-            {/* Mobile Kanban — stacked, collapsible-by-stage list. Stage changes go
-                through KanbanCard's built-in <select>, which already works on touch. */}
-            <div className="lg:hidden">
-              {loadingOpp ? (
-                <div className="card flex h-40 items-center justify-center">
-                  <Spinner className="h-6 w-6 text-brand" />
-                </div>
-              ) : (
-                <MobileKanbanStages
-                  grouped={grouped}
-                  onEdit={(o) => { setEditing(o); setModalOpen(true); }}
-                  onDelete={handleDelete}
-                  onStageChange={handleStageChange}
-                />
-              )}
-            </div>
-
-            {/* Active Market Radar */}
-            <div className="card overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-line">
-                <div>
-                  <h3 className="text-sm font-bold text-ink flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-brand animate-pulse" />
-                    Active Market Radar
-                  </h3>
-                  <p className="text-[11px] text-faint mt-0.5">Live openings for your role</p>
-                </div>
-                <Link to="/live-jobs" className="text-xs font-semibold text-brand hover:underline shrink-0">
-                  View all →
-                </Link>
-              </div>
-
-              <div className="divide-y divide-line max-h-[480px] overflow-y-auto">
-                {loadingJobs ? (
-                  <div className="flex h-32 items-center justify-center">
-                    <Spinner className="h-5 w-5 text-[#2B4C3F]" />
-                  </div>
-                ) : liveJobs.length > 0 ? (
-                  liveJobs.map((job, jIdx) => (
-                    <RadarJobRow key={job?.id || job?._id || jIdx} job={job} />
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center px-6 m-4 rounded-2xl border-2 border-dashed border-line bg-canvas">
-                    <Icon.Briefcase size={28} className="text-faint mb-2" />
-                    <p className="text-sm font-medium text-ink">No live openings loaded</p>
-                    <p className="text-xs text-muted mt-0.5">Explore active roles matching your target profile.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-          </div>
+          <Link
+            to="/live-jobs"
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-soft transition-colors shrink-0"
+          >
+            Go to Live Jobs <Icon.ArrowRight size={14} />
+          </Link>
         </section>
       </div>
-
-      {/* Opportunity Modal */}
-      <OpportunityModal
-        open={modalOpen}
-        onClose={() => { setModalOpen(false); setEditing(null); }}
-        onSubmit={editing ? handleUpdate : handleCreate}
-        initial={editing}
-        loading={saving}
-      />
     </AppShell>
   );
 }
@@ -566,10 +334,10 @@ function WeekCard({ week, index = 0, onToggle, onDeleteGoal }) {
   const isRecommended = week.priority === 'core' || week.priority === 'high';
 
   const accentColorClass = isGapTargeted
-    ? 'border-l-[#2B4C3F]'
+    ? 'border-l-brand'
     : isRecommended
-    ? 'border-l-[#92400E]'
-    : 'border-l-[#D0D0CA]';
+    ? 'border-l-warning'
+    : 'border-l-line';
 
   const safeIndex = typeof index === 'number' && !isNaN(index) ? index : 0;
   const staggerClass = `stagger-${(safeIndex % 5) + 1}`;
@@ -591,8 +359,8 @@ function WeekCard({ week, index = 0, onToggle, onDeleteGoal }) {
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-semibold text-ink">{week.title || week.topic || 'Untitled Week'}</p>
             {isGapTargeted && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#C8DDD6] text-[#2B4C3F] bg-[#F0F5F3]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#2B4C3F]" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-brand/30 text-brand bg-brand/10">
+                <span className="h-1.5 w-1.5 rounded-full bg-brand" />
                 Gap-targeted
               </span>
             )}
@@ -605,7 +373,7 @@ function WeekCard({ week, index = 0, onToggle, onDeleteGoal }) {
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-20 h-1.5 rounded-full progress-ruler overflow-hidden">
-            <div className="h-full rounded-full bg-[#2B4C3F]" style={{ width: `${week.percent || 0}%` }} />
+            <div className="h-full rounded-full bg-brand" style={{ width: `${week.percent || 0}%` }} />
           </div>
           <Icon.ChevronDown size={16} className={cn('text-faint transition-transform', open && 'rotate-180')} />
         </div>
@@ -727,150 +495,6 @@ function TaskRow({ taskKey, title, hours, completed, difficulty, skillLabel, onT
             </div>
           )}
         </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Mobile Kanban: stacked, collapsible-by-stage list (< lg breakpoint) ── */
-function MobileKanbanStages({ grouped, onEdit, onDelete, onStageChange }) {
-  // Default: expand every stage that already has cards, collapse empty ones —
-  // avoids forcing the user to open 7 sections just to find the 1-2 that matter.
-  const [collapsed, setCollapsed] = useState(() => {
-    const initial = {};
-    for (const stage of STAGES) {
-      initial[stage.value] = (grouped[stage.value] || []).length === 0;
-    }
-    return initial;
-  });
-  const toggle = (key) => setCollapsed((c) => ({ ...c, [key]: !c[key] }));
-
-  return (
-    <div className="space-y-2.5">
-      {STAGES.map((stage) => {
-        const cards = grouped[stage.value] || [];
-        const isCollapsed = collapsed[stage.value];
-        return (
-          <div key={stage.value} className="card overflow-hidden !p-0">
-            <button
-              onClick={() => toggle(stage.value)}
-              className="w-full flex items-center justify-between px-4 py-3"
-              aria-expanded={!isCollapsed}
-            >
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: stage.color }} />
-                <span className="text-sm font-semibold text-ink">{stage.label}</span>
-                <span className="text-[10px] font-bold text-faint bg-surface-2 px-1.5 py-0.5 rounded">
-                  {cards.length}
-                </span>
-              </div>
-              <Icon.ChevronDown size={16} className={cn('text-faint transition-transform', !isCollapsed && 'rotate-180')} />
-            </button>
-            {!isCollapsed && (
-              <div className="flex flex-col gap-2 px-3 pb-3 border-t border-line pt-3">
-                {cards.length === 0 ? (
-                  <div className="rounded-xl border-2 border-dashed border-line py-5 px-3 flex flex-col items-center justify-center text-center gap-1 bg-canvas">
-                    <Icon.Layers size={16} className="text-faint mb-0.5" />
-                    <p className="text-xs font-medium text-ink">No applications yet</p>
-                    <p className="text-[10px] text-muted">Track roles as you apply — they'll show up here.</p>
-                  </div>
-                ) : (
-                  cards.map((opp, oIdx) => (
-                    <KanbanCard
-                      key={opp?._id || opp?.id || oIdx}
-                      opp={opp}
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                      onStageChange={onStageChange}
-                    />
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ── Kanban Card ── */
-function KanbanCard({ opp, onEdit, onDelete, onStageChange }) {
-  if (!opp || typeof opp !== 'object') return null;
-  const stage = (opp.stage && stageMap[opp.stage]) || stageMap.wishlist;
-  const company = opp.company || opp.companyName || 'Company';
-  const role = opp.role || opp.jobTitle || 'Role';
-  const oppId = opp._id || opp.id || '';
-
-  return (
-    <div
-      draggable
-      onDragStart={(e) => {
-        if (oppId) e.dataTransfer.setData('text/plain', oppId);
-        e.dataTransfer.effectAllowed = 'move';
-      }}
-      className="group rounded-xl border border-line bg-surface p-3 hover:border-faint transition-colors cursor-grab active:cursor-grabbing hover:shadow-sm"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-ink truncate">{company}</p>
-          <p className="text-[11px] text-faint truncate mt-0.5">{role}</p>
-        </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity shrink-0">
-          <button
-            onClick={() => onEdit(opp)}
-            aria-label={`Edit ${company} — ${role}`}
-            className="rounded p-1 hover:bg-surface-2 text-faint hover:text-ink"
-          >
-            <Icon.Edit size={11} />
-          </button>
-          <button
-            onClick={() => onDelete(oppId)}
-            aria-label={`Delete ${company} — ${role}`}
-            className="rounded p-1 hover:bg-danger/10 text-faint hover:text-danger"
-          >
-            <Icon.Trash size={11} />
-          </button>
-        </div>
-      </div>
-      <select
-        value={opp.stage || 'wishlist'}
-        onChange={(e) => onStageChange(oppId, e.target.value)}
-        className="mt-2 w-full text-[10px] border border-line rounded-lg px-2 py-1 bg-canvas text-muted focus:outline-none cursor-pointer"
-        onClick={(e) => e.stopPropagation()}
-        onDragStart={(e) => e.preventDefault()}
-      >
-        {STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-      </select>
-    </div>
-  );
-}
-
-/* ── Radar Job Row ── */
-function RadarJobRow({ job }) {
-  if (!job || typeof job !== 'object') return null;
-  const title = job.title || job.role || 'Job Opening';
-  const company = job.company || 'Company';
-  const location = job.location || 'Remote';
-  const postedAgo = job.postedAgo ? ` · ${job.postedAgo}` : '';
-  const url = job.applyUrl || job.url || job.link;
-
-  return (
-    <div className="flex items-center justify-between gap-3 px-5 py-4 hover:bg-canvas transition-colors">
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-ink truncate">{title}</p>
-        <p className="text-xs text-muted mt-0.5 truncate">{company}</p>
-        <p className="text-[11px] text-faint mt-0.5">{location}{postedAgo}</p>
-      </div>
-      {url && (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0 inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-ink text-ink text-xs font-semibold hover:bg-ink hover:text-canvas transition-colors"
-        >
-          Apply <Icon.ArrowRight size={11} />
-        </a>
       )}
     </div>
   );

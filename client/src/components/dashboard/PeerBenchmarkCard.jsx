@@ -27,12 +27,12 @@ const STATUS_COLOR = {
   about_average: 'text-muted',
 };
 
-export function PeerBenchmarkCard({ benchmark, loading }) {
+export function PeerBenchmarkCard({ benchmark, loading, bare = false }) {
   const [expanded, setExpanded] = useState(false);
 
   if (loading) {
     return (
-      <div className="card p-6 animate-pulse">
+      <div className={cn(!bare && 'card p-6', 'animate-pulse')}>
         <div className="h-4 w-40 rounded bg-surface-2 mb-3" />
         <div className="h-3 w-64 rounded bg-surface-2" />
       </div>
@@ -49,7 +49,7 @@ export function PeerBenchmarkCard({ benchmark, loading }) {
         : 'Set a target role to unlock peer benchmarking.';
 
     return (
-      <div className="card p-6 flex items-center gap-3">
+      <div className={cn(!bare && 'card p-6', 'flex items-center gap-3')}>
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-faint border border-line">
           <Icon.Users size={16} />
         </span>
@@ -75,18 +75,20 @@ export function PeerBenchmarkCard({ benchmark, loading }) {
     );
 
   return (
-    <div className="card p-6">
+    <div className={cn(!bare && 'card p-6')}>
       <button
         onClick={() => setExpanded((e) => !e)}
         className="w-full flex items-center justify-between gap-4 text-left"
       >
         <div className="flex items-start gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-brand border border-line">
-            <Icon.Users size={16} />
-          </span>
+          {!bare && (
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-brand border border-line">
+              <Icon.Users size={16} />
+            </span>
+          )}
           <div>
-            <h3 className="section-heading-accent text-sm font-bold text-ink">Peer Benchmarking</h3>
-            <p className="text-sm text-muted mt-1">{headline}</p>
+            {!bare && <h3 className="text-sm font-bold text-ink">Peer Benchmarking</h3>}
+            <p className={cn('text-sm text-muted', !bare && 'mt-1')}>{headline}</p>
           </div>
         </div>
         <Icon.ChevronDown

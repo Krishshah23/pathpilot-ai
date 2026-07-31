@@ -112,10 +112,10 @@ function OverviewTab({ stats }) {
   }
 
   const primaryStats = [
-    { label: 'Total Users', value: stats.totalUsers, icon: Icon.Users, color: '#6366f1' },
-    { label: 'Students', value: stats.totalStudents, icon: Icon.User, color: '#818cf8' },
-    { label: 'Admins', value: stats.totalAdmins, icon: Icon.Shield, color: '#8b5cf6' },
-    { label: 'New This Week', value: stats.recentSignups, icon: Icon.Sparkles, color: '#22c55e' },
+    { label: 'Total Users', value: stats.totalUsers, icon: Icon.Users, color: 'muted' },
+    { label: 'Students', value: stats.totalStudents, icon: Icon.User, color: 'muted' },
+    { label: 'Admins', value: stats.totalAdmins, icon: Icon.Shield, color: 'muted' },
+    { label: 'New This Week', value: stats.recentSignups, icon: Icon.Sparkles, color: 'brand' },
   ];
 
   const moduleStats = [
@@ -134,13 +134,13 @@ function OverviewTab({ stats }) {
           const Ico = s.icon;
           return (
             <div key={s.label} className={cn("card card-hover p-5 relative overflow-hidden animate-fade-up", `stagger-${idx + 1}`)}>
-              <div className="absolute top-0 right-0 h-20 w-20 rounded-full opacity-[0.07]"
-                style={{ backgroundColor: s.color, transform: 'translate(30%, -30%)' }}
+              <div
+                className={cn("absolute top-0 right-0 h-20 w-20 rounded-full opacity-[0.07]", s.color === 'brand' ? 'bg-brand' : 'bg-muted')}
+                style={{ transform: 'translate(30%, -30%)' }}
               />
               <div className="flex items-start gap-3">
                 <span
-                  className="flex h-10 w-10 items-center justify-center rounded-xl shrink-0"
-                  style={{ backgroundColor: `${s.color}18`, color: s.color }}
+                  className={cn("flex h-10 w-10 items-center justify-center rounded-xl shrink-0", s.color === 'brand' ? 'bg-brand/10 text-brand' : 'bg-muted/10 text-muted')}
                 >
                   <Ico size={18} />
                 </span>
@@ -171,7 +171,7 @@ function OverviewTab({ stats }) {
                   <>
                     <div className="mt-2 h-1.5 rounded-full bg-surface-2">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-brand to-violet"
+                        className="h-full rounded-full bg-brand"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -193,8 +193,8 @@ function OverviewTab({ stats }) {
           <div className="flex flex-wrap gap-3">
             {Object.entries(stats.opportunityStages).map(([stage, count]) => {
               const colors = {
-                wishlist: '#626b80', applied: '#38bdf8', oa: '#f59e0b',
-                interview: '#8b5cf6', hr: '#818cf8', offer: '#22c55e', rejected: '#ef4444',
+                wishlist: 'var(--color-faint)', applied: 'var(--color-muted)', oa: 'var(--color-warning)',
+                interview: 'var(--color-brand)', hr: 'var(--color-muted)', offer: 'var(--color-brand)', rejected: 'var(--color-danger)',
               };
               const labels = {
                 wishlist: 'Wishlist', applied: 'Applied', oa: 'OA',
@@ -202,7 +202,7 @@ function OverviewTab({ stats }) {
               };
               return (
                 <div key={stage} className="flex items-center gap-2 rounded-lg border border-line bg-surface-2/30 px-3 py-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colors[stage] || '#626b80' }} />
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colors[stage] || 'var(--color-faint)' }} />
                   <span className="text-xs text-muted">{labels[stage] || stage}</span>
                   <span className="text-sm font-bold text-ink">{count}</span>
                 </div>
@@ -354,7 +354,7 @@ function UsersTab() {
         <div className="flex items-center justify-center gap-2">
           <Button
             size="sm"
-            variant="ghost"
+            variant="tertiary"
             disabled={pagination.page <= 1}
             onClick={() => fetchUsers(pagination.page - 1)}
           >
@@ -365,7 +365,7 @@ function UsersTab() {
           </span>
           <Button
             size="sm"
-            variant="ghost"
+            variant="tertiary"
             disabled={pagination.page >= pagination.pages}
             onClick={() => fetchUsers(pagination.page + 1)}
           >
@@ -392,7 +392,7 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
       {/* User info */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#2B4C3F]/10 text-sm font-bold text-[#2B4C3F]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-brand">
             {u.name?.charAt(0).toUpperCase()}
           </div>
           <div>
@@ -411,7 +411,7 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
           className={cn(
             'rounded-lg border px-2 py-1 text-xs font-semibold transition',
             u.role === 'admin'
-              ? 'border-[#2B4C3F]/30 bg-[#F0F5F3] text-[#2B4C3F]'
+              ? 'border-brand/30 bg-brand/10 text-brand'
               : 'border-line bg-surface-2 text-muted'
           )}
         >
@@ -463,10 +463,10 @@ function StatusBadge({ active, label }) {
     <span className={cn(
       'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border',
       active
-        ? 'bg-[#F0F5F3] text-[#2B4C3F] border-[#C8DDD6]'
+        ? 'bg-brand/10 text-brand border-brand/30'
         : 'bg-surface-2 text-faint border-line'
     )}>
-      <span className={cn('h-1.5 w-1.5 rounded-full', active ? 'bg-[#2B4C3F]' : 'bg-[#D0D0CA]')} />
+      <span className={cn('h-1.5 w-1.5 rounded-full', active ? 'bg-brand' : 'bg-line')} />
       {label}
     </span>
   );

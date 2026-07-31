@@ -11,7 +11,7 @@ export default function NotFoundPage() {
         <p className="mt-2 text-muted">This page has drifted off the path.</p>
       </div>
       <Link to="/">
-        <Button variant="outline">Back to safety</Button>
+        <Button variant="secondary">Back to safety</Button>
       </Link>
     </div>
   );

@@ -27,14 +27,14 @@ export function FileUpload({
 
   // SVGs for the curved decorative arrows
   const LeftArrow = () => (
-    <svg className="w-12 h-10 text-[#525252]/30 hidden sm:block" viewBox="0 0 48 40" fill="none">
+    <svg className="w-12 h-10 text-muted/30 hidden sm:block" viewBox="0 0 48 40" fill="none">
       <path d="M4 36C4 36 24 32 32 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="4 4" />
       <path d="M28 20L32 12L39 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 
   const RightArrow = () => (
-    <svg className="w-12 h-10 text-[#525252]/30 hidden sm:block" viewBox="0 0 48 40" fill="none">
+    <svg className="w-12 h-10 text-muted/30 hidden sm:block" viewBox="0 0 48 40" fill="none">
       <path d="M44 36C44 36 24 32 16 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="4 4" />
       <path d="M20 20L16 12L9 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
@@ -66,8 +66,8 @@ export function FileUpload({
         <motion.div
           animate={{
             scale: dragging ? 1.02 : 1,
-            backgroundColor: dragging ? '#F0F5F3' : '#FFFFFF',
-            borderColor: dragging ? '#2B4C3F' : '#EAEAE5',
+            backgroundColor: dragging ? 'var(--color-surface-2)' : 'var(--color-surface)',
+            borderColor: dragging ? 'var(--color-brand)' : 'var(--color-line)',
           }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           className={cn(
@@ -96,9 +96,9 @@ export function FileUpload({
                       y: { repeat: Infinity, duration: 4, ease: 'easeInOut' },
                       default: { type: 'spring', stiffness: 200, damping: 15 }
                     }}
-                    className="absolute left-4 sm:left-8 bg-white border border-[#EAEAE5] rounded-xl p-2.5 shadow-sm flex items-center justify-center z-10 w-12 h-12"
+                    className="absolute left-4 sm:left-8 bg-white border border-line rounded-xl p-2.5 shadow-sm flex items-center justify-center z-10 w-12 h-12"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-[#2B4C3F]/10 text-[#2B4C3F] flex items-center justify-center">
+                    <div className="w-7 h-7 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
                       <Icon.User size={14} />
                     </div>
                   </motion.div>
@@ -118,14 +118,14 @@ export function FileUpload({
                       y: { repeat: Infinity, duration: 3.5, ease: 'easeInOut', delay: 0.3 },
                       default: { type: 'spring', stiffness: 200, damping: 15 }
                     }}
-                    className="absolute bg-white border-2 border-[#171717] rounded-xl p-3 shadow-md flex flex-col gap-1.5 z-20 w-16 h-20 items-center justify-center"
+                    className="absolute bg-white border-2 border-ink rounded-xl p-3 shadow-md flex flex-col gap-1.5 z-20 w-16 h-20 items-center justify-center"
                   >
-                    <div className="w-8 h-8 rounded-full bg-[#171717]/10 text-[#171717] flex items-center justify-center mb-1">
+                    <div className="w-8 h-8 rounded-full bg-ink/10 text-ink flex items-center justify-center mb-1">
                       <Icon.FileText size={18} />
                     </div>
                     {/* Simulated page text lines */}
-                    <div className="w-8 h-1 bg-[#EAEAE5] rounded" />
-                    <div className="w-6 h-1 bg-[#EAEAE5] rounded" />
+                    <div className="w-8 h-1 bg-line rounded" />
+                    <div className="w-6 h-1 bg-line rounded" />
                   </motion.div>
 
                   {/* Decorative Right Arrow */}
@@ -144,19 +144,19 @@ export function FileUpload({
                       y: { repeat: Infinity, duration: 4, ease: 'easeInOut', delay: 0.6 },
                       default: { type: 'spring', stiffness: 200, damping: 15 }
                     }}
-                    className="absolute right-4 sm:right-8 bg-white border border-[#EAEAE5] rounded-xl p-2.5 shadow-sm flex items-center justify-center z-10 w-12 h-12"
+                    className="absolute right-4 sm:right-8 bg-white border border-line rounded-xl p-2.5 shadow-sm flex items-center justify-center z-10 w-12 h-12"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-[#92400E]/10 text-[#92400E] flex items-center justify-center">
+                    <div className="w-7 h-7 rounded-lg bg-warning/10 text-warning flex items-center justify-center">
                       <Icon.Shield size={14} />
                     </div>
                   </motion.div>
                 </div>
 
                 {/* Drag-and-Drop Guidance */}
-                <p className="text-sm font-semibold text-[#171717] mb-1">
-                  Drag & drop your resume, or <span className="text-[#2B4C3F] underline underline-offset-2">browse files</span>
+                <p className="text-sm font-semibold text-ink mb-1">
+                  Drag & drop your resume, or <span className="text-brand underline underline-offset-2">browse files</span>
                 </p>
-                <p className="text-xs text-[#A3A3A3]">{hint}</p>
+                <p className="text-xs text-faint">{hint}</p>
               </motion.div>
             ) : (
               <motion.div
@@ -169,33 +169,33 @@ export function FileUpload({
               >
                 {/* File Icon with Sparkles */}
                 <div className="relative mb-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#2B4C3F]/10 text-[#2B4C3F]">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/10 text-brand">
                     <Icon.Document size={28} />
                   </div>
                   <motion.span
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-                    className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#2B4C3F] text-white border-2 border-white shadow-sm"
+                    className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-white border-2 border-white shadow-sm"
                   >
                     <Icon.Check size={11} strokeWidth={3} />
                   </motion.span>
                 </div>
 
                 {/* File Information */}
-                <p className="text-sm font-bold text-[#171717] max-w-[280px] truncate mb-1">
+                <p className="text-sm font-bold text-ink max-w-[280px] truncate mb-1">
                   {file.name}
                 </p>
-                <p className="text-xs text-[#A3A3A3] mb-4">
+                <p className="text-xs text-faint mb-4">
                   Ready for Career Analysis
                 </p>
 
                 {/* Loading/Progress indicator simulation */}
-                <div className="w-full max-w-[200px] h-1 bg-[#F5F5F3] border border-[#EAEAE5] rounded-full overflow-hidden">
+                <div className="w-full max-w-[200px] h-1 bg-surface-2 border border-line rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: '100%' }}
                     transition={{ duration: 1.2, ease: 'easeOut' }}
-                    className="h-full bg-[#2B4C3F] rounded-full"
+                    className="h-full bg-brand rounded-full"
                   />
                 </div>
               </motion.div>
@@ -205,8 +205,8 @@ export function FileUpload({
       </div>
 
       {!file && existingLabel && (
-        <p className="mt-2 flex items-center gap-1.5 text-xs text-[#525252]">
-          <Icon.Check size={14} className="text-[#2B4C3F]" /> {existingLabel}
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted">
+          <Icon.Check size={14} className="text-brand" /> {existingLabel}
         </p>
       )}
     </div>

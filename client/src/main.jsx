@@ -16,13 +16,12 @@ import './index.css';                        // Global styles (custom properties
 import App from './App.jsx';                 // Root component that holds all routes
 import { AuthProvider } from '@/context/AuthContext';   // Provides user + auth actions to the whole app
 import { ToastProvider } from '@/context/ToastContext'; // Provides toast() notification function to the whole app
-import { ThemeProvider } from '@/context/ThemeContext'; // Provides light/dark theme state to the whole app
+import { ThemeProvider } from '@/context/ThemeContext'; // Provides theme state to the whole app
 
 // Find the <div id="root"> in index.html and mount React inside it.
 // StrictMode double-renders components in dev to catch bugs early — it has no effect in production.
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {/* ThemeProvider wraps everything so the .dark class is set before first paint */}
     <ThemeProvider>
       {/* ToastProvider must wrap AuthProvider so auth actions can fire toasts */}
       <ToastProvider>

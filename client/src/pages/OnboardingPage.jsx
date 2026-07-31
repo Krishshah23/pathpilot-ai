@@ -45,7 +45,7 @@ const FIRST_ACTIONS = [
     title: 'Upload my resume',
     desc: 'Get an instant AI audit — health score, gaps, and ATS keywords in under a minute.',
     route: '/talent-analyzer',
-    accent: '#10B981',
+    accent: 'var(--color-brand)',
   },
   {
     key: 'build',
@@ -53,7 +53,7 @@ const FIRST_ACTIONS = [
     title: 'Build one from scratch',
     desc: "Don't have a resume yet? Start the guided builder with AI writing help.",
     route: '/resume-builder',
-    accent: '#3B82F6',
+    accent: 'var(--color-ink)',
   },
   {
     key: 'explore',
@@ -61,7 +61,7 @@ const FIRST_ACTIONS = [
     title: 'Just explore first',
     desc: 'Take a look around the dashboard before committing to anything.',
     route: '/dashboard',
-    accent: '#8B5CF6',
+    accent: 'var(--color-muted)',
   },
 ];
 
@@ -241,7 +241,7 @@ export default function OnboardingPage() {
 
           {/* ── Navigation ── */}
           <div className="mt-8 flex items-center justify-between border-t border-line pt-6">
-            <Button variant="ghost" onClick={back} disabled={step === 0 || !!submitting}>
+            <Button variant="tertiary" onClick={back} disabled={step === 0 || !!submitting}>
               Back
             </Button>
 

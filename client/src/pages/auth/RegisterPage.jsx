@@ -150,8 +150,7 @@ export default function RegisterPage() {
 
         <Button
           type="submit"
-          variant="mint"
-          className="w-full hud-focus focus-visible:!ring-[#34D399]/40"
+          className="w-full hud-focus focus-visible:!ring-[#34D399]/40 !bg-[#34D399] !text-[#0A0D12] hover:!bg-[#2BBF89] shadow-[0_0_20px_-4px_#34D399]"
           size="lg"
           loading={submitting}
         >

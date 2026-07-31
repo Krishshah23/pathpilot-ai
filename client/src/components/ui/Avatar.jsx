@@ -44,7 +44,7 @@ export function Avatar({ user, size = 'md', className }) {
         'flex shrink-0 items-center justify-center overflow-hidden rounded-full font-bold text-white',
         SIZES[size],
         // Only apply the branded gradient background when there's no profile picture
-        !user?.profile?.avatarUrl && 'btn-brand',
+        !user?.profile?.avatarUrl && 'bg-ink',
         className
       )}
     >

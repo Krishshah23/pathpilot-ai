@@ -2,17 +2,16 @@
  * pages/OverviewPage.jsx — Candidate Command Center Dashboard (/dashboard)
  *
  * ARCHITECTURAL ROLE:
- * The primary dashboard landing page for authenticated candidates.
- *
- * DASHBOARD CARDS & WIDGETS:
- * 1. Greeting & Smart Action Header: Welcomes student, displays target role, and provides a dynamic
- *    smart call-to-action button based on progress (Upload Resume -> Build Roadmap -> Start Practice).
- * 2. Path Score Gauge: Displays canonical weighted Path Score (0-100), readiness tier badge,
- *    and 4 factor score breakdowns (Resume Quality, Skills, Projects, Profile Completion).
- * 3. AI Score Audit Card: Rendered only when an analyzed resume is present. Displays pre-generated
- *    Gemini coaching narrative explaining exact strengths and score blockers.
- * 4. Salary Projection Card: Displays live market salary range (in INR LPA) sourced from Adzuna data.
- * 5. Quick Hub Shortcuts: Cards linking to Talent Analyzer, Execution Engine, and Interview Prep.
+ * The primary dashboard landing page for authenticated candidates, organized
+ * into four clear zones instead of a long stack of uniform bordered cards:
+ * 1. Header — greeting + a slim smart-action prompt.
+ * 2. Hero — the Path Score (the single most important number on the page)
+ *    together with the factor breakdown, in one unified card.
+ * 3. Secondary — a compact Live Jobs teaser (max 3 listings) linking out to
+ *    the full /live-jobs page.
+ * 4. Consolidated Insights — AI Career Audit, Peer Benchmarking, and Market
+ *    Salary merged into one tabbed card instead of three separate ones.
+ * Feature Hub shortcuts close out the page.
  */
 
 import { useEffect, useState } from 'react';
@@ -22,6 +21,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { fadeInUp, staggerContainer } from '@/lib/motion';
 import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
+import { Button } from '@/components/ui/Button';
 import { ScoreGauge } from '@/components/charts/ScoreGauge';
 import { PeerBenchmarkCard } from '@/components/dashboard/PeerBenchmarkCard';
 import { JobCard } from '@/components/jobs/JobCard';
@@ -31,21 +31,6 @@ import { useAuth } from '@/context/AuthContext';
 
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
-import { useCollapsedSections } from '@/lib/useCollapsedSections';
-
-/** Small persisted collapse/expand toggle for secondary dashboard cards. */
-function CollapseToggle({ collapsed, onClick, label }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={collapsed ? `Expand ${label}` : `Collapse ${label}`}
-      aria-expanded={!collapsed}
-      className="shrink-0 flex h-6 w-6 items-center justify-center rounded-md text-faint hover:text-ink hover:bg-surface-2 transition-colors"
-    >
-      <Icon.ChevronDown size={14} className={cn('transition-transform', collapsed && '-rotate-90')} />
-    </button>
-  );
-}
 
 /** Animates a number from 0 up to `target` using an ease-out curve. */
 function useCountUp(target, duration = 1000) {
@@ -70,9 +55,9 @@ function useCountUp(target, duration = 1000) {
 }
 
 const FACTOR_GRADIENTS = {
-  good: 'linear-gradient(90deg, #2B4C3F, #4A8067)',
-  warn: 'linear-gradient(90deg, #92400E, #C9832E)',
-  bad: 'linear-gradient(90deg, #B85A3C, #D97D5E)',
+  good: 'var(--color-brand)',
+  warn: 'var(--color-warning)',
+  bad: 'var(--color-danger)',
 };
 
 const FEATURE_HUB = [
@@ -107,8 +92,7 @@ function EmptyStateHero({ navigate }) {
   return (
     <div className="card p-10 sm:p-14 text-center max-w-2xl mx-auto">
       <span
-        className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-white mb-5 shadow-sm"
-        style={{ background: 'linear-gradient(135deg, var(--brand-grad-from, #2D6A4F), var(--brand-grad-to, #40916C))' }}
+        className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand text-white mb-5 shadow-sm"
       >
         <Icon.Sparkles size={24} />
       </span>
@@ -132,12 +116,13 @@ function EmptyStateHero({ navigate }) {
         ))}
       </div>
 
-      <button
+      <Button
         onClick={() => navigate('/talent-analyzer')}
-        className="btn-gradient mt-8 px-6 py-3 rounded-xl text-sm font-bold inline-flex items-center gap-2"
+        className="mt-8"
+        size="lg"
       >
         Upload Your Resume <Icon.ArrowRight size={15} />
-      </button>
+      </Button>
       <div className="mt-3">
         <button
           onClick={() => navigate('/resume-builder')}
@@ -167,7 +152,7 @@ export default function OverviewPage() {
   const [hasResumeBuilder, setHasResumeBuilder] = useState(false);
   const [liveJobs, setLiveJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
-  const { isCollapsed, toggle: toggleSection } = useCollapsedSections();
+  const [insightTab, setInsightTab] = useState('ai');
 
   useEffect(() => {
     if (loading) return;
@@ -216,7 +201,7 @@ export default function OverviewPage() {
       .finally(() => setLoadingBenchmark(false));
   }, []);
 
-  /* Live Opportunities widget (9B) — top listings preview for the user's dream role */
+  /* Live Opportunities teaser — top 3 listings preview for the user's dream role */
   useEffect(() => {
     const dr = user?.profile?.dreamRole;
     if (!dr) { setLoadingJobs(false); return; }
@@ -237,7 +222,7 @@ export default function OverviewPage() {
     return (
       <AppShell>
         <div className="flex h-96 items-center justify-center">
-          <Spinner className="h-8 w-8 text-[#2B4C3F]" />
+          <Spinner className="h-8 w-8 text-brand" />
         </div>
       </AppShell>
     );
@@ -267,7 +252,7 @@ export default function OverviewPage() {
     desc: 'Create a polished, ATS-optimized resume with our built-in editor and AI writing help.',
     btn: 'Build Resume',
     link: '/resume-builder',
-    icon: <Icon.FileText size={20} />
+    icon: <Icon.FileText size={18} />
   };
 
   if (!hasResume && hasResumeBuilder) {
@@ -276,7 +261,7 @@ export default function OverviewPage() {
       desc: 'Run your resume against your target role to unlock your AI career audit, gap analysis, and path score.',
       btn: 'Analyze Resume',
       link: '/talent-analyzer',
-      icon: <Icon.Sparkles size={20} />
+      icon: <Icon.Sparkles size={18} />
     };
   }
 
@@ -287,7 +272,7 @@ export default function OverviewPage() {
         desc: 'Turn your gap analysis into a customized week-by-week plan.',
         btn: 'Build Roadmap',
         link: '/execution-engine',
-        icon: <Icon.Target size={20} />
+        icon: <Icon.Target size={18} />
       };
     } else {
       smartCta = {
@@ -295,94 +280,87 @@ export default function OverviewPage() {
         desc: 'Test your gap coverage with role-specific AI interview questions.',
         btn: 'Start Practice',
         link: '/interview-prep',
-        icon: <Icon.Award size={20} />
+        icon: <Icon.Award size={18} />
       };
     }
   }
 
+  /* Consolidated Insights — only include tabs that actually have something to show */
+  const insightSections = [
+    hasResume && { id: 'ai', label: 'AI Audit', icon: Icon.MessageSquare },
+    { id: 'peer', label: 'Peer Benchmark', icon: Icon.Users },
+    showSalaryCard && { id: 'salary', label: 'Salary', icon: Icon.DollarSign },
+  ].filter(Boolean);
+  const activeInsight = insightSections.some((s) => s.id === insightTab) ? insightTab : insightSections[0]?.id;
+
   return (
     <AppShell>
       <AppTour navigate={navigate} />
-      <div className="space-y-8">
-        {/* Header section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-line pb-6">
-          <div>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-2 text-xs font-semibold text-muted mb-2 border border-line">
-              Target Role: <strong className="text-ink">{dreamRole}</strong>
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-ink">
-              {greeting}, <span className="text-gradient-emerald">{firstName}</span> 👋
-            </h1>
-            <p className="text-sm text-muted mt-1">
-              Here is your career readiness overview and recommended action items.
-            </p>
+      <div className="space-y-10">
+        {/* ── Zone 1: Header ──────────────────────────────────────── */}
+        <div>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-2 text-xs font-semibold text-muted mb-2 border border-line">
+                Target Role: <strong className="text-ink">{dreamRole}</strong>
+              </span>
+              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-ink">
+                {greeting}, <span className="text-gradient-emerald">{firstName}</span> 👋
+              </h1>
+              <p className="text-sm text-muted mt-1">
+                Here is your career readiness overview and recommended action items.
+              </p>
+            </div>
+            <button
+              onClick={handleExportPDF}
+              disabled={exporting}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-surface border border-line text-xs font-bold text-ink hover:bg-surface-2 transition-colors shadow-sm self-start md:self-auto"
+            >
+              <Icon.Download size={15} />
+              Export Career Report
+            </button>
           </div>
-          <button
-            onClick={handleExportPDF}
-            disabled={exporting}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-surface border border-line text-xs font-bold text-ink hover:bg-surface-2 transition-colors shadow-sm self-start md:self-auto"
-          >
-            <Icon.Download size={15} />
-            Export Career Report
-          </button>
+
+          {!isNewUser && (
+            /* Slim smart-action prompt — light system, not a heavy dark banner */
+            <div className="mt-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-line bg-surface-2 px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface text-brand border border-line">
+                  {smartCta.icon}
+                </span>
+                <div>
+                  <p className="text-sm font-bold text-ink">{smartCta.title}</p>
+                  <p className="text-xs text-muted mt-0.5">{smartCta.desc}</p>
+                </div>
+              </div>
+              <Button onClick={() => navigate(smartCta.link)} className="shrink-0">
+                {smartCta.btn} <Icon.ArrowRight size={14} />
+              </Button>
+            </div>
+          )}
         </div>
 
         {isNewUser ? (
           <EmptyStateHero navigate={navigate} />
         ) : (
         <>
-        {/* Smart CTA Banner — premium dark gradient treatment */}
-        <div className="banner-premium relative overflow-hidden rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          {/* Decorative glow illustration, right side */}
-          <div
-            className="hidden md:block absolute -right-10 -top-10 h-40 w-40 rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(127,181,160,0.25) 0%, transparent 70%)' }}
-          />
-          <div className="flex items-start gap-4 relative z-10">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white border border-white/10">
-              {smartCta.icon}
+        {/* ── Zone 2: Hero — Path Score dominates, factors live alongside it ── */}
+        <div data-tour="path-score-card" className="card p-6 sm:p-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-8 lg:gap-12 items-center">
+            {/* Path Score gauge */}
+            <div className="flex flex-col items-center text-center mx-auto lg:mx-0">
+              <span className="inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white bg-brand shadow-sm mb-4">
+                {readiness?.label ?? 'Score'}
+              </span>
+              <ScoreGauge score={animatedScore} label={readiness?.label} size={200} />
+              <p className="text-xs text-muted mt-4 max-w-xs leading-relaxed">
+                {readiness?.summary}
+              </p>
             </div>
-            <div>
-              <h3 className="text-base font-bold text-white">{smartCta.title}</h3>
-              <p className="text-xs text-white/60 mt-1 max-w-md">{smartCta.desc}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => navigate(smartCta.link)}
-            className="btn-gradient relative z-10 px-6 py-3 rounded-xl text-sm font-bold shrink-0"
-          >
-            {smartCta.btn} →
-          </button>
-        </div>
 
-        {/* Main Grid: Path Score & Factor Breakdown */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Path Score Card — luxury dark card with glowing border */}
-          <div
-            data-tour="path-score-card"
-            className="relative overflow-hidden rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center border border-[#1E2530]"
-            style={{
-              background: 'linear-gradient(160deg, #0F1319 0%, #141A24 50%, #0D1117 100%)',
-              boxShadow: '0 0 0 1px rgba(52,211,153,0.12), 0 20px 50px -12px rgba(0,0,0,0.7)',
-            }}
-          >
-            <span
-              className="absolute top-4 right-4 inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm"
-              style={{ background: 'linear-gradient(135deg, #059669, #34D399)' }}
-            >
-              {readiness?.label ?? 'Score'}
-            </span>
-            <h3 className="text-xs font-bold text-white/40 uppercase tracking-wider mb-4">Path Score</h3>
-            <ScoreGauge score={animatedScore} label={readiness?.label} dark />
-            <p className="text-xs text-white/60 mt-4 max-w-xs leading-relaxed">
-              {readiness?.summary}
-            </p>
-          </div>
-
-          {/* Factor Breakdown */}
-          <div className="card lg:col-span-2 p-6 flex flex-col justify-between">
-            <div>
-              <h3 className="section-heading-accent text-xs font-bold text-faint uppercase tracking-wider mb-4">Readiness Factors</h3>
+            {/* Factor Breakdown */}
+            <div className="w-full lg:border-l lg:border-line lg:pl-12">
+              <h3 className="text-xs font-bold text-faint uppercase tracking-wider mb-4">Readiness Factors</h3>
               <div className="space-y-4">
                 {factors.map((f, i) => (
                   <div key={f.key} className={cn('animate-fade-up', `stagger-${Math.min(5, i + 1)}`)}>
@@ -409,124 +387,112 @@ export default function OverviewPage() {
           </div>
         </div>
 
-        {/* Live Opportunities Widget — promoted above the fold since real-time job
-            matches are one of the highest-value, most action-ready signals on the
-            dashboard; previously buried below Peer Benchmarking. */}
+        {/* ── Zone 3: Secondary — compact Live Jobs teaser ─────────── */}
         {user?.profile?.dreamRole && (loadingJobs || liveJobs.length > 0) && (
-          <div className="card p-6 border-brand/25 relative overflow-hidden">
-            <div
-              className="absolute inset-x-0 top-0 h-0.5"
-              style={{ background: 'linear-gradient(90deg, transparent, #10B981, transparent)' }}
-            />
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10 text-brand border border-brand/20">
-                  <Icon.Briefcase size={15} />
-                </span>
-                <div className="flex items-center gap-2">
-                  <h3 className="section-heading-accent text-sm font-bold text-ink">Live Opportunities</h3>
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand" />
-                  </span>
-                </div>
-                {!loadingJobs && (
-                  <span className="text-[10px] font-bold text-brand bg-brand/10 border border-brand/20 px-2 py-0.5 rounded-full">
-                    {liveJobs.length} open now for {dreamRole}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <button
-                  onClick={() => navigate('/live-jobs')}
-                  className="text-xs font-semibold text-brand hover:underline"
-                >
-                  View All Live Jobs →
-                </button>
-                <CollapseToggle collapsed={isCollapsed('liveJobs')} onClick={() => toggleSection('liveJobs')} label="Live Opportunities" />
-              </div>
-            </div>
-
-            {!isCollapsed('liveJobs') && (
-              loadingJobs ? (
-                <div className="space-y-2">
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className="h-10 rounded-lg bg-surface-2 animate-pulse" />
-                  ))}
-                </div>
-              ) : (
-                <div className="divide-y divide-line">
-                  {liveJobs.slice(0, 3).map((job) => (
-                    <JobCard key={job.id} job={job} matchTier={matchJobToSkills(user?.profile?.skills, job)} variant="compact" />
-                  ))}
-                </div>
-              )
-            )}
-          </div>
-        )}
-
-        {/* Peer Benchmarking Card */}
-        <PeerBenchmarkCard benchmark={peerBenchmark} loading={loadingBenchmark} />
-
-        {/* AI Score Audit Card */}
-        {hasResume && (
-          <div className="card p-6">
-            <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="rounded-2xl border border-line p-5">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-surface-2 text-ink">
-                  <Icon.MessageSquare size={16} />
-                </span>
-                <h3 className="section-heading-accent text-sm font-bold text-ink">AI Career Audit Narrative</h3>
+                <Icon.Briefcase size={14} className="text-faint" />
+                <h3 className="text-xs font-bold text-faint uppercase tracking-wider">Live Opportunities</h3>
               </div>
-              <CollapseToggle collapsed={isCollapsed('aiNarrative')} onClick={() => toggleSection('aiNarrative')} label="AI Career Audit Narrative" />
+              <button
+                onClick={() => navigate('/live-jobs')}
+                className="text-xs font-semibold text-brand hover:underline"
+              >
+                View All Live Jobs →
+              </button>
             </div>
-            {!isCollapsed('aiNarrative') && (
-              loadingAi ? (
-                <div className="py-6 flex items-center justify-center">
-                  <Spinner className="h-6 w-6 text-brand" />
-                </div>
-              ) : (
-                <div className="prose prose-sm max-w-none text-muted text-xs leading-relaxed space-y-3 whitespace-pre-line">
-                  {aiExplanation || 'Your AI audit is being generated...'}
-                </div>
-              )
+
+            {loadingJobs ? (
+              <div className="space-y-2">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-10 rounded-lg bg-surface-2 animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <div className="divide-y divide-line">
+                {liveJobs.slice(0, 3).map((job) => (
+                  <JobCard key={job.id} job={job} matchTier={matchJobToSkills(user?.profile?.skills, job)} variant="compact" />
+                ))}
+              </div>
             )}
           </div>
         )}
 
-        {/* Market Salary Card */}
-        {showSalaryCard && (
-          <div className="card p-5 flex items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-40" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-brand" />
-                </span>
-                <span className="text-[10px] font-bold text-brand uppercase tracking-wider">
-                  Live Market Benchmark
-                </span>
+        {/* ── Zone 4: Consolidated Insights — AI Audit + Peer Benchmark + Salary ── */}
+        {insightSections.length > 0 && (
+          <div className="card overflow-hidden">
+            {insightSections.length > 1 && (
+              <div className="p-4 border-b border-line">
+                <div className="apple-segmented w-full">
+                  {insightSections.map((s) => {
+                    const isActive = activeInsight === s.id;
+                    const SIcon = s.icon;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => setInsightTab(s.id)}
+                        className={cn(
+                          'btn-press apple-segmented-item flex-1 py-2 px-3 text-[13px] flex items-center justify-center gap-1.5',
+                          isActive ? 'text-white' : 'text-faint hover:text-muted'
+                        )}
+                      >
+                        {isActive && (
+                          <motion.span
+                            layoutId="insight-tab-indicator"
+                            className="absolute inset-0 -z-10 rounded-full bg-brand"
+                            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                          />
+                        )}
+                        <span className="relative flex items-center gap-1.5"><SIcon size={13} /> {s.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <h4 className="text-sm font-bold text-ink">{dreamRole} Salary Range</h4>
-              {!isCollapsed('salary') && (
-                <p className="text-[10px] text-muted mt-0.5">Estimated from live job postings · Data may vary</p>
+            )}
+
+            <div className="p-6">
+              {activeInsight === 'ai' && (
+                loadingAi ? (
+                  <div className="py-6 flex items-center justify-center">
+                    <Spinner className="h-6 w-6 text-brand" />
+                  </div>
+                ) : (
+                  <div className="prose prose-sm max-w-none text-muted text-xs leading-relaxed space-y-3 whitespace-pre-line">
+                    {aiExplanation || 'Your AI audit is being generated...'}
+                  </div>
+                )
+              )}
+
+              {activeInsight === 'peer' && (
+                <PeerBenchmarkCard benchmark={peerBenchmark} loading={loadingBenchmark} bare />
+              )}
+
+              {activeInsight === 'salary' && showSalaryCard && (
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                      Live Market Benchmark
+                    </span>
+                    <h4 className="text-sm font-bold text-ink mt-1">{dreamRole} Salary Range</h4>
+                    <p className="text-[10px] text-muted mt-0.5">Estimated from live job postings · Data may vary</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className="text-lg font-bold font-mono text-brand">
+                      ₹{marketSalary.min}L – ₹{marketSalary.max}L
+                    </span>
+                    <p className="text-[10px] text-muted mt-0.5">per annum</p>
+                  </div>
+                </div>
               )}
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <div className="text-right">
-                <span className="text-lg font-bold font-mono text-brand">
-                  ₹{marketSalary.min}L – ₹{marketSalary.max}L
-                </span>
-                {!isCollapsed('salary') && <p className="text-[10px] text-muted mt-0.5">per annum</p>}
-              </div>
-              <CollapseToggle collapsed={isCollapsed('salary')} onClick={() => toggleSection('salary')} label="Salary Range" />
-            </div>
           </div>
         )}
 
-        {/* Feature Hub Shortcuts */}
+        {/* ── Feature Hub Shortcuts ──────────────────────────────── */}
         <div>
-          <h3 className="section-heading-accent text-xs font-bold text-faint uppercase tracking-wider mb-4">Jump Back In</h3>
+          <h3 className="text-xs font-bold text-faint uppercase tracking-wider mb-4">Jump Back In</h3>
           <motion.div
             initial="hidden"
             animate="visible"

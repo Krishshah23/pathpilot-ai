@@ -32,7 +32,7 @@ export function LiveJobsPanel({ jobs, loading, role, setRole, onRefresh, fetched
   const [seniorityFilter, setSeniorityFilter] = useState('all');
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [searchRole, setSearchRole] = useState(role);
-  const { isSaved, toggleSave, clearAll, count } = useSavedJobs();
+  const { isSaved, getStatus, toggleSave, setStatus, clearAll, count } = useSavedJobs();
 
   const seniorities = [...new Set(jobs.map((j) => j.seniority).filter(Boolean))];
 
@@ -113,6 +113,8 @@ export function LiveJobsPanel({ jobs, loading, role, setRole, onRefresh, fetched
               matchTier={matchJobToSkills(skills, job)}
               saved={isSaved(job.id)}
               onToggleSave={toggleSave}
+              status={getStatus(job.id)}
+              onStatusChange={setStatus}
             />
           ))}
         </div>

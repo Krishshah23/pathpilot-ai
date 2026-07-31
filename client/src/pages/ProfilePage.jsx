@@ -196,13 +196,10 @@ export default function ProfilePage() {
           {/* Left Column: Avatar & Account Basics */}
           <div className="md:col-span-4 space-y-6">
             <Card className="!p-6 border border-line bg-surface flex flex-col items-center text-center relative overflow-hidden group">
-              <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808003_1px,transparent_1px),linear-gradient(to_bottom,#80808003_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
-
               {/* Picture Upload Selector */}
-              <div className="relative mb-4 cursor-pointer group/avatar ring-glow rounded-[22px]" onClick={handleAvatarClick}>
+              <div className="relative mb-4 cursor-pointer group/avatar rounded-[22px]" onClick={handleAvatarClick}>
                 <div
-                  className="relative flex h-24 w-24 items-center justify-center rounded-[22px] text-3xl font-extrabold text-white overflow-hidden transition-all duration-300 group-hover/avatar:opacity-90"
-                  style={{ background: 'linear-gradient(135deg, var(--brand-grad-from, #2D6A4F), var(--brand-grad-to, #40916C))' }}
+                  className="relative flex h-24 w-24 items-center justify-center rounded-[22px] bg-brand text-3xl font-extrabold text-white overflow-hidden transition-all duration-300 group-hover/avatar:opacity-90"
                 >
                   {user?.profile?.avatarUrl ? (
                     <img src={user.profile.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
@@ -234,17 +231,17 @@ export default function ProfilePage() {
               <p className="text-xs text-faint mb-1">{user?.email}</p>
               
               <div className="flex flex-wrap gap-1.5 justify-center mt-1.5">
-                <span className="badge-glow-blue inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase">
+                <span className="border border-line bg-surface-2 text-muted inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase">
                   {user?.role}
                 </span>
 
                 {user?.isEmailVerified ? (
-                  <span className="badge-glow-green inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase">
+                  <span className="border border-line bg-surface-2 text-muted inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase">
                     <Icon.Check size={10} />
                     Verified
                   </span>
                 ) : (
-                  <span className="badge-glow-amber inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase">
+                  <span className="border border-warning/30 bg-warning/10 text-warning inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold tracking-wider uppercase">
                     Unverified
                   </span>
                 )}
@@ -276,7 +273,7 @@ export default function ProfilePage() {
 
             {/* Change Password Card */}
             <Card className="!p-6 border border-line bg-surface space-y-4">
-              <div className="section-heading-accent flex items-center gap-2 border-b border-line-soft pb-3">
+              <div className="flex items-center gap-2 border-b border-line-soft pb-3">
                 <Icon.Shield size={16} className="text-muted" />
                 <h3 className="font-semibold text-sm text-ink">Security Settings</h3>
               </div>
@@ -321,7 +318,7 @@ export default function ProfilePage() {
             
             {/* General Info Card */}
             <Card className="!p-6 border border-line bg-surface space-y-6">
-              <div className="section-heading-accent flex items-center gap-2 border-b border-line-soft pb-3">
+              <div className="flex items-center gap-2 border-b border-line-soft pb-3">
                 <Icon.User size={16} className="text-muted" />
                 <h3 className="font-semibold text-sm text-ink">Academic Profile Details</h3>
               </div>
@@ -384,7 +381,7 @@ export default function ProfilePage() {
 
             {/* Tracked Skills Card */}
             <Card className="!p-6 border border-line bg-surface space-y-4">
-              <div className="section-heading-accent flex items-center gap-2 border-b border-line-soft pb-3">
+              <div className="flex items-center gap-2 border-b border-line-soft pb-3">
                 <Icon.Zap size={16} className="text-muted" />
                 <h3 className="font-semibold text-sm text-ink">Tracked Technical Skills</h3>
               </div>
@@ -400,7 +397,7 @@ export default function ProfilePage() {
 
             {/* Public Portfolio Visibility Card */}
             <Card className="!p-6 border border-line bg-surface space-y-4">
-              <div className="section-heading-accent flex items-center gap-2 border-b border-line-soft pb-3">
+              <div className="flex items-center gap-2 border-b border-line-soft pb-3">
                 <Icon.Link size={16} className="text-muted" />
                 <h3 className="font-semibold text-sm text-ink">Public Career Card Visibility</h3>
               </div>

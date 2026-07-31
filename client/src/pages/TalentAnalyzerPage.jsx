@@ -5,15 +5,17 @@
  * Unified hub combining multi-stage Resume Analysis, Skill Gap Analysis, Recruiter Red Flag Feedback,
  * Market Demand Alignment, and Real-Time Job Search.
  *
- * 4 HUB TABS:
+ * 3 HUB TABS:
  * 1. AI Role Analysis: Role fit score, key gaps, ATS keywords missing, and SHAP-like signal breakdown.
  * 2. Recruiter Feedback: 5 rule-based red flag checks (contact info, clichés, metrics ratio, date formats, gaps).
  * 3. Market Alignment: Skill demand frequency percentages sourced from live Adzuna data.
- * 4. Live Jobs: Real-time job search listings powered by TheirStack API with 2-layer caching.
+ *
+ * Real-time job search (TheirStack API) now lives at its own top-level page, /live-jobs.
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AppShell } from '@/components/layout/AppShell';
 
@@ -25,9 +27,8 @@ import { useToast } from '@/context/ToastContext';
 import { api, errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { DREAM_ROLES } from '@/config/careerData';
-import { LiveJobsPanel } from '@/components/jobs/LiveJobsPanel';
 
-const TABS = ['AI Role Analysis', 'Recruiter First Impression', 'Market Alignment', 'Live Jobs'];
+const TABS = ['AI Role Analysis', 'Recruiter First Impression', 'Market Alignment'];
 
 function AnimatedScore({ target }) {
   const [score, setScore] = useState(0);
@@ -70,25 +71,25 @@ function SHAPVisualizer({ resume }) {
       name: 'Skill Coverage',
       weight: Math.round(skillScore),
       maxLabel: `${skills.length} skill${skills.length !== 1 ? 's' : ''} detected`,
-      color: skillScore >= 70 ? '#2B4C3F' : skillScore >= 40 ? '#92400E' : '#B85A3C',
+      color: skillScore >= 70 ? 'var(--color-brand)' : skillScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)',
     },
     {
       name: 'Project Depth',
       weight: Math.round(projectScore),
       maxLabel: `${projects.length} project${projects.length !== 1 ? 's' : ''} found`,
-      color: projectScore >= 70 ? '#2B4C3F' : projectScore >= 40 ? '#92400E' : '#B85A3C',
+      color: projectScore >= 70 ? 'var(--color-brand)' : projectScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)',
     },
     {
       name: 'Experience Signals',
       weight: Math.round(experienceScore),
       maxLabel: experience.length > 0 ? `${experience.length} entr${experience.length !== 1 ? 'ies' : 'y'}` : 'None detected',
-      color: experienceScore >= 70 ? '#2B4C3F' : experienceScore >= 40 ? '#92400E' : '#B85A3C',
+      color: experienceScore >= 70 ? 'var(--color-brand)' : experienceScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)',
     },
     {
       name: 'Resume Health (ATS)',
       weight: Math.round(atsScore),
       maxLabel: `${healthScore}/100 health score`,
-      color: atsScore >= 70 ? '#2B4C3F' : atsScore >= 40 ? '#92400E' : '#B85A3C',
+      color: atsScore >= 70 ? 'var(--color-brand)' : atsScore >= 40 ? 'var(--color-warning)' : 'var(--color-danger)',
     },
   ];
 
@@ -143,7 +144,7 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
     </div>
   );
 
-  const fitColor = roleFitScore >= 70 ? '#2B4C3F' : roleFitScore >= 45 ? '#92400E' : '#B85A3C';
+  const fitColor = roleFitScore >= 70 ? 'var(--color-brand)' : roleFitScore >= 45 ? 'var(--color-warning)' : 'var(--color-danger)';
 
   return (
     <div className="space-y-6">
@@ -177,10 +178,10 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
 
       {/* Next Step Priority */}
       {nextStep && (
-        <div className="flex items-start gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/40 p-4">
-          <Icon.ArrowRight size={16} className="text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-3 rounded-xl border border-brand/30 bg-brand/10 p-4">
+          <Icon.ArrowRight size={16} className="text-brand mt-0.5 shrink-0" />
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-1">Top Priority Right Now</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-brand mb-1">Top Priority Right Now</p>
             <p className="text-sm text-ink font-medium">{nextStep}</p>
           </div>
         </div>
@@ -190,13 +191,13 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
         {/* Key Gaps */}
         {keyGaps.length > 0 && (
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mb-3 flex items-center gap-1.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-danger mb-3 flex items-center gap-1.5">
               <Icon.AlertTriangle size={12} /> Key Gaps ({keyGaps.length})
             </h3>
             <div className="space-y-2">
               {keyGaps.map((gap, i) => (
-                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-red-500/30 bg-red-500/10 dark:bg-red-950/30 px-3 py-2.5 text-sm">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold mt-0.5">{i + 1}</span>
+                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5 text-sm">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-danger text-white text-[10px] font-bold mt-0.5">{i + 1}</span>
                   <span className="text-ink">{gap}</span>
                 </div>
               ))}
@@ -207,13 +208,13 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
         {/* Strengths */}
         {strengthAreas.length > 0 && (
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-3 flex items-center gap-1.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-brand mb-3 flex items-center gap-1.5">
               <Icon.Check size={12} /> Strengths
             </h3>
             <div className="space-y-2">
               {strengthAreas.map((s, i) => (
-                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/30 px-3 py-2.5 text-sm">
-                  <Icon.Check size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                <div key={i} className="flex items-start gap-2.5 rounded-lg border border-brand/30 bg-brand/10 px-3 py-2.5 text-sm">
+                  <Icon.Check size={14} className="text-brand shrink-0 mt-0.5" />
                   <span className="text-ink">{s}</span>
                 </div>
               ))}
@@ -231,20 +232,20 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">Identified Keywords</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand mb-2">Identified Keywords</p>
               <div className="flex flex-wrap gap-1.5">
                 {(resume.skills || []).slice(0, 8).map((kw, i) => (
-                  <span key={i} className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/30 px-2.5 py-1 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+                  <span key={i} className="rounded-lg border border-brand/30 bg-brand/10 px-2.5 py-1 text-xs text-brand font-medium">
                     {kw}
                   </span>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mb-2">Missing Keywords</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-danger mb-2">Missing Keywords</p>
               <div className="flex flex-wrap gap-1.5">
                 {atsKeywordsMissing.map((kw, i) => (
-                  <span key={i} className="rounded-lg border border-red-500/30 bg-red-500/10 dark:bg-red-950/30 px-2.5 py-1 text-xs text-red-700 dark:text-red-300 font-medium">
+                  <span key={i} className="rounded-lg border border-danger/30 bg-danger/10 px-2.5 py-1 text-xs text-danger font-medium">
                     {kw}
                   </span>
                 ))}
@@ -272,7 +273,7 @@ function AIRoleAnalysisTab({ resume, role, onOpenFix }) {
                     fix: rec,
                     type: 'recommendation'
                   })}
-                  className="ml-4 shrink-0 text-xs font-bold text-[#2B4C3F] hover:underline"
+                  className="ml-4 shrink-0 text-xs font-bold text-brand hover:underline"
                 >
                   Fix
                 </button>
@@ -302,11 +303,6 @@ export default function TalentAnalyzerPage() {
   const [gapData, setGapData] = useState(null);
   const [loadingGap, setLoadingGap] = useState(false);
   const [role, setRole] = useState(user?.profile?.dreamRole || (DREAM_ROLES?.[0] ?? 'Full Stack Developer'));
-
-  // Live jobs
-  const [liveJobs, setLiveJobs] = useState([]);
-  const [loadingJobs, setLoadingJobs] = useState(false);
-  const [jobsFetchedAt, setJobsFetchedAt] = useState(null);
 
   // Resume version history
   const [resumeHistory, setResumeHistory] = useState([]);
@@ -341,7 +337,6 @@ export default function TalentAnalyzerPage() {
 
   useEffect(() => {
     if (activeTab === 2) loadGap();
-    if (activeTab === 3) loadJobs();
   }, [activeTab, role]);
 
   const loadGap = async () => {
@@ -354,16 +349,6 @@ export default function TalentAnalyzerPage() {
     } finally {
       setLoadingGap(false);
     }
-  };
-
-  const loadJobs = async () => {
-    setLoadingJobs(true);
-    try {
-      const { data } = await api.get(`/live-jobs?role=${encodeURIComponent(role)}`);
-      setLiveJobs(data.data.jobs || []);
-      setJobsFetchedAt(data.data.fetchedAt || new Date().toISOString());
-    } catch { /* silent */ }
-    finally { setLoadingJobs(false); }
   };
 
   const analyze = async () => {
@@ -419,30 +404,38 @@ export default function TalentAnalyzerPage() {
 
         {/* ── Right: Tabbed Workspace ──────────────────────────────── */}
         <div className="card overflow-hidden">
-          {/* Tab Bar */}
-          <div className="flex border-b border-line bg-surface-2">
-            {TABS.map((tab, i) => {
-              const isActive = activeTab === i;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(i)}
-                  className={cn(
-                    'btn-press relative flex-1 py-4 text-sm font-medium transition-colors',
-                    isActive ? 'text-ink bg-surface font-semibold' : 'text-faint hover:text-muted hover:bg-surface'
-                  )}
-                >
-                  {tab}
-                  {isActive && (
-                    <motion.span
-                      layoutId="talent-tab-indicator"
-                      className="absolute left-0 right-0 bottom-0 h-0.5 bg-brand"
-                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                    />
-                  )}
-                </button>
-              );
-            })}
+          {/* Tab Bar — Apple segmented control with a sliding pill + Live Jobs CTA */}
+          <div className="p-4 border-b border-line flex items-center gap-3">
+            <div className="apple-segmented flex-1">
+              {TABS.map((tab, i) => {
+                const isActive = activeTab === i;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(i)}
+                    className={cn(
+                      'btn-press apple-segmented-item flex-1 py-2 px-3 text-[13px]',
+                      isActive ? 'text-white' : 'text-faint hover:text-muted'
+                    )}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="talent-tab-indicator"
+                        className="absolute inset-0 -z-10 rounded-full bg-brand"
+                        transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                      />
+                    )}
+                    <span className="relative">{tab}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <Link
+              to="/live-jobs"
+              className="hidden sm:inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-brand hover:underline"
+            >
+              <Icon.Briefcase size={13} /> Live Jobs
+            </Link>
           </div>
 
           {/* Tab Content */}
@@ -450,17 +443,6 @@ export default function TalentAnalyzerPage() {
             {activeTab === 0 && <AIRoleAnalysisTab resume={resume} role={role} onOpenFix={setFixTarget} />}
             {activeTab === 1 && <RecruiterFeedbackTab resume={resume} onOpenFix={setFixTarget} />}
             {activeTab === 2 && <MarketAlignmentTab gapData={gapData} loading={loadingGap} role={role} onRefresh={loadGap} />}
-            {activeTab === 3 && (
-              <LiveJobsTab
-                jobs={liveJobs}
-                loading={loadingJobs}
-                role={role}
-                setRole={setRole}
-                onRefresh={loadJobs}
-                fetchedAt={jobsFetchedAt}
-                skills={[...(user?.profile?.skills || []), ...(resume?.skills || [])]}
-              />
-            )}
           </div>
         </div>
       </div>
@@ -486,7 +468,7 @@ function UploadZone({ file, setFile, analyzing, onAnalyze, onCancel }) {
       <FileUpload file={file} onSelect={setFile} />
       {analyzing ? (
         <div className="mt-6 flex items-center justify-center gap-3 rounded-xl border border-line py-4 text-sm text-muted">
-          <Spinner className="h-5 w-5 text-[#2B4C3F]" />
+          <Spinner className="h-5 w-5 text-brand" />
           <span>Analyzing resume…</span>
         </div>
       ) : (
@@ -623,7 +605,7 @@ function ScoreHistoryCard({ history }) {
                 )}
                 style={{
                   height: `${barH}px`,
-                  backgroundColor: isLatest || isPinned ? '#10B981' : 'var(--line-border)',
+                  backgroundColor: isLatest || isPinned ? 'var(--color-brand)' : 'var(--line-border)',
                   opacity: isPinned || isLatest ? 1 : 0.85,
                 }}
               />
@@ -690,8 +672,8 @@ function RecruiterFeedbackTab({ resume, onOpenFix }) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold text-ink flex items-center gap-2">
             {redFlags.length > 0
-              ? <><Icon.AlertTriangle size={16} className="text-[#B85A3C]" /> Recruiter Red Flags ({redFlags.length})</>
-              : <><Icon.Shield size={16} className="text-[#2B4C3F]" /> All Checks Passed</>}
+              ? <><Icon.AlertTriangle size={16} className="text-danger" /> Recruiter Red Flags ({redFlags.length})</>
+              : <><Icon.Shield size={16} className="text-brand" /> All Checks Passed</>}
           </h3>
         </div>
         {redFlags.length > 0 ? (
@@ -701,9 +683,9 @@ function RecruiterFeedbackTab({ resume, onOpenFix }) {
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] px-4 py-4 flex items-center gap-3">
-            <Icon.Check size={20} className="text-[#2B4C3F] shrink-0" />
-            <p className="text-sm text-[#2B4C3F]">Your resume passed all formatting and content checks.</p>
+          <div className="rounded-xl border border-brand/30 bg-brand/10 px-4 py-4 flex items-center gap-3">
+            <Icon.Check size={20} className="text-brand shrink-0" />
+            <p className="text-sm text-brand">Your resume passed all formatting and content checks.</p>
           </div>
         )}
       </div>
@@ -715,7 +697,7 @@ function RecruiterFeedbackTab({ resume, onOpenFix }) {
           <div className="space-y-3">
             {breakdown.map((item) => {
               const pct = item.max ? Math.round((item.score / item.max) * 100) : 0;
-              const color = item.status === 'good' ? '#2B4C3F' : item.status === 'warn' ? '#92400E' : '#B85A3C';
+              const color = item.status === 'good' ? 'var(--color-brand)' : item.status === 'warn' ? 'var(--color-warning)' : 'var(--color-danger)';
               return (
                 <div key={item.label}>
                   <div className="flex justify-between text-xs mb-1">
@@ -741,7 +723,7 @@ function RecruiterFeedbackTab({ resume, onOpenFix }) {
             {suggestions.map((s, i) => (
               <li key={i} className="flex justify-between items-center rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm text-muted">
                 <div className="flex items-start gap-2.5">
-                  <Icon.ChevronRight size={16} className="mt-0.5 shrink-0 text-[#2B4C3F]" />
+                  <Icon.ChevronRight size={16} className="mt-0.5 shrink-0 text-brand" />
                   <span>{s}</span>
                 </div>
                 <button
@@ -751,7 +733,7 @@ function RecruiterFeedbackTab({ resume, onOpenFix }) {
                     fix: s,
                     type: 'suggestion'
                   })}
-                  className="ml-4 shrink-0 text-xs font-bold text-[#2B4C3F] hover:underline"
+                  className="ml-4 shrink-0 text-xs font-bold text-brand hover:underline"
                 >
                   Fix
                 </button>
@@ -770,14 +752,14 @@ function StickyNote({ flag, onOpenFix }) {
     <div className={cn(
       'rounded-xl border p-4 text-sm flex flex-col justify-between',
       isCritical
-        ? 'border-red-500/30 bg-red-500/10 dark:bg-red-950/40 dark:border-red-900/60'
-        : 'border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/40 dark:border-amber-900/60'
+        ? 'border-danger/30 bg-danger/10'
+        : 'border-warning/30 bg-warning/10'
     )}>
       <div>
         <div className="flex items-center gap-2 mb-2">
           <span className={cn(
             'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded',
-            isCritical ? 'bg-red-600 text-white' : 'bg-amber-600 text-white'
+            isCritical ? 'bg-danger text-white' : 'bg-warning text-white'
           )}>
             {flag.severity}
           </span>
@@ -842,19 +824,19 @@ function MarketAlignmentTab({ gapData, loading, role, onRefresh }) {
 
       {loading ? (
         <div className="flex h-40 items-center justify-center">
-          <Spinner className="h-6 w-6 text-[#2B4C3F]" />
+          <Spinner className="h-6 w-6 text-brand" />
         </div>
       ) : gapData ? (
         <>
           {/* Market Velocity Ticker */}
           {trendingSkills.length > 0 && (
             <div className="flex items-center gap-3 rounded-xl border border-line bg-canvas px-4 py-3">
-              <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#B85A3C] shrink-0">
+              <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-danger shrink-0">
                 <Icon.Zap size={12} /> Trending
               </span>
               <div className="overflow-hidden flex-1">
                 <p className="text-sm font-semibold text-ink animate-fade-up" key={trendingIdx}>
-                  <span className="text-[#B85A3C] font-bold">{trendingSkills[trendingIdx]?.skill}</span>
+                  <span className="text-danger font-bold">{trendingSkills[trendingIdx]?.skill}</span>
                   {' '}appears in {trendingSkills[trendingIdx]?.demand ?? trendingSkills[trendingIdx]?.marketFrequency}% of job postings for {role}
                 </p>
               </div>
@@ -864,8 +846,8 @@ function MarketAlignmentTab({ gapData, loading, role, onRefresh }) {
           {/* Skills grid */}
           <div className="grid gap-6 sm:grid-cols-2">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#2B4C3F] mb-3 flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#2B4C3F]" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-brand mb-3 flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-brand" />
                 Matched Skills ({matchedSkills.length})
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -878,9 +860,9 @@ function MarketAlignmentTab({ gapData, loading, role, onRefresh }) {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.25 }}
-                      className="inline-flex items-center gap-2 rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] px-3.5 py-1.5 text-xs font-semibold text-[#2B4C3F] shadow-sm"
+                      className="inline-flex items-center gap-2 rounded-xl border border-brand/30 bg-brand/10 px-3.5 py-1.5 text-xs font-semibold text-brand shadow-sm"
                     >
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#2B4C3F]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-brand" />
                       {skillName}
                     </motion.span>
                   );
@@ -888,8 +870,8 @@ function MarketAlignmentTab({ gapData, loading, role, onRefresh }) {
               </div>
             </div>
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#B85A3C] mb-3 flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#B85A3C]" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-danger mb-3 flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-danger" />
                 Missing Skills ({missingSkills.length})
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -900,9 +882,9 @@ function MarketAlignmentTab({ gapData, loading, role, onRefresh }) {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.25 }}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#E8C4B8] bg-[#FDF5F3] px-3.5 py-1.5 text-xs font-semibold text-[#B85A3C] shadow-sm"
+                    className="inline-flex items-center gap-2 rounded-xl border border-danger/30 bg-danger/10 px-3.5 py-1.5 text-xs font-semibold text-danger shadow-sm"
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#B85A3C]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-danger" />
                     <span>{s.skill}</span>
                     {(s.demand ?? s.marketFrequency) ? (
                       <span className="text-[10px] opacity-75 font-normal">({s.demand ?? s.marketFrequency}%)</span>
@@ -922,12 +904,6 @@ function MarketAlignmentTab({ gapData, loading, role, onRefresh }) {
       )}
     </div>
   );
-}
-
-/* ── Tab C: Live Jobs ── */
-
-function LiveJobsTab(props) {
-  return <LiveJobsPanel {...props} />;
 }
 
 function FixHelperDrawer({ target: fixTarget, onClose }) {
@@ -976,23 +952,23 @@ function FixHelperDrawer({ target: fixTarget, onClose }) {
     flag: {
       label: 'Recruiter Red Flag',
       reason: 'This pattern triggers automated rejection in most ATS systems. Recruiters reviewing your resume will flag this as incomplete or unprofessional.',
-      borderColor: 'border-[#E8C4B8]',
-      bgColor: 'bg-[#FDF5F3]',
-      textColor: 'text-[#B85A3C]',
+      borderColor: 'border-danger/30',
+      bgColor: 'bg-danger/10',
+      textColor: 'text-danger',
     },
     suggestion: {
       label: 'Resume Improvement',
       reason: 'Addressing this will strengthen your resume\'s clarity and make your experience more compelling to hiring managers.',
-      borderColor: 'border-[#C8DDD6]',
-      bgColor: 'bg-[#F0F5F3]',
-      textColor: 'text-[#2B4C3F]',
+      borderColor: 'border-brand/30',
+      bgColor: 'bg-brand/10',
+      textColor: 'text-brand',
     },
     recommendation: {
       label: 'AI Recommendation',
       reason: 'This recommendation is based on analyzing your resume against current role requirements. Acting on it will directly improve your role-fit score.',
-      borderColor: 'border-[#E8D8A8]',
-      bgColor: 'bg-[#FEFBF0]',
-      textColor: 'text-[#92400E]',
+      borderColor: 'border-warning/30',
+      bgColor: 'bg-warning/10',
+      textColor: 'text-warning',
     },
   };
   const config = typeConfig[fixType] || typeConfig.suggestion;
@@ -1013,7 +989,7 @@ function FixHelperDrawer({ target: fixTarget, onClose }) {
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-line bg-canvas">
           <div className="flex items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#2B4C3F] text-white shadow-sm">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand text-white shadow-sm">
               <Icon.Sparkles size={16} />
             </span>
             <div>
@@ -1075,15 +1051,15 @@ function FixHelperDrawer({ target: fixTarget, onClose }) {
             {/* Section 3: Recommended fix */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#2B4C3F] text-[10px] font-bold text-white">3</span>
+                <span className="flex h-5 w-5 items-center justify-center rounded-md bg-brand text-[10px] font-bold text-white">3</span>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-faint">Recommended fix</span>
               </div>
-              <div className="rounded-xl border border-[#C8DDD6] bg-[#F0F5F3] p-4 fix-panel-shimmer relative overflow-hidden">
+              <div className="rounded-xl border border-brand/30 bg-brand/10 p-4 fix-panel-shimmer relative overflow-hidden">
                 <div className="flex items-center gap-1.5 mb-3">
-                  <Icon.Sparkles size={12} className="text-[#2B4C3F]" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#2B4C3F]">AI Suggestion</span>
+                  <Icon.Sparkles size={12} className="text-brand" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-brand">AI Suggestion</span>
                 </div>
-                <p className="text-[13px] text-[#2B4C3F] leading-relaxed font-medium break-words whitespace-pre-wrap select-all">
+                <p className="text-[13px] text-brand leading-relaxed font-medium break-words whitespace-pre-wrap select-all">
                   {fixTarget.fix}
                 </p>
               </div>
@@ -1113,7 +1089,7 @@ function FixHelperDrawer({ target: fixTarget, onClose }) {
             className={cn(
               'flex-1 h-11 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm',
               copied
-                ? 'bg-[#2B4C3F] text-white fix-panel-copy-success'
+                ? 'bg-brand text-white fix-panel-copy-success'
                 : 'bg-brand text-white hover:bg-brand-soft hover:shadow-md active:scale-[0.98]'
             )}
           >

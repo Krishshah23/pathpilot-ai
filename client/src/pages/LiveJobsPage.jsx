@@ -53,10 +53,10 @@ export default function LiveJobsPage() {
         <div>
           <div className="flex items-center gap-2 mb-1.5">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-50" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-brand" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-faint opacity-50" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-faint" />
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-brand">Live · Refreshed every 6 hours</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted">Live · Refreshed every 6 hours</span>
           </div>
           <h1 className="font-serif text-3xl font-bold text-ink flex items-center gap-2.5">
             <Icon.Briefcase size={26} className="text-brand" />

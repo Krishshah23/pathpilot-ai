@@ -26,7 +26,7 @@ export function FAQSection({ limit, dark = false, className }) {
             className={cn(
               'rounded-xl border overflow-hidden transition-colors',
               dark
-                ? cn('border-white/10 bg-white/5', isOpen && 'border-[#7FB5A0]/50')
+                ? cn('border-white/10 bg-white/5', isOpen && 'border-brand/50')
                 : cn('border-line bg-surface', isOpen && 'border-brand/40')
             )}
           >

@@ -36,17 +36,21 @@ const emptyEducation = () => ({ degree: '', institution: '', location: '', start
 
 /**
  * Locates the experience/bullet indices for an AI optimize-scan rewrite.
- * The `id` Gemini echoes back (e.g. "0-2") isn't always reliable, so we verify
- * it against the original bullet text and fall back to a text search if it
- * doesn't line up — rather than silently indexing into the wrong bullet.
+ * The `id` (e.g. "0-2") is a direct pointer into the same numbered bullet list
+ * Gemini was shown, so it's trusted first. Gemini's echoed "original" text is
+ * often a paraphrase rather than a verbatim copy, so it's only used as a fuzzy
+ * (normalized, case-insensitive) fallback if the id no longer resolves — e.g.
+ * bullets were added/removed between the scan and clicking Apply.
  */
 function findBulletLocation(experience, id, originalText) {
   const [expIdx, bulletIdx] = (id || '').split('-').map(Number);
-  if (Number.isInteger(expIdx) && Number.isInteger(bulletIdx) && experience[expIdx]?.bullets[bulletIdx] === originalText) {
+  if (Number.isInteger(expIdx) && Number.isInteger(bulletIdx) && experience[expIdx]?.bullets[bulletIdx] !== undefined) {
     return { expIdx, bulletIdx };
   }
+  const normalize = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const target = normalize(originalText);
   for (let ei = 0; ei < experience.length; ei++) {
-    const bi = experience[ei].bullets.indexOf(originalText);
+    const bi = experience[ei].bullets.findIndex((b) => normalize(b) === target);
     if (bi !== -1) return { expIdx: ei, bulletIdx: bi };
   }
   return null;
@@ -62,6 +66,7 @@ export function Editor({ resumeBuilder, setResumeBuilder, onSwitchMode, initiali
   const [rewritingId, setRewritingId] = useState(null); // `${section}-${entryIdx}-${bulletIdx}` while a rewrite is in flight
   const [insertingKeywords, setInsertingKeywords] = useState(false);
   const [exporting, setExporting] = useState(null);
+  const [zoom, setZoom] = useState(0.6);
   const saveTimer = useRef(null);
 
   useEffect(() => setDoc(resumeBuilder), [resumeBuilder]);
@@ -257,12 +262,34 @@ export function Editor({ resumeBuilder, setResumeBuilder, onSwitchMode, initiali
         {/* Right: ATS panel + live preview */}
         <div className="space-y-5 lg:sticky lg:top-24 self-start">
           <AtsPanel atsScore={doc.atsScore} />
-          <div className="card overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-line bg-surface-2">
+          <div className="apple-card-lg card overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-line bg-surface-2 flex items-center justify-between gap-2">
               <p className="text-[10px] font-bold uppercase tracking-wider text-faint">Live Preview · {TEMPLATE_OPTIONS.find((t) => t.key === doc.template)?.label}</p>
+              <div className="apple-segmented shrink-0">
+                <button
+                  onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))}
+                  aria-label="Zoom out"
+                  className="apple-segmented-item h-6 w-6 flex items-center justify-center text-faint hover:text-ink"
+                >
+                  −
+                </button>
+                <span className="px-1.5 text-[10px] font-mono font-semibold text-muted tabular-nums w-10 text-center">{Math.round(zoom * 100)}%</span>
+                <button
+                  onClick={() => setZoom((z) => Math.min(1.2, +(z + 0.1).toFixed(2)))}
+                  aria-label="Zoom in"
+                  className="apple-segmented-item h-6 w-6 flex items-center justify-center text-faint hover:text-ink"
+                >
+                  +
+                </button>
+              </div>
             </div>
-            <div className="max-h-[900px] overflow-y-auto">
-              <Preview doc={doc} />
+            <div className="max-h-[900px] overflow-auto bg-surface-2 p-6">
+              <div
+                className="mx-auto shadow-[0_8px_24px_-8px_rgba(0,0,0,0.25)] transition-[zoom] duration-200"
+                style={{ width: '640px', zoom }}
+              >
+                <Preview doc={doc} />
+              </div>
             </div>
           </div>
         </div>

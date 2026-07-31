@@ -22,7 +22,6 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Icon } from '@/components/ui/icons';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { useTheme } from '@/context/ThemeContext';
 import { api, errorMessage } from '@/lib/api';
 import { Footer } from '@/components/layout/Footer';
 import { ContactModal } from '@/components/layout/ContactModal';
@@ -49,7 +48,6 @@ function TopNav({ user, onOpenContact, onStartTour }) {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const toast = useToast();
-  const { isDark, toggleTheme } = useTheme();
 
   const isAdmin = user?.role === 'admin';
   const links = isAdmin ? ADMIN_NAV_LINKS : NAV_LINKS;
@@ -72,169 +70,158 @@ function TopNav({ user, onOpenContact, onStartTour }) {
   };
 
   return (
-    <header className="sticky top-0 z-40 nav-frosted border-b border-line">
-      <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between gap-8">
+    <div className="sticky top-0 z-40 px-3 pt-3 sm:px-5 sm:pt-4">
+      <header className="apple-glass mx-auto max-w-7xl rounded-2xl border border-line shadow-[0_8px_32px_-8px_rgba(0,0,0,0.12)] transition-colors duration-300">
+        <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-8">
 
-        {/* Left: Logo */}
-        <a href="/dashboard" className="flex items-center gap-2.5 shrink-0 group">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white shadow-sm transition-transform duration-300 group-hover:scale-105">
-            <span className="font-bold text-sm font-sans tracking-tight">PP</span>
-          </span>
-          <span className="font-serif font-bold text-ink text-lg tracking-tight hidden sm:block">
-            PathPilot
-          </span>
-        </a>
-
-        {/* Center: Nav links (desktop) */}
-        <nav className="hidden md:flex items-center gap-1">
-          {links.map((link) => (
-            <NavLink
-              key={link.path}
-              to={link.path}
-              data-tour={`nav-${link.path.replace('/', '')}`}
-              className={({ isActive }) =>
-                cn(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-150 flex items-center gap-1.5',
-                  isActive
-                    ? 'nav-gradient-active text-white shadow-sm'
-                    : 'text-muted hover:text-ink hover:bg-surface-2'
-                )
-              }
-            >
-              {link.live && (
-                <span className="relative flex h-1.5 w-1.5 shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-75" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand" />
-                </span>
-              )}
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Right: Theme toggle + Bell + Avatar */}
-        <div className="flex items-center gap-3 shrink-0 relative" ref={dropdownRef}>
-          <button
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-2 border border-line text-ink hover:bg-line transition-all duration-200"
-          >
-            {isDark ? (
-              <Icon.Sun size={18} className="text-amber-400 transition-transform duration-300 rotate-0 hover:rotate-90" />
-            ) : (
-              <Icon.Moon size={18} className="text-[#2B4C3F] transition-transform duration-300 -rotate-12 hover:rotate-0" />
-            )}
-          </button>
-
-          <NotificationBell />
-
-          <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-2.5 rounded-full p-0.5 pr-3 transition hover:bg-surface-2 focus:outline-none"
-            title="Account options"
-          >
-            <Avatar user={user} size="sm" />
-            <span className="hidden sm:block text-sm font-medium text-ink">
-              {user?.name?.split(' ')[0]}
+          {/* Left: Logo */}
+          <a href="/dashboard" className="flex items-center gap-2.5 shrink-0 group">
+            <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-brand text-white shadow-sm transition-transform duration-300 group-hover:scale-105">
+              <span className="font-bold text-sm font-sans tracking-tight">PP</span>
             </span>
-            <Icon.ChevronDown size={14} className={cn("text-faint transition-transform duration-200", dropdownOpen && "rotate-180")} />
-          </button>
+            <span className="font-display font-semibold text-ink text-[15px] tracking-tight hidden sm:block">
+              PathPilot
+            </span>
+          </a>
 
-          {/* Account Dropdown Popover */}
-          {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-line bg-surface p-1.5 shadow-xl z-50 animate-fade-down origin-top-right">
-              {/* Account Header */}
-              <div className="px-3 py-2 border-b border-line mb-1">
-                <p className="text-xs font-bold text-ink leading-tight truncate">{user?.name}</p>
-                <p className="text-[10px] text-faint truncate mt-0.5">{user?.email}</p>
-                <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-md bg-surface-2 text-muted text-[9px] font-semibold uppercase tracking-wider border border-line">
-                  {user?.role}
-                </span>
-              </div>
-
-              {/* Actions */}
-              {!isAdmin && (
-                <button
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    navigate('/profile');
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted hover:text-ink hover:bg-surface-2 rounded-lg transition-colors"
-                >
-                  <Icon.User size={14} />
-                  Profile Settings
-                </button>
-              )}
-
-              {!isAdmin && onStartTour && (
-                <button
-                  onClick={() => {
-                    setDropdownOpen(false);
-                    onStartTour();
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted hover:text-ink hover:bg-surface-2 rounded-lg transition-colors"
-                >
-                  <Icon.Compass size={14} />
-                  Take a Tour
-                </button>
-              )}
-
-              <button
-                onClick={() => {
-                  setDropdownOpen(false);
-                  onOpenContact();
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted hover:text-ink hover:bg-surface-2 rounded-lg transition-colors"
+          {/* Center: Nav links (desktop) — Apple pill-per-item nav */}
+          <nav className="hidden md:flex items-center gap-1">
+            {links.map((link) => (
+              <NavLink
+                key={link.path}
+                to={link.path}
+                data-tour={`nav-${link.path.replace('/', '')}`}
+                className={({ isActive }) =>
+                  cn(
+                    'px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-all duration-200 flex items-center gap-1.5',
+                    isActive
+                      ? 'bg-brand text-white shadow-sm'
+                      : 'text-muted hover:text-ink hover:bg-surface-2'
+                  )
+                }
               >
-                <Icon.MessageSquare size={14} />
-                Contact &amp; Feedback
-              </button>
+                {link.live && (
+                  <span className="relative flex h-1.5 w-1.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-current" />
+                  </span>
+                )}
+                {link.label}
+              </NavLink>
+            ))}
+          </nav>
 
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10 rounded-lg transition-colors"
-              >
-                <Icon.Logout size={14} />
-                Log out
-              </button>
-            </div>
-          )}
+          {/* Right: Bell + Avatar */}
+          <div className="flex items-center gap-2 shrink-0 relative" ref={dropdownRef}>
+            <NotificationBell />
 
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden rounded-lg p-2 text-muted hover:bg-surface-2"
-            onClick={() => setMobileOpen((o) => !o)}
-            aria-label="Toggle menu"
-          >
-            {mobileOpen ? <Icon.X size={20} /> : <Icon.Menu size={20} />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile nav drawer */}
-      {mobileOpen && (
-        <div className="md:hidden border-t border-line bg-surface px-6 py-4 space-y-1 animate-fade-up">
-          {links.map((link) => (
-            <NavLink
-              key={link.path}
-              to={link.path}
-              onClick={() => setMobileOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  'block px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-brand text-white'
-                    : 'text-muted hover:text-ink hover:bg-surface-2'
-                )
-              }
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-2 rounded-full p-0.5 pr-2.5 transition hover:bg-surface-2 focus:outline-none"
+              title="Account options"
             >
-              {link.label}
-            </NavLink>
-          ))}
+              <Avatar user={user} size="sm" />
+              <span className="hidden sm:block text-[13px] font-semibold text-ink">
+                {user?.name?.split(' ')[0]}
+              </span>
+              <Icon.ChevronDown size={13} className={cn("text-faint transition-transform duration-200", dropdownOpen && "rotate-180")} />
+            </button>
+
+            {/* Account Dropdown Popover */}
+            {dropdownOpen && (
+              <div className="apple-glass absolute right-0 top-full mt-2 w-56 rounded-2xl border border-line p-1.5 shadow-xl z-50 animate-fade-down origin-top-right">
+                {/* Account Header */}
+                <div className="px-3 py-2 border-b border-line mb-1">
+                  <p className="text-xs font-bold text-ink leading-tight truncate">{user?.name}</p>
+                  <p className="text-[10px] text-faint truncate mt-0.5">{user?.email}</p>
+                  <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full bg-surface-2 text-muted text-[9px] font-semibold uppercase tracking-wider border border-line">
+                    {user?.role}
+                  </span>
+                </div>
+
+                {/* Actions */}
+                {!isAdmin && (
+                  <button
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      navigate('/profile');
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted hover:text-ink hover:bg-surface-2 rounded-xl transition-colors"
+                  >
+                    <Icon.User size={14} />
+                    Profile Settings
+                  </button>
+                )}
+
+                {!isAdmin && onStartTour && (
+                  <button
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      onStartTour();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted hover:text-ink hover:bg-surface-2 rounded-xl transition-colors"
+                  >
+                    <Icon.Compass size={14} />
+                    Take a Tour
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    setDropdownOpen(false);
+                    onOpenContact();
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted hover:text-ink hover:bg-surface-2 rounded-xl transition-colors"
+                >
+                  <Icon.MessageSquare size={14} />
+                  Contact &amp; Feedback
+                </button>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10 rounded-xl transition-colors"
+                >
+                  <Icon.Logout size={14} />
+                  Log out
+                </button>
+              </div>
+            )}
+
+            {/* Mobile hamburger */}
+            <button
+              className="md:hidden rounded-full p-2 text-muted hover:bg-surface-2"
+              onClick={() => setMobileOpen((o) => !o)}
+              aria-label="Toggle menu"
+            >
+              {mobileOpen ? <Icon.X size={20} /> : <Icon.Menu size={20} />}
+            </button>
+          </div>
         </div>
-      )}
-    </header>
+
+        {/* Mobile nav drawer */}
+        {mobileOpen && (
+          <div className="md:hidden border-t border-line px-4 py-3 space-y-1 animate-fade-up">
+            {links.map((link) => (
+              <NavLink
+                key={link.path}
+                to={link.path}
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'block px-4 py-2.5 rounded-xl text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-brand text-white'
+                      : 'text-muted hover:text-ink hover:bg-surface-2'
+                  )
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+        )}
+      </header>
+    </div>
   );
 }
 
@@ -709,7 +696,7 @@ export function AppShell({ children }) {
           data-tour="coach-button"
           onClick={openCoach}
           className="fixed bottom-6 right-6 z-40 flex items-center justify-center rounded-full bg-brand text-white transition-all duration-300 hover:scale-110 active:scale-95 group"
-          style={{ height: '56px', width: '56px', boxShadow: '0 8px 32px -4px rgba(43, 76, 63, 0.4), 0 2px 8px rgba(0, 0, 0, 0.15)' }}
+          style={{ height: '56px', width: '56px', boxShadow: '0 12px 32px -6px rgba(16, 185, 129, 0.45), 0 4px 12px rgba(0, 0, 0, 0.15)' }}
           aria-label={proactiveNotif ? 'Open AI Career Coach — new update about your progress' : 'Open AI Career Coach'}
         >
           <span className="absolute inset-0 rounded-full border-2 border-brand/30 animate-ping" />
