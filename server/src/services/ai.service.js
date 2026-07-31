@@ -47,9 +47,14 @@ async function call(method, url, data) {
   } catch (err) {
     // If Django returned a response with non-2xx status code
     if (err.response) {
-      throw new ApiError(502, `AI service error: ${err.response.data?.message || err.response.status}`);
+      const fullUrl = `${env.aiServiceUrl}/api${url}`;
+      // eslint-disable-next-line no-console
+      console.error(`[AI Service] ${method.toUpperCase()} ${fullUrl} → ${err.response.status}`, err.response.data);
+      throw new ApiError(502, `AI service error: ${err.response.status} on ${url}`);
     }
     // If connection timed out or socket refused connection (Django service offline)
+    // eslint-disable-next-line no-console
+    console.error(`[AI Service] Connection failed to ${env.aiServiceUrl}:`, err.message);
     throw new ApiError(503, 'AI service is unavailable');
   }
 }
