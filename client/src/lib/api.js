@@ -59,8 +59,15 @@ export function getAccessToken() {
  *   automatically — required for this to work cross-site in prod (see the
  *   sameSite:'none' cookie config on the server, auth.controller.js).
  */
+const rawBase = (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api').trim();
+const baseURL = rawBase.startsWith('http')
+  ? rawBase
+  : typeof window !== 'undefined'
+    ? `${window.location.origin}${rawBase.startsWith('/') ? '' : '/'}${rawBase}`
+    : rawBase;
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api',
+  baseURL,
   withCredentials: true, // required for the refresh cookie to be sent
 });
 
