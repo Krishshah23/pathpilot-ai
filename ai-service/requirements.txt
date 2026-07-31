@@ -5,6 +5,7 @@ django-cors-headers>=4.4
 python-dotenv>=1.0
 requests>=2.32
 gunicorn>=22.0
+whitenoise>=6.7
 
 # ── Machine Learning (Phase 8 & 9) ────────────────────
 pandas>=2.2
