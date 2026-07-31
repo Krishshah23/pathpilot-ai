@@ -7,10 +7,11 @@
  */
 
 import { Router } from 'express';
+import { protect } from '../middleware/auth.middleware.js';
 import { predict } from '../controllers/ml.controller.js';
 
 const router = Router();
 
-router.post('/predict', predict);
+router.post('/predict', protect, predict);
 
 export default router;

@@ -21,11 +21,33 @@ def env_bool(key, default=False):
 
 
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-insecure-change-me')
-DEBUG = env_bool('DJANGO_DEBUG', True)
+# Defaults to OFF (fail-closed) if DJANGO_DEBUG isn't set at all — an unset
+# env var in a real deployment should never silently turn debug tracebacks
+# on. Local dev sets DJANGO_DEBUG=True explicitly in its own .env.
+DEBUG = env_bool('DJANGO_DEBUG', False)
 ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 # Shared secret so only the Node backend can call this service.
 INTERNAL_API_KEY = os.getenv('INTERNAL_API_KEY', 'dev-internal-key')
+
+# Refuse to boot with DEBUG off while still using the known, source-visible
+# placeholder secrets above — those defaults exist purely so local dev works
+# out of the box, and INTERNAL_API_KEY in particular is the only thing
+# gating every ML endpoint. A misconfigured deployment that forgets to set
+# these should fail loudly at startup, not run wide open silently.
+if not DEBUG:
+    _weak_env_vars = []
+    if SECRET_KEY == 'dev-insecure-change-me':
+        _weak_env_vars.append('DJANGO_SECRET_KEY')
+    if INTERNAL_API_KEY == 'dev-internal-key':
+        _weak_env_vars.append('INTERNAL_API_KEY')
+    if _weak_env_vars:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured(
+            'Refusing to start with DEBUG=False while these env vars are still '
+            f'set to their insecure placeholder defaults: {", ".join(_weak_env_vars)}. '
+            'Set real random values for them in the environment before deploying.'
+        )
 
 INSTALLED_APPS = [
     'django.contrib.contenttypes',

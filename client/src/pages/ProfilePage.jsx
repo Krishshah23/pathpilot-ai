@@ -94,11 +94,11 @@ export default function ProfilePage() {
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
     if (!passwordForm.currentPassword || !passwordForm.newPassword) {
-      toast.warn('Please fill in both password fields');
+      toast.warning('Please fill in both password fields');
       return;
     }
     if (passwordForm.newPassword.length < 8) {
-      toast.warn('New password must be at least 8 characters long');
+      toast.warning('New password must be at least 8 characters long');
       return;
     }
 
