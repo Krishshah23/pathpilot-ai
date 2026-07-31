@@ -105,7 +105,7 @@ export function ScoreGauge({ score = 0, size = 180, label, dark = false }) {
       </svg>
 
       {/* Centered Score Display */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-3">
         <div className="metric-glow flex flex-col items-center justify-center">
           <span className={cn('font-serif text-3xl sm:text-4xl font-extrabold animate-count-up leading-none', dark ? 'text-white' : 'text-ink')}>
             {Math.round(safeScore)}
@@ -114,7 +114,10 @@ export function ScoreGauge({ score = 0, size = 180, label, dark = false }) {
             /100
           </span>
         </div>
-        <span className="text-xs font-semibold mt-1" style={{ color }}>
+        <span
+          className="text-[10px] font-semibold mt-1 leading-tight text-center w-full"
+          style={{ color, maxWidth: radius * 1.4 }}
+        >
           {label ?? scoreLabel(safeScore)}
         </span>
       </div>
