@@ -35,3 +35,12 @@ npm-debug.log*
 .DS_Store
 .vscode/
 .idea/
+.claude/
+
+# Internal Docs & Attachments
+docs/
+pathpilot_documentation.md
+*light_ui*
+*dark_mode*
+*.pdf
+
