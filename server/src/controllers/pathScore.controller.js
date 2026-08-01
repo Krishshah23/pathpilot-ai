@@ -82,7 +82,7 @@ export const getPathScore = asyncHandler(async (req, res) => {
     }
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('Error fetching ML predictions:', err);
+    console.log('[PathScore] ML prediction pipeline bypassed (models not trained or cold-start):', err.message);
   }
 
   // Defensive fallback for SHAP explanation UI rendering

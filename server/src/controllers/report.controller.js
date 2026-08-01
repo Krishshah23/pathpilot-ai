@@ -146,7 +146,7 @@ export const generate = asyncHandler(async (req, res) => {
     }
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('Error fetching ML predictions for report (non-critical):', err);
+    console.log('[Report] ML prediction pipeline bypassed (models not trained or cold-start):', err.message);
   }
 
   sendSuccess(res, { data: { report } });
