@@ -1,56 +1,100 @@
 /**
  * components/ui/Logo.jsx — PathPilot AI Brand Logo
  *
- * Two exports:
- *   LogoMark — icon-only brand mark (rounded navy square, ascending growth
- *              bars, an arrow riding the staircase). Used anywhere space is
- *              tight (compact nav headers, footers, cards).
- *   Logo     — LogoMark + "PathPilot AI" wordmark, optionally with the
- *              "CAREER READINESS PLATFORM" tagline underneath.
- *
- * The icon's colors (navy #151A3D, teal #2FD3C6, orange #FF6B4A) are a fixed
- * brand identity, independent of the app's single emerald accent — same
- * reasoning as any product logo that doesn't reskin itself to match a
- * particular screen's theme.
- *
- * USAGE:
- *   <Logo />                       // full lockup
- *   <Logo tagline />                // + "CAREER READINESS PLATFORM"
- *   <Logo showText={false} />       // icon only (equivalent to <LogoMark />)
- *   <LogoMark size={28} />          // icon only, custom size
+ * Designed specifically for PathPilot AI:
+ * - Symbolism: An AI Pilot Compass Arrow intersecting an ascending Career Path curve & milestone nodes.
+ * - Palette: Rich Emerald (#10B981) + Cyan/Teal (#06B6D4) gradients matching the app theme.
  */
 
 import { cn } from '@/lib/cn';
 
-/** Icon-only brand mark — rounded navy square with ascending growth bars + arrow. */
+/** Icon-only brand mark — squircle container with AI compass arrow + path curve. */
 export function LogoMark({ size = 36, className }) {
+  const gradientId = 'logo-emerald-grad';
+  const glowId = 'logo-emerald-glow';
+
   return (
     <svg
       viewBox="0 0 160 160"
       width={size}
       height={size}
-      className={cn('shrink-0', className)}
+      className={cn('shrink-0 drop-shadow-sm', className)}
       aria-hidden="true"
     >
-      <rect width="160" height="160" rx="36" fill="#151A3D" />
-      <rect x="28" y="100" width="16" height="28" rx="3" fill="#3A4080" />
-      <rect x="54" y="84" width="16" height="44" rx="3" fill="#3A4080" />
-      <rect x="80" y="64" width="16" height="64" rx="3" fill="#2FD3C6" />
-      <rect x="106" y="40" width="16" height="88" rx="3" fill="#2FD3C6" />
-      <path
-        d="M28 108 L54 92 L80 72 L114 42"
+      <defs>
+        {/* Emerald to Teal primary gradient */}
+        <linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#059669" />
+          <stop offset="50%" stopColor="#10B981" />
+          <stop offset="100%" stopColor="#34D399" />
+        </linearGradient>
+
+        {/* Secondary Cyan Accent Gradient */}
+        <linearGradient id="logo-teal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#06B6D4" />
+          <stop offset="100%" stopColor="#10B981" />
+        </linearGradient>
+
+        {/* Soft Glow */}
+        <radialGradient id={glowId} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#10B981" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+
+      {/* Background Container: Dark Ink Squircle */}
+      <rect width="160" height="160" rx="40" fill="#0F172A" />
+      <rect
+        width="158"
+        height="158"
+        x="1"
+        y="1"
+        rx="39"
         fill="none"
-        stroke="#FF6B4A"
-        strokeWidth="5"
+        stroke="rgba(16, 185, 129, 0.2)"
+        strokeWidth="2"
+      />
+
+      {/* Ambient Radial Glow */}
+      <circle cx="95" cy="65" r="55" fill={`url(#${glowId})`} />
+
+      {/* Ascending Career Path Ribbon (Curved Arc) */}
+      <path
+        d="M 32 120 C 45 115, 55 95, 75 90 C 95 85, 105 55, 128 42"
+        fill="none"
+        stroke="rgba(255, 255, 255, 0.15)"
+        strokeWidth="6"
         strokeLinecap="round"
       />
+
+      {/* Primary Gradient Path Line */}
       <path
-        d="M100 38 L118 38 L118 56"
+        d="M 32 120 C 45 115, 55 95, 75 90 C 95 85, 105 55, 128 42"
         fill="none"
-        stroke="#FF6B4A"
-        strokeWidth="5"
+        stroke={`url(#${gradientId})`}
+        strokeWidth="6"
         strokeLinecap="round"
-        strokeLinejoin="round"
+      />
+
+      {/* Career Milestone Nodes (3 Progress Dots) */}
+      <circle cx="36" cy="118" r="4.5" fill="#34D399" />
+      <circle cx="75" cy="90" r="5" fill="#06B6D4" />
+      
+      {/* Pilot Compass Arrow (Forward Direction Vector) */}
+      <path
+        d="M 128 42 L 102 48 L 114 60 Z"
+        fill={`url(#${gradientId})`}
+      />
+      <path
+        d="M 128 42 L 114 60 L 104 76 L 118 70 L 128 42 Z"
+        fill="url(#logo-teal-grad)"
+        opacity="0.9"
+      />
+
+      {/* AI Navigation Spark Star at Tip */}
+      <path
+        d="M 134 32 L 136 38 L 142 40 L 136 42 L 134 48 L 132 42 L 126 40 L 132 38 Z"
+        fill="#6EE7B7"
       />
     </svg>
   );
@@ -64,7 +108,7 @@ export function Logo({ className, showText = true, tagline = false, size = 36 })
       {showText && (
         <div className="leading-none">
           <span className="font-display text-lg font-bold tracking-tight text-ink">
-            PathPilot<span className="text-[#2FD3C6]">AI</span>
+            PathPilot<span className="text-emerald-500 font-extrabold ml-0.5">AI</span>
           </span>
           {tagline && (
             <p className="mt-1 font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-faint">
@@ -76,3 +120,4 @@ export function Logo({ className, showText = true, tagline = false, size = 36 })
     </div>
   );
 }
+
