@@ -305,7 +305,7 @@ export default function OverviewPage() {
                 Target Role: <strong className="text-ink">{dreamRole}</strong>
               </span>
               <h1 className="text-2xl sm:text-3xl font-serif font-bold text-ink">
-                {greeting}, <span className="text-gradient-emerald">{firstName}</span> 👋
+                {greeting}, <span className="text-ink">{firstName}</span> 👋
               </h1>
               <p className="text-sm text-muted mt-1">
                 Here is your career readiness overview and recommended action items.

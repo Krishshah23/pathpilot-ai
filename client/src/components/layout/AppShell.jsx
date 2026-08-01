@@ -91,15 +91,15 @@ function TopNav({ user, onOpenContact, onStartTour }) {
                   cn(
                     'px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-all duration-200 flex items-center gap-1.5',
                     isActive
-                      ? 'bg-brand text-white shadow-sm'
+                      ? 'bg-ink text-white shadow-sm'
                       : 'text-muted hover:text-ink hover:bg-surface-2'
                   )
                 }
               >
                 {link.live && (
                   <span className="relative flex h-1.5 w-1.5 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-current opacity-75" />
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-current" />
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
                   </span>
                 )}
                 {link.label}
@@ -691,11 +691,11 @@ export function AppShell({ children }) {
         <button
           data-tour="coach-button"
           onClick={openCoach}
-          className="fixed bottom-6 right-6 z-40 flex items-center justify-center rounded-full bg-brand text-white transition-all duration-300 hover:scale-110 active:scale-95 group"
-          style={{ height: '56px', width: '56px', boxShadow: '0 12px 32px -6px rgba(16, 185, 129, 0.45), 0 4px 12px rgba(0, 0, 0, 0.15)' }}
+          className="fixed bottom-6 right-6 z-40 flex items-center justify-center rounded-full bg-ink text-white transition-all duration-300 hover:scale-110 active:scale-95 group"
+          style={{ height: '56px', width: '56px', boxShadow: '0 12px 32px -6px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.15)' }}
           aria-label={proactiveNotif ? 'Open AI Career Coach — new update about your progress' : 'Open AI Career Coach'}
         >
-          <span className="absolute inset-0 rounded-full border-2 border-brand/30 animate-ping" />
+          <span className="absolute inset-0 rounded-full border-2 border-white/10 animate-ping" />
           <Icon.MessageSquare size={22} className="relative z-10" />
           {proactiveNotif && !coachOpen && (
             <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 z-20">

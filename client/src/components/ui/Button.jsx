@@ -29,9 +29,10 @@ import { Spinner } from './Spinner';
 
 // Map of variant names → Tailwind classes for background/text/hover colours
 const VARIANTS = {
-  primary:   'bg-brand text-white hover:bg-brand-soft',
+  primary:   'bg-ink text-white hover:bg-ink/85',
   secondary: 'border border-line bg-surface text-ink hover:bg-surface-2',
   tertiary:  'text-muted hover:text-ink hover:bg-surface-2',
+  brand:     'bg-brand text-white hover:bg-brand-soft',  // use only for explicit green CTAs
 };
 
 // Map of size names → Tailwind height/padding/text classes
