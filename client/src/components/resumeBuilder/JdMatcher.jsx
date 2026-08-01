@@ -14,6 +14,9 @@ import { useToast } from '@/context/ToastContext';
 import { errorMessage } from '@/lib/api';
 import { cn } from '@/lib/cn';
 
+// Kept in sync with the server-side minimum in resumeBuilder.controller.js's matchJobDescription.
+const MIN_JD_LENGTH = 40;
+
 export function JdMatcher({ onMatch, onInsertKeywords, applying }) {
   const toast = useToast();
   const [expanded, setExpanded] = useState(false);
@@ -22,7 +25,7 @@ export function JdMatcher({ onMatch, onInsertKeywords, applying }) {
   const [result, setResult] = useState(null);
 
   const runMatch = async () => {
-    if (jobDescription.trim().length < 40) return;
+    if (jobDescription.trim().length < MIN_JD_LENGTH) return;
     setMatching(true);
     setResult(null);
     try {
@@ -52,15 +55,22 @@ export function JdMatcher({ onMatch, onInsertKeywords, applying }) {
 
       {expanded && (
         <div className="px-5 pb-5 space-y-4 border-t border-line pt-4">
-          <textarea
-            value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
-            placeholder="Paste the full job description here…"
-            className="input w-full min-h-[120px] resize-none text-sm"
-          />
+          <div>
+            <textarea
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder="Paste the full job description here…"
+              className="input w-full min-h-[120px] resize-none text-sm"
+            />
+            {jobDescription.trim().length > 0 && jobDescription.trim().length < MIN_JD_LENGTH && (
+              <p className="text-[11px] text-faint mt-1.5">
+                {MIN_JD_LENGTH - jobDescription.trim().length} more character{MIN_JD_LENGTH - jobDescription.trim().length === 1 ? '' : 's'} needed — paste the full job description, not just a summary.
+              </p>
+            )}
+          </div>
           <button
             onClick={runMatch}
-            disabled={matching || jobDescription.trim().length < 40}
+            disabled={matching || jobDescription.trim().length < MIN_JD_LENGTH}
             className="h-10 px-5 rounded-xl bg-brand text-white text-sm font-semibold hover:bg-brand-soft disabled:opacity-40 transition-colors flex items-center gap-2"
           >
             {matching ? <Spinner className="h-4 w-4" /> : <Icon.Sparkles size={14} />} Compare
