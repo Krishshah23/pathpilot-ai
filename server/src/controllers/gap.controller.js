@@ -12,6 +12,7 @@
 
 import { Resume } from '../models/Resume.js';
 import { aiService } from '../services/ai.service.js';
+import { geminiAnalyzeSkillGap } from '../services/gemini.service.js';
 import { collectStudentSkills } from '../services/pathScore.service.js';
 import { getMarketDataForRole } from '../services/jobMarket.service.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -32,21 +33,31 @@ export const analyzeGap = asyncHandler(async (req, res) => {
   const resume = await Resume.findOne({ user: req.user._id }).sort({ createdAt: -1 });
   const currentSkills = collectStudentSkills(req.user, resume);
 
-  // Parallel execution: fetch AI gap analysis and live market demand simultaneously
-  const [aiResponse, marketData] = await Promise.all([
-    aiService.skillGap({ targetRole, currentSkills }),
+  // Fetch market data in parallel; AI gap analysis tries Django first then falls back to Gemini
+  const [aiResult, marketData] = await Promise.all([
+    (async () => {
+      try {
+        const res = await aiService.skillGap({ targetRole, currentSkills });
+        return res?.data || null;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn('[Gap] Django skill gap service unavailable, trying Gemini fallback:', err.message);
+        return null;
+      }
+    })(),
     getMarketDataForRole(targetRole),
   ]);
 
-  const gap = aiResponse?.data;
+  let gap = aiResult;
 
   if (!gap) {
-    throw new ApiError(
-      502,
-      aiResponse?.implemented === false
-        ? 'The AI service is running outdated code. Please restart the Django service.'
-        : 'AI service returned no gap analysis'
-    );
+    // eslint-disable-next-line no-console
+    console.log('[Gap] Using Gemini fallback for skill gap analysis...');
+    gap = await geminiAnalyzeSkillGap({ targetRole, currentSkills });
+  }
+
+  if (!gap) {
+    throw new ApiError(502, 'Unable to analyze skill gap — AI service temporarily unavailable. Please try again in a moment.');
   }
 
   // Enrich missing skills with live market frequency data

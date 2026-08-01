@@ -12,7 +12,7 @@
 import { GrowthPlan } from '../models/GrowthPlan.js';
 import { Resume } from '../models/Resume.js';
 import { aiService } from '../services/ai.service.js';
-import { geminiGenerateGapRoadmap } from '../services/gemini.service.js';
+import { geminiGenerateGapRoadmap, geminiGenerateRoadmap } from '../services/gemini.service.js';
 import { collectStudentSkills } from '../services/pathScore.service.js';
 import { roadmapToWeeks, preserveCompletion, withProgress } from '../services/growth.service.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -39,15 +39,24 @@ export const generateGrowthPlan = asyncHandler(async (req, res) => {
   const resume = await Resume.findOne({ user: req.user._id }).sort({ createdAt: -1 });
   const currentSkills = collectStudentSkills(req.user, resume);
 
-  const aiResponse = await aiService.recommendRoadmap({ targetRole, currentSkills });
-  const roadmap = aiResponse?.data;
+  // Try Django AI service first, fall back to Gemini if unavailable (e.g. Render cold start)
+  let roadmap = null;
+  try {
+    const aiResponse = await aiService.recommendRoadmap({ targetRole, currentSkills });
+    roadmap = aiResponse?.data;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[Growth] Django roadmap service unavailable, trying Gemini fallback:', err.message);
+  }
+
   if (!roadmap) {
-    throw new ApiError(
-      502,
-      aiResponse?.implemented === false
-        ? 'The AI service is running outdated code. Please restart the Django service.'
-        : 'AI service returned no roadmap'
-    );
+    // eslint-disable-next-line no-console
+    console.log('[Growth] Using Gemini fallback to generate roadmap...');
+    roadmap = await geminiGenerateRoadmap({ targetRole, currentSkills });
+  }
+
+  if (!roadmap) {
+    throw new ApiError(502, 'Unable to generate roadmap — AI service temporarily unavailable. Please try again in a moment.');
   }
 
   const existing = await GrowthPlan.findOne({ user: req.user._id });

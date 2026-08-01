@@ -474,6 +474,127 @@ function getLocalResumeFallback(parsedData, targetRole) {
 
 // ── Resume Builder AI Features ────────────────────────────────────────────────
 
+/**
+ * Gemini-powered fallback roadmap generator.
+ * Used when the Django AI service is unavailable (cold start or down on Render free tier).
+ * Returns a roadmap object matching the same shape expected by `roadmapToWeeks()` in growth.service.js.
+ */
+export async function geminiGenerateRoadmap({ targetRole, currentSkills = [] }) {
+  const skillsText = currentSkills.length > 0 ? currentSkills.join(', ') : 'none listed';
+  const prompt = `You are a technical career coach. Generate a week-by-week learning roadmap for a student targeting: ${targetRole}.
+
+Their current skills: ${skillsText}
+
+Generate a structured 6-8 week roadmap focused on skills they likely still need for ${targetRole}.
+Return ONLY valid JSON matching this exact structure:
+{
+  "targetRole": "${targetRole}",
+  "summary": "<1-2 sentence roadmap summary>",
+  "coverage": "6 weeks",
+  "totalWeeks": 6,
+  "totalTasks": 18,
+  "totalHours": 48,
+  "strengths": ["<existing strength 1>", "<existing strength 2>"],
+  "weeks": [
+    {
+      "week": 1,
+      "title": "<Core foundation: Skill1, Skill2>",
+      "focusHours": 8,
+      "tasks": [
+        {
+          "key": "skill-name-slug",
+          "skill": "Skill Name",
+          "title": "Learn Skill Name",
+          "priority": "core",
+          "difficulty": "Beginner",
+          "estimatedHours": 8
+        }
+      ]
+    }
+  ]
+}
+Priority must be one of: core, recommended, supporting.
+Difficulty must be one of: Beginner, Intermediate, Advanced.`;
+
+  try {
+    const result = await generateJson(prompt);
+    if (!result || !Array.isArray(result.weeks)) return null;
+    // Ensure each task has required fields
+    result.weeks = result.weeks.map((w, i) => ({
+      week: w.week || i + 1,
+      title: w.title || `Week ${i + 1}`,
+      focusHours: w.focusHours || 8,
+      tasks: (w.tasks || []).map((t) => ({
+        key: t.key || t.skill?.toLowerCase().replace(/\s+/g, '-') || `task-${i}`,
+        skill: t.skill || t.title || 'General',
+        title: t.title || `Learn ${t.skill}`,
+        priority: ['core', 'recommended', 'supporting'].includes(t.priority) ? t.priority : 'core',
+        difficulty: ['Beginner', 'Intermediate', 'Advanced'].includes(t.difficulty) ? t.difficulty : 'Intermediate',
+        estimatedHours: Number(t.estimatedHours) || 8,
+      })),
+    }));
+    return result;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[Gemini Roadmap Fallback] Failed:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Gemini-powered fallback skill gap analyzer.
+ * Used when the Django AI service is unavailable (cold start or down on Render free tier).
+ * Returns a gap object matching the same shape expected by gap.controller.js.
+ */
+export async function geminiAnalyzeSkillGap({ targetRole, currentSkills = [] }) {
+  const skillsText = currentSkills.length > 0 ? currentSkills.join(', ') : 'none listed';
+  const prompt = `You are a technical career analyst. Analyze the skill gap for a student targeting: ${targetRole}.
+
+Their current skills: ${skillsText}
+
+Return ONLY valid JSON matching this exact structure:
+{
+  "targetRole": "${targetRole}",
+  "matchedSkills": [
+    { "skill": "Python", "priority": "core", "estimatedHours": 0 }
+  ],
+  "missingSkills": [
+    { "skill": "Docker", "priority": "core", "estimatedHours": 10 },
+    { "skill": "SQL", "priority": "recommended", "estimatedHours": 8 }
+  ],
+  "score": 45,
+  "recommendations": [
+    "Start with core skills: Docker and Kubernetes",
+    "Build 2 role-relevant projects"
+  ]
+}
+Priority must be one of: core, recommended, supporting.
+Include 3-8 missing skills and all matched skills from their current skill list.
+Score is the percentage of required role skills they already have (0-100).`;
+
+  try {
+    const result = await generateJson(prompt);
+    if (!result || !Array.isArray(result.missingSkills)) return null;
+    result.matchedSkills = (result.matchedSkills || []).map((s) => ({
+      skill: s.skill || 'Unknown',
+      priority: s.priority || 'recommended',
+      estimatedHours: Number(s.estimatedHours) || 0,
+    }));
+    result.missingSkills = (result.missingSkills || []).map((s) => ({
+      skill: s.skill || 'Unknown',
+      priority: s.priority || 'recommended',
+      estimatedHours: Number(s.estimatedHours) || 8,
+    }));
+    result.score = Number(result.score) || 0;
+    result.recommendations = result.recommendations || [];
+    return result;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[Gemini Skill Gap Fallback] Failed:', err.message);
+    return null;
+  }
+}
+
 /** Rewrites a single resume bullet to be stronger, action-verb-first, and measurable. */
 export async function geminiRewriteBullet({ bullet, targetRole, context = '' }) {
   const prompt = `You are a professional resume writer helping a candidate targeting: ${targetRole}
