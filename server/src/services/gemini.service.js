@@ -16,8 +16,8 @@
  * 7. `geminiParseFallback()` — High-fidelity extraction parser for noisy or low-text PDF scans.
  *
  * AUTOMATIC MODEL FALLBACK & QUOTA PROTECTION:
- * - `safeGenerateContent()` catches 429 quota errors on `gemini-3.5-flash` and automatically retries
- *   using `gemini-3.1-flash-lite`.
+ * - `safeGenerateContent()` catches 429 quota errors and 404 model-not-found errors,
+ *   automatically retrying with fallback models (`gemini-3.5-flash-lite`, `gemini-3.6-flash`).
  * - `geminiAnalyzeResume()` includes a local heuristic fallback (`getLocalResumeFallback()`)
  *   that guarantees onboarding completes cleanly even during total API outages.
  */
@@ -30,13 +30,15 @@ import { ApiError } from '../utils/ApiError.js';
 const ai = new GoogleGenAI({ apiKey: env.gemini.apiKey });
 
 // Default Gemini model specified in environment config
-const MODEL = env.gemini.model; // default: gemini-3.5-flash
+const MODEL = env.gemini.model;
 
 /**
- * Invokes Gemini content generation with automatic quota fallback (`gemini-3.1-flash-lite`).
+ * Invokes Gemini content generation with automatic model fallback on quota or 404 errors.
  * @param {object} params - Model call options
  * @returns {Promise<object>} Gemini response object
  */
+const FALLBACK_MODELS = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.6-flash'];
+
 async function safeGenerateContent({ model, contents, config }) {
   try {
     return await ai.models.generateContent({ model, contents, config });
@@ -47,23 +49,32 @@ async function safeGenerateContent({ model, contents, config }) {
       msg.includes('RESOURCE_EXHAUSTED') ||
       msg.includes('quota') ||
       msg.includes('limit');
+    const isModelNotFound =
+      msg.includes('404') ||
+      msg.includes('not found') ||
+      msg.includes('NOT_FOUND') ||
+      msg.includes('is not found');
 
-    if (isQuota && model !== 'gemini-1.5-flash') {
-      // eslint-disable-next-line no-console
-      console.warn(
-        `[Gemini Fallback] Quota exceeded on model '${model}'. Retrying with 'gemini-1.5-flash'...`
-      );
-      try {
-        return await ai.models.generateContent({
-          model: 'gemini-1.5-flash',
-          contents,
-          config,
-        });
-      } catch (fallbackErr) {
+    if (isQuota || isModelNotFound) {
+      for (const fallback of FALLBACK_MODELS) {
+        if (fallback === model) continue;
         // eslint-disable-next-line no-console
-        console.error('[Gemini Fallback] Fallback model also failed:', fallbackErr.message);
-        throw fallbackErr;
+        console.warn(
+          `[Gemini Fallback] ${isQuota ? 'Quota exceeded' : 'Model not found'} on '${model}'. Trying '${fallback}'...`
+        );
+        try {
+          return await ai.models.generateContent({
+            model: fallback,
+            contents,
+            config,
+          });
+        } catch (fallbackErr) {
+          // eslint-disable-next-line no-console
+          console.warn(`[Gemini Fallback] '${fallback}' also failed:`, fallbackErr.message);
+        }
       }
+      // eslint-disable-next-line no-console
+      console.error('[Gemini Fallback] All fallback models exhausted.');
     }
     throw err;
   }
@@ -88,10 +99,10 @@ function geminiErrorHandler(err) {
       'Gemini API key is invalid or not enabled. Visit console.cloud.google.com to enable the Generative Language API.'
     );
   }
-  if (msg.includes('404') || msg.includes('not found')) {
+  if (msg.includes('404') || msg.includes('not found') || msg.includes('NOT_FOUND')) {
     throw new ApiError(
       503,
-      `Model not available. Check that ${MODEL} is supported for your API key region.`
+      `Gemini model not available (tried ${MODEL} + fallbacks). Verify GEMINI_API_KEY is valid and the model exists.`
     );
   }
   throw new ApiError(503, `AI service error: ${msg.slice(0, 120)}`);
@@ -490,7 +501,7 @@ Return ONLY valid JSON matching this exact structure:
 {
   "targetRole": "${targetRole}",
   "summary": "<1-2 sentence roadmap summary>",
-  "coverage": "6 weeks",
+  "coverage": 6,
   "totalWeeks": 6,
   "totalTasks": 18,
   "totalHours": 48,

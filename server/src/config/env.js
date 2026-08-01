@@ -164,9 +164,9 @@ export const env = {
     apiKey: process.env.GEMINI_API_KEY || '',
 
     // The specific Gemini model variant to use.
-    // Valid options: 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'
-    // NOTE: 'gemini-3.5-flash' does NOT exist — causes 404 for all Gemini calls.
-    model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
+    // Valid options: 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.6-flash'
+    // NOTE: 'gemini-2.0-flash' and 'gemini-1.5-*' free-tier quotas are zeroed/sunset.
+    model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
   },
 
   // ── Firebase Admin (Google OAuth verification) ───────────────────────────────

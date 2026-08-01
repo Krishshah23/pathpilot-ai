@@ -235,7 +235,7 @@ The seed script is idempotent — re-running it skips existing users.
 | `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | Job-market API (omit to fall back to seeded mock data) |
 | `THEIRSTACK_API_KEY` | Live-jobs API (omit to disable live listings) |
 | `GEMINI_API_KEY`  | Google Gemini API key                     |
-| `GEMINI_MODEL`    | Model name (default `gemini-3.5-flash`, falls back to `gemini-3.1-flash-lite` on quota errors) |
+| `GEMINI_MODEL`    | Model name (default `gemini-3.5-flash`, auto-fallback to `gemini-3.5-flash-lite` / `gemini-3.6-flash` on quota/404 errors) |
 | `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | Firebase Admin credentials for verifying Google Sign-In tokens (omit to disable Google OAuth only) |
 
 ### `ai-service/.env`
