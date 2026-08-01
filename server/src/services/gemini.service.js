@@ -48,14 +48,14 @@ async function safeGenerateContent({ model, contents, config }) {
       msg.includes('quota') ||
       msg.includes('limit');
 
-    if (isQuota && model !== 'gemini-3.1-flash-lite') {
+    if (isQuota && model !== 'gemini-1.5-flash') {
       // eslint-disable-next-line no-console
       console.warn(
-        `[Gemini Fallback] Quota exceeded on model '${model}'. Retrying with 'gemini-3.1-flash-lite'...`
+        `[Gemini Fallback] Quota exceeded on model '${model}'. Retrying with 'gemini-1.5-flash'...`
       );
       try {
         return await ai.models.generateContent({
-          model: 'gemini-3.1-flash-lite',
+          model: 'gemini-1.5-flash',
           contents,
           config,
         });

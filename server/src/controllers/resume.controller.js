@@ -28,6 +28,87 @@ import { geminiAnalyzeResume, geminiExplainScore, geminiParseFallback, geminiVal
 import { buildPathScore, recomputePathScoreCache } from '../services/pathScore.service.js';
 import { notify, notifyOnce } from '../services/notification.service.js';
 
+// ── Common tech skills for local matching ────────────────────────────────────
+const KNOWN_SKILLS = [
+  'JavaScript','TypeScript','Python','Java','C++','C','C#','Go','Rust','PHP','Ruby','Swift','Kotlin',
+  'React','Angular','Vue','Next.js','Nuxt','Svelte','Node.js','Express','Django','Flask','FastAPI',
+  'Spring','Laravel','Rails','ASP.NET',
+  'HTML','CSS','SCSS','Tailwind','Bootstrap',
+  'SQL','MySQL','PostgreSQL','MongoDB','SQLite','Redis','Firebase','Supabase','DynamoDB',
+  'AWS','GCP','Azure','Docker','Kubernetes','Terraform','CI/CD','GitHub Actions','Jenkins',
+  'Git','Linux','Bash','REST','GraphQL','gRPC','WebSockets',
+  'TensorFlow','PyTorch','scikit-learn','Pandas','NumPy','OpenCV','Keras',
+  'Figma','Postman','JIRA','Agile','Scrum',
+];
+
+/**
+ * Pure local regex resume parser — zero dependencies, zero external API calls.
+ * Used as the final fallback when both Django and Gemini are unavailable.
+ * Extracts skills by keyword matching and does basic section detection.
+ */
+function localParseFallback(rawText) {
+  if (!rawText || rawText.trim().split(/\s+/).length < 10) return null;
+
+  const lower = rawText.toLowerCase();
+  const lines = rawText.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  // Skills: match known tech keywords
+  const foundSkills = KNOWN_SKILLS.filter((s) =>
+    new RegExp(`(?<![a-z0-9.#])${s.replace(/[.+#]/g, '\\$&').toLowerCase()}(?![a-z0-9.+#])`, 'i').test(lower)
+  );
+
+  // Email
+  const emailMatch = rawText.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+  // Phone
+  const phoneMatch = rawText.match(/(\+?[\d\s\-().]{10,})/);
+  // LinkedIn
+  const linkedinMatch = rawText.match(/linkedin\.com\/[\w/-]+/i);
+  // GitHub
+  const githubMatch = rawText.match(/github\.com\/[\w/-]+/i);
+
+  // Education: look for degree keywords near institution
+  const degreeKeywords = ['b.tech','btech','bachelor','b.e','bsc','bca','m.tech','mtech','master','mca','mba','phd','diploma'];
+  const education = lines
+    .filter((l) => degreeKeywords.some((d) => l.toLowerCase().includes(d)))
+    .slice(0, 3);
+
+  // Projects: look for lines that start section headers
+  const projectHeaders = lines.filter((l) =>
+    /^(project|projects|personal project|academic project)/i.test(l)
+  );
+
+  // Experience: lines with internship/work keywords
+  const experienceLines = lines.filter((l) =>
+    /intern|engineer|developer|analyst|trainee/i.test(l) && l.length < 80
+  ).slice(0, 3);
+
+  const wordCount = rawText.trim().split(/\s+/).length;
+
+  return {
+    skills: foundSkills,
+    education,
+    projects: projectHeaders.length > 0 ? [{ title: 'Project(s) detected', description: 'See resume for details' }] : [],
+    experience: experienceLines,
+    certifications: [],
+    contact: {
+      email: emailMatch?.[0] || '',
+      phone: phoneMatch?.[1]?.trim() || '',
+      linkedin: linkedinMatch?.[0] || '',
+      github: githubMatch?.[0] || '',
+    },
+    health: {
+      score: Math.min(50, 10 + foundSkills.length * 2),
+      breakdown: [
+        { label: 'Parsed by local fallback', score: 5, max: 10, status: 'warn',
+          tip: 'AI parsing was unavailable. Re-upload your resume to get a full analysis.' },
+      ],
+    },
+    suggestions: ['AI parsing was temporarily unavailable. Re-upload your resume for a full AI analysis.'],
+    wordCount,
+    lowText: wordCount < 80,
+  };
+}
+
 // Minimum displayScore change (points) before a "your score changed" notification fires.
 // Below this, day-to-day noise (e.g. a re-upload with near-identical content) wouldn't
 // be a meaningful enough signal to interrupt the user.
@@ -66,6 +147,14 @@ export const analyzeResume = asyncHandler(async (req, res) => {
     if (fallbackParsed) {
       parsed = fallbackParsed;
     }
+  }
+
+  // Last-resort: pure local regex extraction — no external API needed.
+  // Guarantees the resume upload never fails even if both Django and Gemini are down.
+  if (!parsed) {
+    // eslint-disable-next-line no-console
+    console.log('[Fallback Parser] Both AI services unavailable. Using local regex parser...');
+    parsed = localParseFallback(text);
   }
 
   if (!parsed) {

@@ -164,8 +164,9 @@ export const env = {
     apiKey: process.env.GEMINI_API_KEY || '',
 
     // The specific Gemini model variant to use.
-    // 'gemini-3.5-flash' is fast and cheap; use 'gemini-pro' for higher quality.
-    model: process.env.GEMINI_MODEL || 'gemini-3.5-flash',
+    // Valid options: 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'
+    // NOTE: 'gemini-3.5-flash' does NOT exist — causes 404 for all Gemini calls.
+    model: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
   },
 
   // ── Firebase Admin (Google OAuth verification) ───────────────────────────────
