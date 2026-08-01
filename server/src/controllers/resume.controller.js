@@ -48,14 +48,20 @@ export const analyzeResume = asyncHandler(async (req, res) => {
   const text = extracted.text || '';
   const links = extracted.links || [];
 
-  // Step 3: Parse structure via Django ML service
-  let aiResponse = await aiService.parseResume({ text, links });
-  let parsed = aiResponse?.data;
+  // Step 3: Parse structure via Django ML service with Gemini fallback on failure
+  let parsed = null;
+  try {
+    const aiResponse = await aiService.parseResume({ text, links });
+    parsed = aiResponse?.data;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[Resume Controller] Django AI service parse failed, falling back to Gemini parser:', err.message);
+  }
 
-  // Fallback to Gemini if text length is low or parsing returns low quality
+  // Fallback to Gemini if text length is low or parsing returns low quality or failed
   if (!parsed || parsed.lowText || (parsed.skills?.length === 0 && parsed.projects?.length === 0)) {
     // eslint-disable-next-line no-console
-    console.log('[Fallback Parser] Django parsing returned low quality or low text. Invoking Gemini Fallback Parser...');
+    console.log('[Fallback Parser] Invoking Gemini Fallback Parser...');
     const fallbackParsed = await geminiParseFallback(text);
     if (fallbackParsed) {
       parsed = fallbackParsed;

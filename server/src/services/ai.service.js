@@ -27,7 +27,7 @@ import { ApiError } from '../utils/ApiError.js';
 // Pre-configured Axios instance dedicated to Django ML service communication
 const aiClient = axios.create({
   baseURL: `${env.aiServiceUrl}/api`,
-  timeout: 15000, // 15s timeout to prevent hanging Node threads if Django ML training/inference lags
+  timeout: 45000, // 45s timeout to allow Render free-tier cold starts to wake up
   headers: { 'X-Internal-Key': env.internalApiKey },
 });
 
