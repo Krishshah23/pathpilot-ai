@@ -19,6 +19,124 @@ import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 
+// ── Role skill maps for local fallback ──────────────────────────────────────
+const ROLE_SKILL_MAP = {
+  'Full Stack Developer': [
+    { skill: 'HTML & CSS', hours: 8, priority: 'core' },
+    { skill: 'JavaScript', hours: 12, priority: 'core' },
+    { skill: 'React', hours: 14, priority: 'core' },
+    { skill: 'Node.js', hours: 12, priority: 'core' },
+    { skill: 'REST APIs', hours: 8, priority: 'core' },
+    { skill: 'MongoDB', hours: 8, priority: 'recommended' },
+    { skill: 'Git & GitHub', hours: 4, priority: 'recommended' },
+    { skill: 'Docker', hours: 8, priority: 'supporting' },
+  ],
+  'Backend Developer': [
+    { skill: 'Node.js / Python', hours: 12, priority: 'core' },
+    { skill: 'REST API Design', hours: 8, priority: 'core' },
+    { skill: 'SQL Databases', hours: 10, priority: 'core' },
+    { skill: 'Authentication & JWT', hours: 6, priority: 'core' },
+    { skill: 'Docker', hours: 8, priority: 'recommended' },
+    { skill: 'Redis Caching', hours: 6, priority: 'recommended' },
+    { skill: 'System Design', hours: 10, priority: 'supporting' },
+  ],
+  'Frontend Developer': [
+    { skill: 'HTML & CSS', hours: 8, priority: 'core' },
+    { skill: 'JavaScript (ES6+)', hours: 10, priority: 'core' },
+    { skill: 'React', hours: 14, priority: 'core' },
+    { skill: 'TypeScript', hours: 8, priority: 'core' },
+    { skill: 'State Management', hours: 6, priority: 'recommended' },
+    { skill: 'CSS Frameworks', hours: 4, priority: 'recommended' },
+    { skill: 'Web Performance', hours: 6, priority: 'supporting' },
+  ],
+  'Data Scientist': [
+    { skill: 'Python', hours: 10, priority: 'core' },
+    { skill: 'Pandas & NumPy', hours: 10, priority: 'core' },
+    { skill: 'Machine Learning (scikit-learn)', hours: 14, priority: 'core' },
+    { skill: 'Data Visualization', hours: 8, priority: 'recommended' },
+    { skill: 'SQL', hours: 8, priority: 'recommended' },
+    { skill: 'Statistics & Probability', hours: 10, priority: 'core' },
+    { skill: 'Deep Learning (PyTorch)', hours: 14, priority: 'supporting' },
+  ],
+  'ML Engineer': [
+    { skill: 'Python', hours: 10, priority: 'core' },
+    { skill: 'PyTorch / TensorFlow', hours: 14, priority: 'core' },
+    { skill: 'Model Deployment (FastAPI)', hours: 8, priority: 'core' },
+    { skill: 'MLOps & Docker', hours: 10, priority: 'recommended' },
+    { skill: 'Feature Engineering', hours: 8, priority: 'recommended' },
+    { skill: 'Cloud (AWS/GCP)', hours: 8, priority: 'supporting' },
+  ],
+  'DevOps Engineer': [
+    { skill: 'Linux & Bash', hours: 8, priority: 'core' },
+    { skill: 'Docker & Kubernetes', hours: 14, priority: 'core' },
+    { skill: 'CI/CD Pipelines', hours: 10, priority: 'core' },
+    { skill: 'Terraform (IaC)', hours: 10, priority: 'recommended' },
+    { skill: 'AWS / GCP / Azure', hours: 12, priority: 'recommended' },
+    { skill: 'Monitoring & Logging', hours: 6, priority: 'supporting' },
+  ],
+};
+const DEFAULT_ROLE_SKILLS = ROLE_SKILL_MAP['Full Stack Developer'];
+
+function _resolveRoleSkills(targetRole) {
+  if (!targetRole) return DEFAULT_ROLE_SKILLS;
+  const key = Object.keys(ROLE_SKILL_MAP).find(
+    (r) => r.toLowerCase() === targetRole.toLowerCase() || targetRole.toLowerCase().includes(r.split(' ')[0].toLowerCase())
+  );
+  return ROLE_SKILL_MAP[key] || DEFAULT_ROLE_SKILLS;
+}
+
+function _slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''); }
+
+/**
+ * Local in-memory roadmap generator — zero external API dependency.
+ * Filters out skills the student already has, packs remainder into weeks.
+ */
+function localRoadmapFallback(targetRole, currentSkills = []) {
+  const required = _resolveRoleSkills(targetRole);
+  const currentLower = currentSkills.map((s) => s.toLowerCase());
+  const missing = required.filter((r) => !currentLower.some((c) => c.includes(_slug(r.skill).split('-')[0])));
+  const skills = missing.length > 0 ? missing : required;
+
+  // Pack into ~8h weeks
+  const weeks = [];
+  let weekBuffer = [];
+  let weekHours = 0;
+  skills.forEach((s) => {
+    weekBuffer.push(s);
+    weekHours += s.hours;
+    if (weekHours >= 8) {
+      weeks.push(weekBuffer);
+      weekBuffer = [];
+      weekHours = 0;
+    }
+  });
+  if (weekBuffer.length > 0) weeks.push(weekBuffer);
+
+  return {
+    targetRole,
+    summary: `A focused ${weeks.length}-week roadmap to help you become a ${targetRole}.`,
+    coverage: `${weeks.length} weeks`,
+    totalWeeks: weeks.length,
+    totalTasks: skills.length,
+    totalHours: skills.reduce((sum, s) => sum + s.hours, 0),
+    strengths: currentSkills.slice(0, 3),
+    weeks: weeks.map((group, i) => ({
+      week: i + 1,
+      title: `${group[0].priority === 'core' ? 'Core' : 'Recommended'}: ${group.map((g) => g.skill).join(', ')}`,
+      focusHours: group.reduce((sum, g) => sum + g.hours, 0),
+      tasks: group.map((g) => ({
+        key: _slug(g.skill),
+        skill: g.skill,
+        title: `Learn ${g.skill}`,
+        priority: g.priority,
+        difficulty: g.hours <= 8 ? 'Beginner' : g.hours <= 12 ? 'Intermediate' : 'Advanced',
+        estimatedHours: g.hours,
+      })),
+    })),
+  };
+}
+
+
 /**
  * GET /api/growth
  * Returns active candidate growth plan with progress stats.
@@ -55,9 +173,17 @@ export const generateGrowthPlan = asyncHandler(async (req, res) => {
     roadmap = await geminiGenerateRoadmap({ targetRole, currentSkills });
   }
 
+  // Final local fallback — zero external API dependency, always succeeds
+  if (!roadmap) {
+    // eslint-disable-next-line no-console
+    console.log('[Growth] Both AI services unavailable. Using local role-based roadmap fallback...');
+    roadmap = localRoadmapFallback(targetRole, currentSkills);
+  }
+
   if (!roadmap) {
     throw new ApiError(502, 'Unable to generate roadmap — AI service temporarily unavailable. Please try again in a moment.');
   }
+
 
   const existing = await GrowthPlan.findOne({ user: req.user._id });
   let weeks = preserveCompletion(roadmapToWeeks(roadmap), existing);

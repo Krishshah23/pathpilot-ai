@@ -20,6 +20,80 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 import { notifyOnce } from '../services/notification.service.js';
 
+// ── Local skill gap fallback ─────────────────────────────────────────────────
+const ROLE_REQUIRED_SKILLS = {
+  'Full Stack Developer': [
+    { skill: 'JavaScript', priority: 'core', estimatedHours: 12 },
+    { skill: 'React', priority: 'core', estimatedHours: 14 },
+    { skill: 'Node.js', priority: 'core', estimatedHours: 12 },
+    { skill: 'MongoDB', priority: 'recommended', estimatedHours: 8 },
+    { skill: 'Docker', priority: 'supporting', estimatedHours: 8 },
+    { skill: 'REST APIs', priority: 'core', estimatedHours: 8 },
+    { skill: 'Git', priority: 'recommended', estimatedHours: 4 },
+  ],
+  'Backend Developer': [
+    { skill: 'Node.js', priority: 'core', estimatedHours: 12 },
+    { skill: 'SQL', priority: 'core', estimatedHours: 10 },
+    { skill: 'REST APIs', priority: 'core', estimatedHours: 8 },
+    { skill: 'Docker', priority: 'recommended', estimatedHours: 8 },
+    { skill: 'System Design', priority: 'recommended', estimatedHours: 10 },
+  ],
+  'Frontend Developer': [
+    { skill: 'React', priority: 'core', estimatedHours: 14 },
+    { skill: 'TypeScript', priority: 'core', estimatedHours: 8 },
+    { skill: 'CSS', priority: 'core', estimatedHours: 6 },
+    { skill: 'State Management', priority: 'recommended', estimatedHours: 6 },
+  ],
+  'Data Scientist': [
+    { skill: 'Python', priority: 'core', estimatedHours: 10 },
+    { skill: 'Machine Learning', priority: 'core', estimatedHours: 14 },
+    { skill: 'Pandas', priority: 'core', estimatedHours: 8 },
+    { skill: 'SQL', priority: 'recommended', estimatedHours: 8 },
+    { skill: 'Statistics', priority: 'core', estimatedHours: 10 },
+  ],
+  'ML Engineer': [
+    { skill: 'Python', priority: 'core', estimatedHours: 10 },
+    { skill: 'PyTorch', priority: 'core', estimatedHours: 14 },
+    { skill: 'Docker', priority: 'recommended', estimatedHours: 8 },
+    { skill: 'FastAPI', priority: 'core', estimatedHours: 6 },
+    { skill: 'Cloud Deployment', priority: 'supporting', estimatedHours: 8 },
+  ],
+  'DevOps Engineer': [
+    { skill: 'Linux', priority: 'core', estimatedHours: 8 },
+    { skill: 'Docker', priority: 'core', estimatedHours: 10 },
+    { skill: 'Kubernetes', priority: 'core', estimatedHours: 12 },
+    { skill: 'CI/CD', priority: 'core', estimatedHours: 10 },
+    { skill: 'AWS', priority: 'recommended', estimatedHours: 12 },
+  ],
+};
+
+function localSkillGapFallback(targetRole, currentSkills = []) {
+  const roleKey = Object.keys(ROLE_REQUIRED_SKILLS).find(
+    (r) => r.toLowerCase() === (targetRole || '').toLowerCase() ||
+      (targetRole || '').toLowerCase().includes(r.split(' ')[0].toLowerCase())
+  );
+  const required = ROLE_REQUIRED_SKILLS[roleKey] || ROLE_REQUIRED_SKILLS['Full Stack Developer'];
+  const currentLower = currentSkills.map((s) => s.toLowerCase());
+
+  const matchedSkills = required.filter((r) =>
+    currentLower.some((c) => c.includes(r.skill.toLowerCase().split(' ')[0]))
+  );
+  const missingSkills = required.filter((r) =>
+    !currentLower.some((c) => c.includes(r.skill.toLowerCase().split(' ')[0]))
+  );
+
+  const score = required.length > 0 ? Math.round((matchedSkills.length / required.length) * 100) : 0;
+
+  return {
+    targetRole,
+    matchedSkills,
+    missingSkills,
+    score,
+    recommendations: missingSkills.slice(0, 4).map((s) => `Learn ${s.skill} — ~${s.estimatedHours}h`),
+  };
+}
+
+
 /**
  * POST /api/gap/analyze
  * Performs role skill gap analysis enriched with real-time job market frequency metrics.
@@ -54,6 +128,13 @@ export const analyzeGap = asyncHandler(async (req, res) => {
     // eslint-disable-next-line no-console
     console.log('[Gap] Using Gemini fallback for skill gap analysis...');
     gap = await geminiAnalyzeSkillGap({ targetRole, currentSkills });
+  }
+
+  // Final local fallback — zero external API dependency, always succeeds
+  if (!gap) {
+    // eslint-disable-next-line no-console
+    console.log('[Gap] Both AI services unavailable. Using local role-based skill gap fallback...');
+    gap = localSkillGapFallback(targetRole, currentSkills);
   }
 
   if (!gap) {
