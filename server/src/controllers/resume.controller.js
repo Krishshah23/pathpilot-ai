@@ -194,7 +194,8 @@ export const analyzeResume = asyncHandler(async (req, res) => {
   // Read file buffer as base64 for persistent backup in MongoDB
   let fileBase64 = '';
   try {
-    fileBase64 = fs.readFileSync(absPath).toString('base64');
+    const targetPath = req.file?.path || absPath;
+    fileBase64 = fs.readFileSync(targetPath).toString('base64');
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Failed to encode resume file to base64:', err);

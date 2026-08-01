@@ -115,8 +115,28 @@ export const uploadResume = asyncHandler(async (req, res) => {
   if (!req.file) throw ApiError.badRequest('No resume uploaded');
 
   removeLocalFile(req.user.profile.resumeUrl);
-  req.user.profile.resumeUrl = publicUrl('resume', req.file.filename);
+  const newUrl = publicUrl('resume', req.file.filename);
+  req.user.profile.resumeUrl = newUrl;
   await req.user.save();
+
+  let fileBase64 = '';
+  try {
+    const absPath = req.file.path || path.join(process.cwd(), 'uploads', 'resumes', req.file.filename);
+    fileBase64 = fs.readFileSync(absPath).toString('base64');
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to read uploaded resume for base64 backup:', err);
+  }
+
+  if (fileBase64) {
+    await Resume.create({
+      user: req.user._id,
+      fileUrl: newUrl,
+      fileBase64,
+      mimeType: req.file.mimetype || 'application/pdf',
+      originalName: req.file.originalname,
+    });
+  }
 
   return sendSuccess(res, {
     message: 'Resume uploaded',
