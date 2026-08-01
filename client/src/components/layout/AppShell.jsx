@@ -19,6 +19,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/cn';
 import { Avatar } from '@/components/ui/Avatar';
+import { LogoMark } from '@/components/ui/Logo';
 import { Icon } from '@/components/ui/icons';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -76,11 +77,9 @@ function TopNav({ user, onOpenContact, onStartTour }) {
 
           {/* Left: Logo */}
           <a href="/dashboard" className="flex items-center gap-2.5 shrink-0 group">
-            <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-brand text-white shadow-sm transition-transform duration-300 group-hover:scale-105">
-              <span className="font-bold text-sm font-sans tracking-tight">PP</span>
-            </span>
+            <LogoMark size={32} className="transition-transform duration-300 group-hover:scale-105" />
             <span className="font-display font-semibold text-ink text-[15px] tracking-tight hidden sm:block">
-              PathPilot
+              PathPilot<span className="text-[#2FD3C6]">AI</span>
             </span>
           </a>
 

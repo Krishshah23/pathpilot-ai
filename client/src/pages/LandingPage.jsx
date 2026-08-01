@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { Icon } from '@/components/ui/icons';
+import { Logo } from '@/components/ui/Logo';
 import { ScoreGauge } from '@/components/charts/ScoreGauge';
 import { Footer } from '@/components/layout/Footer';
 import {
@@ -68,12 +69,9 @@ function LandingNav() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <nav className="flex items-center justify-between px-6 sm:px-12 py-6">
-      <Link to="/" className="flex items-center gap-2.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-brand text-white font-display text-[13px] font-semibold">
-          PP
-        </span>
-        <span className="font-display text-lg text-ink">PathPilot</span>
+    <nav className="nav-frosted sticky top-0 z-30 flex items-center justify-between px-6 sm:px-12 py-4 border-b border-line">
+      <Link to="/" className="group flex items-center">
+        <Logo size={34} className="transition-transform duration-300 group-hover:scale-105" />
       </Link>
 
       <Link
@@ -125,18 +123,22 @@ function Hero() {
               </Link>
             )}
           </div>
-
-          <p className="mt-8 flex items-center gap-2 text-xs text-faint">
-            <Icon.Sparkles size={13} /> Powered by advanced AI
-          </p>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: reduce ? 0 : 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduce ? 0.15 : 0.6, ease: [0.16, 1, 0.3, 1], delay: reduce ? 0 : 0.15 }}
-          className="flex justify-center"
+          className="relative flex justify-center"
         >
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 -z-10 blur-3xl opacity-40"
+            style={{
+              background:
+                'radial-gradient(38% 38% at 30% 20%, rgba(47,211,198,0.25) 0%, transparent 70%), radial-gradient(42% 42% at 75% 80%, rgba(255,107,74,0.16) 0%, transparent 70%)',
+            }}
+          />
           <div className="card w-full max-w-sm p-8 flex flex-col items-center text-center">
             <ScoreGauge score={94} label="Excellent" size={180} />
             <div className="mt-6 w-full space-y-2">

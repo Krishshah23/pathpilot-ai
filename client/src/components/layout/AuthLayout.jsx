@@ -8,6 +8,7 @@
  */
 
 import { Link } from 'react-router-dom';
+import { LogoMark } from '@/components/ui/Logo';
 import { cn } from '@/lib/cn';
 
 const TABS = [
@@ -21,10 +22,10 @@ export function AuthLayout({ title, subtitle, children, activeTab }) {
       {/* Nav */}
       <nav className="flex items-center px-6 sm:px-12 py-6 border-b border-line">
         <Link to="/" className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-brand text-white font-display text-[13px] font-semibold">
-            PP
+          <LogoMark size={32} />
+          <span className="font-display text-lg text-ink">
+            PathPilot<span className="text-[#2FD3C6]">AI</span>
           </span>
-          <span className="font-display text-lg text-ink">PathPilot</span>
         </Link>
       </nav>
 

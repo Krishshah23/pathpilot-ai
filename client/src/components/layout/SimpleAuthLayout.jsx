@@ -9,6 +9,7 @@
 
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
+import { LogoMark } from '@/components/ui/Logo';
 
 export function SimpleAuthLayout({ title, subtitle, children }) {
   const reduce = useReducedMotion();
@@ -17,10 +18,10 @@ export function SimpleAuthLayout({ title, subtitle, children }) {
     <div className="auth-dot-grid min-h-screen bg-canvas flex flex-col">
       <header className="px-6 sm:px-12 py-6">
         <Link to="/login" className="inline-flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-brand text-white font-display text-[13px] font-semibold">
-            PP
+          <LogoMark size={32} />
+          <span className="font-display text-lg text-ink">
+            PathPilot<span className="text-[#2FD3C6]">AI</span>
           </span>
-          <span className="font-display text-lg text-ink">PathPilot</span>
         </Link>
       </header>
 

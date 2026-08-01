@@ -7,6 +7,7 @@
  */
 
 import { NavLink } from 'react-router-dom';
+import { LogoMark } from '@/components/ui/Logo';
 import { Icon } from '@/components/ui/icons';
 
 const QUICK_LINKS = [
@@ -32,10 +33,10 @@ export function Footer() {
         {/* Brand */}
         <div className="lg:col-span-1">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand text-white shadow-sm">
-              <span className="font-bold text-xs font-sans tracking-tight">PP</span>
+            <LogoMark size={32} />
+            <span className="font-serif font-bold text-ink text-base tracking-tight">
+              PathPilot<span className="text-[#2FD3C6]">AI</span>
             </span>
-            <span className="font-serif font-bold text-ink text-base tracking-tight">PathPilot</span>
           </div>
           <p className="mt-3 text-xs text-muted leading-relaxed">Your AI career co-pilot.</p>
           <p className="mt-1 text-[11px] text-faint">© {year} PathPilot AI. Built for engineering students.</p>
@@ -89,7 +90,7 @@ export function Footer() {
 
       <div className="border-t border-line px-6 sm:px-10 py-4 flex items-center justify-center">
         <p className="text-[11px] text-faint text-center">
-          Powered by advanced AI · Built with <span className="text-danger">❤</span> for engineering students
+          Built with <span className="text-danger">❤</span> for engineering students
         </p>
       </div>
     </footer>

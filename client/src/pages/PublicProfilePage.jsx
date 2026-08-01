@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Icon } from '@/components/ui/icons';
+import { LogoMark } from '@/components/ui/Logo';
 import { ScoreGauge } from '@/components/charts/ScoreGauge';
 import { api, errorMessage } from '@/lib/api';
 
@@ -145,9 +146,7 @@ export default function PublicProfilePage() {
         {/* ── Top Bar ── */}
         <div className="flex items-center justify-between mb-10 fade-up">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2B4C3F]/10 border border-[#2B4C3F]/20">
-              <span className="text-[10px] font-black text-[#2B4C3F]">PP</span>
-            </div>
+            <LogoMark size={28} />
             <span className="text-xs font-bold tracking-wider uppercase text-[#525252]">PathPilot AI</span>
           </div>
           <button
