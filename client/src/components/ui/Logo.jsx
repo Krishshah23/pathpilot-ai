@@ -12,7 +12,7 @@ export function LogoMark() {
 }
 
 /** Clean, sleek PathPilot AI typographic wordmark. */
-export function Logo({ className, showText = true, tagline = false }) {
+export function Logo({ className, tagline = false }) {
   return (
     <div className={cn('flex items-center gap-2 select-none', className)}>
       <div className="leading-none flex flex-col">
@@ -33,5 +33,3 @@ export function Logo({ className, showText = true, tagline = false }) {
     </div>
   );
 }
-
-
