@@ -46,6 +46,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { protect } from './middleware/auth.middleware.js';
 import { ApiError } from './utils/ApiError.js';
+import { Resume } from './models/Resume.js';
 
 /**
  * Creates and configures the Express application.
@@ -99,7 +100,7 @@ export function createApp() {
   //   - Students can only access their own resume
   // The userId is embedded in the filename (set by upload.middleware.js)
   // to enable fast ownership checks without a DB query.
-  app.get('/uploads/resumes/:filename', protect, (req, res, next) => {
+  app.get('/uploads/resumes/:filename', protect, async (req, res, next) => {
     try {
       const { filename } = req.params;
 
@@ -115,8 +116,21 @@ export function createApp() {
       // Build the absolute path to the file on disk
       const absPath = path.resolve(process.cwd(), 'uploads', 'resumes', filename);
 
-      // Check the file actually exists (handles the case where the DB reference is stale)
+      // Check if file exists on disk; if not (e.g. Render free tier ephemeral disk wiped),
+      // restore it from the MongoDB base64 backup field.
       if (!fs.existsSync(absPath)) {
+        const resumeDoc = await Resume.findOne({ fileUrl: { $regex: filename } });
+        if (resumeDoc && resumeDoc.fileBase64) {
+          try {
+            const fileBuffer = Buffer.from(resumeDoc.fileBase64, 'base64');
+            fs.mkdirSync(path.dirname(absPath), { recursive: true });
+            fs.writeFileSync(absPath, fileBuffer);
+            return res.contentType(resumeDoc.mimeType || 'application/pdf').send(fileBuffer);
+          } catch (restoreErr) {
+            // eslint-disable-next-line no-console
+            console.error('Failed to restore resume file from MongoDB base64:', restoreErr);
+          }
+        }
         throw ApiError.notFound('Resume file not found');
       }
 

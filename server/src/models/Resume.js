@@ -96,6 +96,13 @@ const resumeSchema = new Schema(
     // Used to display a download link and to re-read the file if needed
     fileUrl: { type: String, required: true },
 
+    // Base64 encoded file content stored directly in MongoDB as a backup
+    // Ensures resume files persist permanently even if Render's ephemeral disk resets
+    fileBase64: { type: String, default: '' },
+
+    // MIME type of the uploaded file
+    mimeType: { type: String, default: 'application/pdf' },
+
     // Original filename from the user's computer (e.g. 'Krish_Resume_2024.pdf')
     // Stored for display purposes only — the saved filename is generated and unique
     originalName: { type: String, default: '' },

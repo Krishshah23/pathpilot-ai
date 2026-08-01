@@ -191,10 +191,21 @@ export const analyzeResume = asyncHandler(async (req, res) => {
     skills: parsed.skills || [],
   });
 
+  // Read file buffer as base64 for persistent backup in MongoDB
+  let fileBase64 = '';
+  try {
+    fileBase64 = fs.readFileSync(absPath).toString('base64');
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to encode resume file to base64:', err);
+  }
+
   // Step 6: Save Resume document
   const resume = await Resume.create({
     user: req.user._id,
     fileUrl,
+    fileBase64,
+    mimeType: req.file.mimetype || 'application/pdf',
     originalName: req.file.originalname,
     skills: parsed.skills,
     education: parsed.education,
