@@ -6,11 +6,9 @@
 
 import { cn } from '@/lib/cn';
 
-/** Icon-only fallback (simple dot spark for tight spaces if ever needed) */
-export function LogoMark({ size = 12, className }) {
-  return (
-    <span className={cn('inline-block rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50', className)} style={{ width: size, height: size }} />
-  );
+/** Pure text brand mark — no icon box or dots */
+export function LogoMark() {
+  return null;
 }
 
 /** Clean, sleek PathPilot AI typographic wordmark. */

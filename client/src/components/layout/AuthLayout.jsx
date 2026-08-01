@@ -8,7 +8,7 @@
  */
 
 import { Link } from 'react-router-dom';
-import { LogoMark } from '@/components/ui/Logo';
+import { Logo } from '@/components/ui/Logo';
 import { cn } from '@/lib/cn';
 
 const TABS = [
@@ -21,11 +21,8 @@ export function AuthLayout({ title, subtitle, children, activeTab }) {
     <div className="auth-dot-grid min-h-screen bg-canvas flex flex-col">
       {/* Nav */}
       <nav className="flex items-center px-6 sm:px-12 py-6 border-b border-line">
-        <Link to="/" className="flex items-center gap-2.5">
-          <LogoMark size={32} />
-          <span className="font-display text-lg text-ink">
-            PathPilot<span className="text-[#2FD3C6]">AI</span>
-          </span>
+        <Link to="/" className="flex items-center">
+          <Logo />
         </Link>
       </nav>
 

@@ -19,7 +19,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/cn';
 import { Avatar } from '@/components/ui/Avatar';
-import { LogoMark } from '@/components/ui/Logo';
+import { Logo } from '@/components/ui/Logo';
 import { Icon } from '@/components/ui/icons';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -76,12 +76,9 @@ function TopNav({ user, onOpenContact, onStartTour }) {
         <div className="px-4 sm:px-6 h-14 flex items-center justify-between gap-8">
 
           {/* Left: Logo */}
-          <a href="/dashboard" className="flex items-center gap-2.5 shrink-0 group">
-            <LogoMark size={32} className="transition-transform duration-300 group-hover:scale-105" />
-            <span className="font-display font-semibold text-ink text-[15px] tracking-tight hidden sm:block">
-              PathPilot<span className="text-[#2FD3C6]">AI</span>
-            </span>
-          </a>
+          <NavLink to="/dashboard" className="flex items-center shrink-0">
+            <Logo />
+          </NavLink>
 
           {/* Center: Nav links (desktop) — Apple pill-per-item nav */}
           <nav className="hidden md:flex items-center gap-1">

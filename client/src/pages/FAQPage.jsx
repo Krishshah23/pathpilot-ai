@@ -10,7 +10,7 @@
 
 import { Link } from 'react-router-dom';
 import { Icon } from '@/components/ui/icons';
-import { LogoMark } from '@/components/ui/Logo';
+import { Logo } from '@/components/ui/Logo';
 import { FAQSection } from '@/components/FAQSection';
 
 export default function FAQPage() {
@@ -18,11 +18,8 @@ export default function FAQPage() {
     <div className="min-h-screen bg-canvas text-ink">
       <header className="border-b border-line">
         <div className="mx-auto max-w-3xl px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
-            <LogoMark size={32} />
-            <span className="font-serif font-bold text-ink text-base tracking-tight">
-              PathPilot<span className="text-[#2FD3C6]">AI</span>
-            </span>
+          <Link to="/" className="flex items-center">
+            <Logo />
           </Link>
           <Link to="/login" className="text-xs font-semibold text-muted hover:text-ink transition-colors">
             ← Back to Login
