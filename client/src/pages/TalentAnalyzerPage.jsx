@@ -422,7 +422,7 @@ export default function TalentAnalyzerPage() {
                     {isActive && (
                       <motion.span
                         layoutId="talent-tab-indicator"
-                        className="absolute inset-0 rounded-full bg-brand"
+                        className="absolute inset-0 rounded-full bg-ink"
                         transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                       />
                     )}
@@ -431,12 +431,7 @@ export default function TalentAnalyzerPage() {
                 );
               })}
             </div>
-            <Link
-              to="/live-jobs"
-              className="hidden sm:inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-brand hover:underline"
-            >
-              <Icon.Briefcase size={13} /> Live Jobs
-            </Link>
+
           </div>
 
           {/* Tab Content */}

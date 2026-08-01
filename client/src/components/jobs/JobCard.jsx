@@ -100,7 +100,7 @@ export function JobCard({ job, matchTier, saved, onToggleSave, status, onStatusC
             href={job.applyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-brand text-white hover:bg-brand-soft transition-colors inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-xs font-semibold"
+            className="bg-ink text-white hover:bg-ink/85 transition-colors inline-flex items-center gap-1.5 h-9 px-4 rounded-lg text-xs font-semibold"
           >
             Apply Now <Icon.ArrowRight size={12} />
           </a>

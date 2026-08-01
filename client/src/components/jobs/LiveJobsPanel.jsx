@@ -91,7 +91,7 @@ export function LiveJobsPanel({ jobs, loading, role, setRole, onRefresh, fetched
               onClick={() => setSeniorityFilter(s)}
               className={cn(
                 'px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors border',
-                seniorityFilter === s ? 'bg-brand text-white border-brand' : 'border-line text-muted hover:bg-surface-2'
+                seniorityFilter === s ? 'bg-ink text-white border-ink' : 'border-line text-muted hover:bg-surface-2'
               )}
             >
               {s === 'all' ? 'All levels' : String(s).replace('_', ' ')}
@@ -139,7 +139,7 @@ export function LiveJobsPanel({ jobs, loading, role, setRole, onRefresh, fetched
             />
             <button
               onClick={() => searchRole.trim() && setRole(searchRole.trim())}
-              className="h-9 px-3 rounded-xl bg-brand text-white text-xs font-semibold hover:bg-brand-soft transition-colors shrink-0"
+              className="h-9 px-3 rounded-xl bg-ink text-white text-xs font-semibold hover:bg-ink/85 transition-colors shrink-0"
             >
               Search
             </button>
