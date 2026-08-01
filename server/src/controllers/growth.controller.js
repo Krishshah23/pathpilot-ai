@@ -115,7 +115,7 @@ function localRoadmapFallback(targetRole, currentSkills = []) {
   return {
     targetRole,
     summary: `A focused ${weeks.length}-week roadmap to help you become a ${targetRole}.`,
-    coverage: `${weeks.length} weeks`,
+    coverage: weeks.length,
     totalWeeks: weeks.length,
     totalTasks: skills.length,
     totalHours: skills.reduce((sum, s) => sum + s.hours, 0),
@@ -224,7 +224,7 @@ export const generateGrowthPlan = asyncHandler(async (req, res) => {
     user: req.user._id,
     targetRole: roadmap.targetRole,
     summary: roadmap.summary,
-    coverageStart: roadmap.coverage,
+    coverageStart: typeof roadmap.coverage === 'string' ? parseInt(roadmap.coverage, 10) || roadmap.totalWeeks : roadmap.coverage,
     totalWeeks: roadmap.totalWeeks,
     totalTasks: roadmap.totalTasks,
     totalHours: roadmap.totalHours,
