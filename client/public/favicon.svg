@@ -1,20 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
   <!-- Dark ink squircle background -->
-  <rect width="160" height="160" rx="38" fill="#0F172A"/>
-  <!-- Subtle border -->
-  <rect x="1" y="1" width="158" height="158" rx="37" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
-  <!-- "P" lettermark in white -->
-  <text
-    x="50%"
-    y="50%"
-    dominant-baseline="central"
-    text-anchor="middle"
-    font-family="Georgia, 'Times New Roman', serif"
-    font-size="96"
-    font-weight="700"
-    fill="white"
-    letter-spacing="-2"
-  >P</text>
-  <!-- Emerald dot accent bottom-right -->
-  <circle cx="118" cy="118" r="12" fill="#10B981"/>
+  <rect width="160" height="160" rx="36" fill="#0F172A"/>
+  <rect x="1" y="1" width="158" height="158" rx="35" fill="none" stroke="rgba(16,185,129,0.2)" stroke-width="2"/>
+
+  <!-- Ambient emerald glow -->
+  <radialGradient id="g" cx="60%" cy="40%" r="50%">
+    <stop offset="0%" stop-color="#10B981" stop-opacity="0.25"/>
+    <stop offset="100%" stop-color="#10B981" stop-opacity="0"/>
+  </radialGradient>
+  <circle cx="95" cy="65" r="70" fill="url(#g)"/>
+
+  <!-- Ascending career path curve -->
+  <path d="M 30 122 C 45 116, 58 96, 78 90 C 98 84, 108 54, 130 40"
+    fill="none" stroke="#10B981" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- Milestone dots -->
+  <circle cx="34" cy="120" r="5" fill="#34D399"/>
+  <circle cx="78" cy="90" r="5.5" fill="#06B6D4"/>
+
+  <!-- Arrow tip -->
+  <path d="M 130 40 L 104 46 L 116 58 Z" fill="#10B981"/>
+
+  <!-- Sparkle star at tip -->
+  <path d="M 136 30 L 138 37 L 145 39 L 138 41 L 136 48 L 134 41 L 127 39 L 134 37 Z" fill="#6EE7B7"/>
 </svg>
