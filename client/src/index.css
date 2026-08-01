@@ -371,59 +371,6 @@ textarea.input { height: auto; padding-block: 0.625rem; }
   border: none;
 }
 
-/* ─── App Tour (driver.js) — Dark Branded Popover ────────────────────── */
-/* Hardcoded dark styling regardless of site theme — matches the auth pages'
-   always-dark brand identity rather than following the app's own theme. */
-
-.pp-tour-popover.driver-popover {
-  background: #0F1C17;
-  color: #F3F5F4;
-  border: 1px solid rgba(127, 181, 160, 0.35);
-  border-radius: 1rem;
-  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.7);
-  font-family: var(--font-sans);
-}
-.pp-tour-popover .driver-popover-title {
-  color: #ffffff;
-  font-family: var(--font-serif);
-  font-size: 1.05rem;
-  font-weight: 700;
-}
-.pp-tour-popover .driver-popover-description {
-  color: rgba(243, 245, 244, 0.75);
-  font-size: 0.8125rem;
-  line-height: 1.6;
-}
-.pp-tour-popover .driver-popover-progress-text {
-  color: rgba(127, 181, 160, 0.8);
-  font-size: 0.6875rem;
-}
-.pp-tour-popover .driver-popover-footer button {
-  background: var(--color-brand);
-  color: #ffffff;
-  text-shadow: none;
-  border: none;
-  border-radius: 0.6rem;
-  padding: 0.4rem 0.9rem;
-  font-weight: 600;
-  font-size: 0.75rem;
-}
-.pp-tour-popover .driver-popover-footer .driver-popover-prev-btn {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(243, 245, 244, 0.8);
-}
-.pp-tour-popover .driver-popover-close-btn {
-  color: rgba(243, 245, 244, 0.5);
-}
-.pp-tour-popover .driver-popover-arrow-side-top.driver-popover-arrow { border-top-color: #0F1C17; }
-.pp-tour-popover .driver-popover-arrow-side-bottom.driver-popover-arrow { border-bottom-color: #0F1C17; }
-.pp-tour-popover .driver-popover-arrow-side-left.driver-popover-arrow { border-left-color: #0F1C17; }
-.pp-tour-popover .driver-popover-arrow-side-right.driver-popover-arrow { border-right-color: #0F1C17; }
-
-.driver-active-element {
-  border-radius: 0.75rem !important;
-}
-
 /* ─── AI Coach markdown message rendering ────────────────────────────── */
 
 .markdown-chat {
@@ -503,6 +450,65 @@ textarea.input { height: auto; padding-block: 0.625rem; }
 .stagger-5 { animation-delay: 0.25s; }
 
 } /* end @layer components */
+
+/* ─── App Tour (driver.js) — Dark Branded Popover ────────────────────── */
+/* Hardcoded dark styling regardless of site theme — matches the auth pages'
+   always-dark brand identity rather than following the app's own theme.
+   Deliberately kept OUTSIDE @layer components: driver.css (imported by
+   AppTour.jsx) is plain unlayered CSS, and per the CSS cascade-layers spec
+   unlayered rules always beat layered ones regardless of specificity — so a
+   layered override here would lose the background-color fight against
+   driver.css's `.driver-popover{background-color:#fff}` while still winning
+   descendant color rules, producing barely-visible light text on white. */
+
+.pp-tour-popover.driver-popover {
+  background: #0F1C17;
+  color: #F3F5F4;
+  border: 1px solid rgba(127, 181, 160, 0.35);
+  border-radius: 1rem;
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.7);
+  font-family: var(--font-sans);
+}
+.pp-tour-popover .driver-popover-title {
+  color: #ffffff;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.pp-tour-popover .driver-popover-description {
+  color: rgba(243, 245, 244, 0.75);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+.pp-tour-popover .driver-popover-progress-text {
+  color: rgba(127, 181, 160, 0.8);
+  font-size: 0.6875rem;
+}
+.pp-tour-popover .driver-popover-footer button {
+  background: var(--color-brand);
+  color: #ffffff;
+  text-shadow: none;
+  border: none;
+  border-radius: 0.6rem;
+  padding: 0.4rem 0.9rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+.pp-tour-popover .driver-popover-footer .driver-popover-prev-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(243, 245, 244, 0.8);
+}
+.pp-tour-popover .driver-popover-close-btn {
+  color: rgba(243, 245, 244, 0.5);
+}
+.pp-tour-popover .driver-popover-arrow-side-top.driver-popover-arrow { border-top-color: #0F1C17; }
+.pp-tour-popover .driver-popover-arrow-side-bottom.driver-popover-arrow { border-bottom-color: #0F1C17; }
+.pp-tour-popover .driver-popover-arrow-side-left.driver-popover-arrow { border-left-color: #0F1C17; }
+.pp-tour-popover .driver-popover-arrow-side-right.driver-popover-arrow { border-right-color: #0F1C17; }
+
+.driver-active-element {
+  border-radius: 0.75rem !important;
+}
 
 @layer utilities {
   /* Animations */
