@@ -172,6 +172,12 @@ export function Editor({ resumeBuilder, setResumeBuilder, onSwitchMode, initiali
       setDoc(data.data.resumeBuilder);
       setResumeBuilder(data.data.resumeBuilder);
       toast.success('Summary updated with new keywords');
+      setOptimizing((prev) =>
+        prev && {
+          ...prev,
+          keywordSuggestions: (prev.keywordSuggestions || []).filter((k) => !keywords.includes(k)),
+        }
+      );
     } catch (err) {
       toast.error(errorMessage(err, 'Failed to insert keywords'));
     } finally {
@@ -234,7 +240,13 @@ export function Editor({ resumeBuilder, setResumeBuilder, onSwitchMode, initiali
       </div>
 
       {optimizing && !optimizing.loading && (
-        <OptimizeResults result={optimizing} onApplyBullet={applyBulletRewrite} onDismiss={() => setOptimizing(null)} />
+        <OptimizeResults
+          result={optimizing}
+          onApplyBullet={applyBulletRewrite}
+          onApplyKeywords={insertKeywords}
+          applyingKeywords={insertingKeywords}
+          onDismiss={() => setOptimizing(null)}
+        />
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
@@ -363,7 +375,7 @@ function ModeSwitcher({ onSwitchMode, initializing }) {
 }
 
 /* ── Optimize scan results banner ── */
-function OptimizeResults({ result, onApplyBullet, onDismiss }) {
+function OptimizeResults({ result, onApplyBullet, onApplyKeywords, applyingKeywords, onDismiss }) {
   const hasContent = result.bulletRewrites?.length || result.keywordSuggestions?.length || result.redFlags?.length;
   return (
     <div className="card p-5 space-y-4">
@@ -381,7 +393,16 @@ function OptimizeResults({ result, onApplyBullet, onDismiss }) {
       )}
       {result.keywordSuggestions?.length > 0 && (
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-faint mb-1.5">Keyword Suggestions</p>
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-faint">Keyword Suggestions</p>
+            <button
+              onClick={() => onApplyKeywords(result.keywordSuggestions)}
+              disabled={applyingKeywords}
+              className="text-[11px] font-semibold text-brand hover:underline disabled:opacity-50 flex items-center gap-1"
+            >
+              {applyingKeywords && <Spinner className="h-3 w-3" />} Apply to summary
+            </button>
+          </div>
           <div className="flex flex-wrap gap-1">{result.keywordSuggestions.map((k) => <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-surface-2 text-muted">{k}</span>)}</div>
         </div>
       )}

@@ -21,6 +21,7 @@ import { AppShell } from '@/components/layout/AppShell';
 
 import { Icon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
+import { Skeleton, SkeletonChips } from '@/components/ui/Skeleton';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -831,8 +832,19 @@ function MarketAlignmentTab({ gapData, loading, role, onRefresh }) {
       </div>
 
       {loading ? (
-        <div className="flex h-40 items-center justify-center">
-          <Spinner className="h-6 w-6 text-muted" />
+        <div className="space-y-6">
+          <Skeleton className="h-11 w-full rounded-xl" />
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div>
+              <Skeleton className="h-3 w-32 mb-3" />
+              <SkeletonChips count={5} widths={[80, 100, 65, 90, 75]} />
+            </div>
+            <div>
+              <Skeleton className="h-3 w-32 mb-3" />
+              <SkeletonChips count={6} widths={[95, 70, 110, 85, 65, 100]} />
+            </div>
+          </div>
+          <p className="text-center text-xs text-faint">Analyzing skill gap against live market data…</p>
         </div>
       ) : gapData ? (
         <>

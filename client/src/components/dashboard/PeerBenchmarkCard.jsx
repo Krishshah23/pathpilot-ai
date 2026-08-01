@@ -61,16 +61,17 @@ export function PeerBenchmarkCard({ benchmark, loading, bare = false }) {
   // "Top X%" reads great near the top but turns into a nonsense/deflating statement
   // near the bottom ("top 100%" is trivially true and says nothing useful). Below a
   // beat-rate of 25%, switch to a growth-oriented framing instead of a percentile claim.
+  const peerLabel = benchmark.scope === 'platform' ? 'PathPilot' : `${benchmark.dreamRole}`;
   const headline =
     benchmark.betterThanPercent >= 25 ? (
       <>
         You're in the <strong className="text-brand">top {benchmark.topPercent}%</strong> of{' '}
-        {benchmark.dreamRole} candidates on PathPilot.
+        {peerLabel} {benchmark.scope === 'platform' ? 'students' : 'candidates'} on PathPilot.
       </>
     ) : (
       <>
-        <strong className="text-ink">{benchmark.peerCount}</strong> {benchmark.dreamRole} peers are
-        ahead of you on PathPilot right now — plenty of room to climb.
+        <strong className="text-ink">{benchmark.peerCount}</strong> {peerLabel}{' '}
+        {benchmark.scope === 'platform' ? 'students' : 'peers'} are ahead of you on PathPilot right now — plenty of room to climb.
       </>
     );
 
@@ -89,6 +90,11 @@ export function PeerBenchmarkCard({ benchmark, loading, bare = false }) {
           <div>
             {!bare && <h3 className="text-sm font-bold text-ink">Peer Benchmarking</h3>}
             <p className={cn('text-sm text-muted', !bare && 'mt-1')}>{headline}</p>
+            {benchmark.scope === 'platform' && (
+              <p className="text-[11px] text-faint mt-1">
+                Not enough {benchmark.dreamRole} peers yet — comparing against all PathPilot students instead.
+              </p>
+            )}
           </div>
         </div>
         <Icon.ChevronDown

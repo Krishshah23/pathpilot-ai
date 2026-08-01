@@ -29,7 +29,7 @@ import { buildPathScore, recomputePathScoreCache } from '../services/pathScore.s
 import { notify, notifyOnce } from '../services/notification.service.js';
 
 // ── Common tech skills for local matching ────────────────────────────────────
-const KNOWN_SKILLS = [
+export const KNOWN_SKILLS = [
   'JavaScript','TypeScript','Python','Java','C++','C','C#','Go','Rust','PHP','Ruby','Swift','Kotlin',
   'React','Angular','Vue','Next.js','Nuxt','Svelte','Node.js','Express','Django','Flask','FastAPI',
   'Spring','Laravel','Rails','ASP.NET',

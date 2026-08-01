@@ -17,7 +17,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 import { extractResumeText } from '../services/resumeText.service.js';
 import { geminiParseFallback } from '../services/gemini.service.js';
-import { localParseFallback } from './resume.controller.js';
+import { localParseFallback, KNOWN_SKILLS } from './resume.controller.js';
 import { computeAtsScore } from '../services/resumeBuilderAts.service.js';
 import {
   geminiRewriteBullet,
@@ -220,6 +220,32 @@ export const optimizeResume = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Pure keyword-overlap fallback for JD matching — zero external API dependency.
+ * Used when Gemini is unavailable (all fallback models quota-exhausted/down).
+ * Extracts known tech skill keywords present in the JD, then checks which
+ * ones also appear in the resume text.
+ */
+function localMatchJobDescription(jobDescription, resumeText) {
+  const jdLower = jobDescription.toLowerCase();
+  const resumeLower = resumeText.toLowerCase();
+
+  const jdKeywords = KNOWN_SKILLS.filter((s) =>
+    new RegExp(`(?<![a-z0-9.#])${s.replace(/[.+#]/g, '\\$&').toLowerCase()}(?![a-z0-9.+#])`, 'i').test(jdLower)
+  );
+  const matchedKeywords = jdKeywords.filter((s) =>
+    new RegExp(`(?<![a-z0-9.#])${s.replace(/[.+#]/g, '\\$&').toLowerCase()}(?![a-z0-9.+#])`, 'i').test(resumeLower)
+  );
+  const missingKeywords = jdKeywords.filter((s) => !matchedKeywords.includes(s));
+
+  return {
+    jdKeywords,
+    matchedKeywords,
+    missingKeywords,
+    matchPercent: jdKeywords.length > 0 ? Math.round((matchedKeywords.length / jdKeywords.length) * 100) : 0,
+  };
+}
+
+/**
  * POST /api/resume-builder/ai/match-jd
  * body: { jobDescription: string }
  * Compares the current draft against a pasted job description.
@@ -234,7 +260,15 @@ export const matchJobDescription = asyncHandler(async (req, res) => {
   const targetRole = req.user.profile?.dreamRole || 'Software Engineer';
   const resumeText = exportToText(doc);
 
-  const result = await geminiMatchJobDescription({ jobDescription, resumeText, targetRole });
+  let result;
+  try {
+    result = await geminiMatchJobDescription({ jobDescription, resumeText, targetRole });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[JD Match] Gemini unavailable, using local keyword fallback:', err.message);
+    result = localMatchJobDescription(jobDescription, resumeText);
+  }
+
   return sendSuccess(res, { data: result });
 });
 

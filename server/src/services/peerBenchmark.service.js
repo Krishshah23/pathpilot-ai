@@ -44,6 +44,9 @@ const BUCKETS = [
 /** @type {Map<string, { fetchedAt: number, peers: Array<{userId: string, score: number, factors: Array}> }>} */
 const roleCache = new Map();
 
+/** @type {{ fetchedAt: number, peers: Array<{userId: string, score: number, factors: Array}> } | null} */
+let allPeersCache = null;
+
 function bucketFor(score) {
   return BUCKETS.find((b) => score >= b.min && score <= b.max)?.key || BUCKETS[0].key;
 }
@@ -73,6 +76,30 @@ async function loadRolePeers(dreamRole) {
   return peers;
 }
 
+/**
+ * Loads (and caches) every scored user across ALL roles — used as a fallback
+ * comparison pool when a niche dream role doesn't have enough same-role peers
+ * to compare against without risking de-anonymization.
+ */
+async function loadAllPeers() {
+  if (allPeersCache && Date.now() - allPeersCache.fetchedAt < CACHE_TTL_MS) {
+    return allPeersCache.peers;
+  }
+
+  const docs = await User.find({ 'pathScoreCache.computedAt': { $ne: null } })
+    .select('pathScoreCache')
+    .lean();
+
+  const peers = docs.map((d) => ({
+    userId: String(d._id),
+    score: d.pathScoreCache.displayScore ?? 0,
+    factors: d.pathScoreCache.factors || [],
+  }));
+
+  allPeersCache = { fetchedAt: Date.now(), peers };
+  return peers;
+}
+
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -91,16 +118,28 @@ export async function getPeerBenchmark(user) {
     return { available: false, reason: 'no_score_yet' };
   }
 
-  const allPeers = await loadRolePeers(dreamRole);
   const userId = String(user._id);
-  const peers = allPeers.filter((p) => p.userId !== userId);
+  const roleScopedPeers = (await loadRolePeers(dreamRole)).filter((p) => p.userId !== userId);
+
+  // Niche roles rarely have 5+ same-role peers. Rather than hiding the feature
+  // entirely, fall back to comparing against every scored student on the
+  // platform — still anonymous, just a broader (less role-specific) pool.
+  let peers = roleScopedPeers;
+  let scope = 'role';
+  if (peers.length < MIN_PEER_SAMPLE) {
+    const allScopedPeers = (await loadAllPeers()).filter((p) => p.userId !== userId);
+    if (allScopedPeers.length >= MIN_PEER_SAMPLE) {
+      peers = allScopedPeers;
+      scope = 'platform';
+    }
+  }
 
   if (peers.length < MIN_PEER_SAMPLE) {
     return {
       available: false,
       reason: 'not_enough_peers',
       dreamRole,
-      peerCount: peers.length,
+      peerCount: roleScopedPeers.length,
       minRequired: MIN_PEER_SAMPLE,
     };
   }
@@ -159,6 +198,7 @@ export async function getPeerBenchmark(user) {
   return {
     available: true,
     dreamRole,
+    scope, // 'role' | 'platform' — 'platform' means not enough same-role peers, comparing against all users instead
     peerCount: peers.length,
     yourScore,
     betterThanPercent,
