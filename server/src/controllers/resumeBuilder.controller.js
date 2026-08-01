@@ -17,6 +17,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 import { extractResumeText } from '../services/resumeText.service.js';
 import { geminiParseFallback } from '../services/gemini.service.js';
+import { localParseFallback } from './resume.controller.js';
 import { computeAtsScore } from '../services/resumeBuilderAts.service.js';
 import {
   geminiRewriteBullet,
@@ -122,7 +123,8 @@ export const initResumeBuilder = asyncHandler(async (req, res) => {
     if (!req.file) throw ApiError.badRequest('Upload a PDF or Word resume to migrate.');
     const absPath = path.join(process.cwd(), 'uploads', 'resumes', req.file.filename);
     const extracted = await extractResumeText(absPath, req.file.originalname);
-    const parsed = await geminiParseFallback(extracted.text || '');
+    let parsed = await geminiParseFallback(extracted.text || '');
+    if (!parsed) parsed = localParseFallback(extracted.text || '');
     if (!parsed) throw new ApiError(502, 'Could not parse that file. Try a text-based PDF or Word document.');
     sections = buildSectionsFromParsed(parsed, req.user);
   }

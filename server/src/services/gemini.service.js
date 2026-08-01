@@ -181,6 +181,75 @@ async function generateText(systemInstruction, userPrompt) {
   }
 }
 
+function findJsonEnd(text, start) {
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"' && (i === start || text[i - 1] !== '\\')) { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{' || ch === '[') depth++;
+    else if (ch === '}' || ch === ']') { depth--; if (depth === 0) return i; }
+  }
+  return -1;
+}
+
+function extractJson(raw) {
+  let text = raw.trim();
+  const firstBrace = Math.min(
+    text.indexOf('{') === -1 ? Infinity : text.indexOf('{'),
+    text.indexOf('[') === -1 ? Infinity : text.indexOf('[')
+  );
+
+  // Try extracting the first complete JSON object/array by tracking brace depth
+  if (firstBrace !== Infinity) {
+    const end = findJsonEnd(text, firstBrace);
+    if (end !== -1) {
+      try { return JSON.parse(text.substring(firstBrace, end + 1)); } catch {}
+    }
+  }
+
+  // Fallback: use first/last brace heuristic
+  const lastBrace = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
+  if (firstBrace !== Infinity && lastBrace !== -1 && lastBrace > firstBrace) {
+    text = text.substring(firstBrace, lastBrace + 1);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Attempt repair of truncated Gemini output
+    let r = text;
+
+    // 1. Close unterminated string — find last unmatched quote
+    const quoteCount = (r.match(/(?<!\\)"/g) || []).length;
+    if (quoteCount % 2 !== 0) r += '"';
+
+    // 2. Remove trailing incomplete key-value pairs (e.g. `"key": "val`, `"key":`)
+    r = r.replace(/,\s*"[^"]*"\s*:\s*"[^"]*"?\s*$/, '');
+    r = r.replace(/,\s*"[^"]*"\s*:?\s*$/, '');
+
+    // 3. Remove trailing commas (both end-of-string and before closing brace/bracket)
+    r = r.replace(/,\s*$/, '');
+    r = r.replace(/,\s*([}\]])/g, '$1');
+
+    // 4. Close unclosed brackets/braces in correct order
+    const stack = [];
+    let inString = false;
+    for (let i = 0; i < r.length; i++) {
+      const ch = r[i];
+      if (ch === '"' && (i === 0 || r[i - 1] !== '\\')) { inString = !inString; continue; }
+      if (inString) continue;
+      if (ch === '{') stack.push('}');
+      else if (ch === '[') stack.push(']');
+      else if (ch === '}' || ch === ']') stack.pop();
+    }
+    r += stack.reverse().join('');
+
+    return JSON.parse(r);
+  }
+}
+
 /** Utility to generate JSON objects with structured application/json MIME configuration. */
 async function generateJson(prompt) {
   try {
@@ -189,23 +258,12 @@ async function generateJson(prompt) {
       contents: prompt,
       config: {
         temperature: 0.3,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 4096,
         responseMimeType: 'application/json',
       },
     });
 
-    let text = response.text.trim();
-    const firstBrace = Math.min(
-      text.indexOf('{') === -1 ? Infinity : text.indexOf('{'),
-      text.indexOf('[') === -1 ? Infinity : text.indexOf('[')
-    );
-    const lastBrace = Math.max(text.lastIndexOf('}'), text.lastIndexOf(']'));
-
-    if (firstBrace !== Infinity && lastBrace !== -1 && lastBrace > firstBrace) {
-      text = text.substring(firstBrace, lastBrace + 1);
-    }
-
-    return JSON.parse(text);
+    return extractJson(response.text);
   } catch (err) {
     if (err instanceof ApiError) throw err;
     geminiErrorHandler(err);

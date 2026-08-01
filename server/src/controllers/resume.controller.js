@@ -46,7 +46,7 @@ const KNOWN_SKILLS = [
  * Used as the final fallback when both Django and Gemini are unavailable.
  * Extracts skills by keyword matching and does basic section detection.
  */
-function localParseFallback(rawText) {
+export function localParseFallback(rawText) {
   if (!rawText || rawText.trim().split(/\s+/).length < 10) return null;
 
   const lower = rawText.toLowerCase();

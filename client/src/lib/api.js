@@ -98,23 +98,32 @@ api.interceptors.request.use((config) => {
 // requests simultaneously.
 let refreshing = null;
 
+const MAX_COLD_RETRIES = 2;
+const COLD_RETRY_DELAY = 3000;
+
 api.interceptors.response.use(
-  // Pass through all successful responses unchanged
   (res) => res,
 
   async (error) => {
-    const original = error.config;             // the original request config
+    const original = error.config;
     const status = error.response?.status;
 
-    // Only auto-refresh on 401, only once per request, and never for /auth/ routes
-    // (to prevent infinite loops when /auth/refresh itself returns 401).
+    // Retry on 502/503 (Render cold start) — up to 2 retries with 3s delay
+    if ((status === 502 || status === 503) && !original._authRetry) {
+      const retryCount = original._coldRetry || 0;
+      if (retryCount < MAX_COLD_RETRIES) {
+        original._coldRetry = retryCount + 1;
+        await new Promise((r) => setTimeout(r, COLD_RETRY_DELAY));
+        return api(original);
+      }
+    }
+
+    // Auto-refresh on 401 (expired access token)
     const isAuthRoute = original?.url?.includes('/auth/');
-    if (status === 401 && !original._retry && !isAuthRoute) {
-      original._retry = true; // mark so we don't retry again
+    if (status === 401 && !original._authRetry && !isAuthRoute) {
+      original._authRetry = true;
 
       try {
-        // Use an existing in-flight refresh promise if available,
-        // otherwise start a new one. `.finally` clears the variable when done.
         refreshing =
           refreshing ||
           api.post('/auth/refresh').finally(() => {
@@ -122,17 +131,15 @@ api.interceptors.response.use(
           });
 
         const { data } = await refreshing;
-        setAccessToken(data.data.accessToken); // store new access token
+        setAccessToken(data.data.accessToken);
 
-        // Patch the original request's header and retry it
         original.headers.Authorization = `Bearer ${getAccessToken()}`;
         return api(original);
       } catch {
-        // Refresh also failed → user is truly logged out
         setAccessToken(null);
       }
     }
-    return Promise.reject(error); // propagate the error to the calling component
+    return Promise.reject(error);
   }
 );
 
