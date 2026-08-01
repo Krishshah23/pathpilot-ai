@@ -574,23 +574,39 @@ Score is the percentage of required role skills they already have (0-100).`;
 
   try {
     const result = await generateJson(prompt);
-    if (!result || !Array.isArray(result.missingSkills)) return null;
-    result.matchedSkills = (result.matchedSkills || []).map((s) => ({
-      skill: s.skill || 'Unknown',
-      priority: s.priority || 'recommended',
-      estimatedHours: Number(s.estimatedHours) || 0,
-    }));
-    result.missingSkills = (result.missingSkills || []).map((s) => ({
-      skill: s.skill || 'Unknown',
-      priority: s.priority || 'recommended',
-      estimatedHours: Number(s.estimatedHours) || 8,
-    }));
-    result.score = Number(result.score) || 0;
-    result.recommendations = result.recommendations || [];
-    return result;
+    if (!result) {
+      // eslint-disable-next-line no-console
+      console.warn('[Gemini Skill Gap Fallback] generateJson returned null/undefined');
+      return null;
+    }
+
+    // Accept partial results — don't require perfect structure
+    const missingSkills = Array.isArray(result.missingSkills)
+      ? result.missingSkills
+      : Array.isArray(result.missing_skills) ? result.missing_skills : [];
+
+    const matchedSkills = Array.isArray(result.matchedSkills)
+      ? result.matchedSkills
+      : Array.isArray(result.matched_skills) ? result.matched_skills : [];
+
+    return {
+      targetRole: result.targetRole || targetRole,
+      matchedSkills: matchedSkills.map((s) => ({
+        skill: s.skill || String(s),
+        priority: s.priority || 'recommended',
+        estimatedHours: Number(s.estimatedHours) || 0,
+      })),
+      missingSkills: missingSkills.map((s) => ({
+        skill: s.skill || String(s),
+        priority: ['core','recommended','supporting'].includes(s.priority) ? s.priority : 'recommended',
+        estimatedHours: Number(s.estimatedHours) || 8,
+      })),
+      score: Number(result.score) || 0,
+      recommendations: Array.isArray(result.recommendations) ? result.recommendations : [],
+    };
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error('[Gemini Skill Gap Fallback] Failed:', err.message);
+    console.error('[Gemini Skill Gap Fallback] Failed:', err.message, err.stack?.split('\n')[1] || '');
     return null;
   }
 }

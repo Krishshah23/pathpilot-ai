@@ -61,6 +61,10 @@ export const analyzeGap = asyncHandler(async (req, res) => {
   }
 
   // Enrich missing skills with live market frequency data
+  // Guard arrays in case Gemini fallback returned partial data
+  gap.missingSkills = Array.isArray(gap.missingSkills) ? gap.missingSkills : [];
+  gap.matchedSkills = Array.isArray(gap.matchedSkills) ? gap.matchedSkills : [];
+
   if (marketData.available && marketData.skills.length) {
     const marketSkillMap = new Map(
       marketData.skills.map((s) => [s.skill.toLowerCase(), s])
