@@ -831,7 +831,9 @@ Return ONLY a JSON object of this structure:
   "suggestions": ["Add missing GitHub links", "Quantify project metrics"],
   "wordCount": 100,
   "lowText": false
-}`;
+}
+
+IMPORTANT: every "status" field in "health.breakdown" must be EXACTLY one of these three strings: "good", "warn", "bad" — no other values are valid.`;
 
   try {
     const parsed = await generateJson(prompt);

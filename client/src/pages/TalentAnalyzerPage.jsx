@@ -456,6 +456,45 @@ export default function TalentAnalyzerPage() {
 
 /* ── Upload Zone ── */
 
+// Mirrors the real backend pipeline order (extract → parse → role-fit → recommendations →
+// persist) so the wait feels like visible progress rather than a stalled spinner. The
+// pipeline can take 30-60s+ on a cold Render backend, so steps advance slowly and the
+// last one holds indefinitely until the request actually resolves.
+const ANALYZE_STEPS = [
+  'Extracting text from your resume…',
+  'Parsing skills, projects & experience…',
+  'Comparing against your target role…',
+  'Generating personalized recommendations…',
+  'Finalizing your analysis…',
+];
+const ANALYZE_STEP_INTERVAL_MS = 4000;
+
+function AnalyzingProgress() {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    setStep(0);
+    if (ANALYZE_STEPS.length <= 1) return;
+    const interval = setInterval(() => {
+      setStep((s) => Math.min(s + 1, ANALYZE_STEPS.length - 1));
+    }, ANALYZE_STEP_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="mt-6 rounded-xl border border-line py-5 px-5">
+      <div className="flex items-center justify-center gap-3 text-sm text-muted">
+        <Spinner className="h-5 w-5 text-brand shrink-0" />
+        <span key={step} className="animate-fade-up">{ANALYZE_STEPS[step]}</span>
+      </div>
+      <div className="relative mt-4 h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+        <div className="animate-shimmer absolute inset-0 rounded-full bg-brand/25" />
+      </div>
+      <p className="mt-3 text-center text-[11px] text-faint">This can take up to a minute — hang tight.</p>
+    </div>
+  );
+}
+
 function UploadZone({ file, setFile, analyzing, onAnalyze, onCancel }) {
   return (
     <div className="card p-8">
@@ -463,10 +502,7 @@ function UploadZone({ file, setFile, analyzing, onAnalyze, onCancel }) {
       <p className="text-xs text-faint mb-6">Upload a text-based PDF resume for analysis.</p>
       <FileUpload file={file} onSelect={setFile} />
       {analyzing ? (
-        <div className="mt-6 flex items-center justify-center gap-3 rounded-xl border border-line py-4 text-sm text-muted">
-          <Spinner className="h-5 w-5 text-brand" />
-          <span>Analyzing resume…</span>
-        </div>
+        <AnalyzingProgress />
       ) : (
         <div className="mt-6 flex gap-3">
           {onCancel && (

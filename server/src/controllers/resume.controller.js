@@ -109,6 +109,27 @@ export function localParseFallback(rawText) {
   };
 }
 
+const HEALTH_STATUS_ENUM = ['good', 'warn', 'bad'];
+
+/**
+ * Clamps a health-breakdown entry's `status` to the Resume schema's strict
+ * enum (['good', 'warn', 'bad']). Django's parser always returns one of
+ * these, but the Gemini fallback parser is LLM-generated free text (e.g.
+ * "average", "needs improvement") — an out-of-enum value throws a Mongoose
+ * ValidationError deep inside Resume.create(), which the error middleware
+ * flattens into an unhelpful generic "Validation failed" toast. Falls back
+ * to a score/max ratio when the reported status isn't a valid enum value.
+ */
+function sanitizeHealthBreakdown(breakdown) {
+  if (!Array.isArray(breakdown)) return [];
+  return breakdown.map((entry) => {
+    if (HEALTH_STATUS_ENUM.includes(entry.status)) return entry;
+    const ratio = entry.max > 0 ? entry.score / entry.max : 0;
+    const status = ratio >= 0.7 ? 'good' : ratio >= 0.4 ? 'warn' : 'bad';
+    return { ...entry, status };
+  });
+}
+
 // Minimum displayScore change (points) before a "your score changed" notification fires.
 // Below this, day-to-day noise (e.g. a re-upload with near-identical content) wouldn't
 // be a meaningful enough signal to interrupt the user.
@@ -215,7 +236,7 @@ export const analyzeResume = asyncHandler(async (req, res) => {
     certifications: parsed.certifications,
     contact: parsed.contact,
     healthScore: parsed.health?.score ?? 0,
-    healthBreakdown: parsed.health?.breakdown ?? [],
+    healthBreakdown: sanitizeHealthBreakdown(parsed.health?.breakdown),
     suggestions: parsed.suggestions,
     redFlags,
     wordCount: parsed.wordCount,

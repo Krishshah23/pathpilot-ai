@@ -148,9 +148,27 @@ api.interceptors.response.use(
  * Components use this to show toast error messages without writing the
  * same `err?.response?.data?.message || err.message` chain everywhere.
  *
+ * For validation errors (400s from Zod or Mongoose), the server also sends a
+ * `details` array — either `[{ field, message }]` (Zod) or `[message, ...]`
+ * (Mongoose) — that the top-level `message` alone doesn't convey (e.g. a bare
+ * "Validation failed"). Append the first couple of those so the toast is
+ * actually diagnosable instead of generic.
+ *
  * @param {Error}  err      - the caught Axios error
  * @param {string} fallback - shown if no meaningful message is found
  */
 export function errorMessage(err, fallback = 'Something went wrong') {
-  return err?.response?.data?.message || err?.message || fallback;
+  const data = err?.response?.data;
+  const base = data?.message || err?.message || fallback;
+
+  if (Array.isArray(data?.details) && data.details.length > 0) {
+    const detailText = data.details
+      .slice(0, 2)
+      .map((d) => (typeof d === 'string' ? d : d?.message))
+      .filter(Boolean)
+      .join('; ');
+    if (detailText) return `${base}: ${detailText}`;
+  }
+
+  return base;
 }
