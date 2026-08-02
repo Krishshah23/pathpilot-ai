@@ -13,7 +13,7 @@
  * Real-time job search (TheirStack API) now lives at its own top-level page, /live-jobs.
  */
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -638,48 +638,61 @@ function SectionList({ title, items, lowConfidence }) {
 /* ── Score History: click-to-pin bars with delta + date detail ── */
 function ScoreHistoryCard({ history }) {
   // Server returns newest-first; reverse so the chart reads oldest → newest, left to right.
-  const versions = history.slice().reverse();
+  const versions = useMemo(() => (history || []).slice().reverse(), [history]);
   const [pinnedIdx, setPinnedIdx] = useState(versions.length - 1); // default: latest version
+  const scrollRef = useRef(null);
 
-  const selected = versions[pinnedIdx];
+  useEffect(() => {
+    setPinnedIdx(versions.length - 1);
+  }, [versions.length]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, [versions.length]);
+
+  const selected = versions[pinnedIdx] || versions[versions.length - 1];
   const previous = pinnedIdx > 0 ? versions[pinnedIdx - 1] : null;
-  const delta = previous ? selected.healthScore - previous.healthScore : null;
+  const delta = previous && selected ? selected.healthScore - previous.healthScore : null;
 
   return (
-    <div className="card p-5">
+    <div className="card p-5 overflow-hidden">
       <div className="flex items-center justify-between mb-3">
         <p className="text-[10px] font-bold uppercase tracking-wider text-faint">Score History</p>
         <p className="text-[10px] text-faint">{versions.length} versions uploaded</p>
       </div>
 
-      <div className="flex items-end gap-2 h-12">
-        {versions.map((h, i) => {
-          const isLatest = i === versions.length - 1;
-          const isPinned = i === pinnedIdx;
-          const barH = Math.max(16, Math.round((h.healthScore / 100) * 48));
-          return (
-            <button
-              key={h._id}
-              onClick={() => setPinnedIdx(i)}
-              aria-label={`Version from ${new Date(h.createdAt).toLocaleDateString()}, score ${h.healthScore}`}
-              aria-pressed={isPinned}
-              className="flex flex-col items-center gap-1 flex-1 group"
-            >
-              <span className={cn('text-[9px] font-bold', isPinned ? 'text-brand' : 'text-faint')}>{h.healthScore}</span>
-              <div
-                className={cn(
-                  'w-full rounded-t-md transition-all',
-                  isPinned && 'ring-2 ring-brand ring-offset-1 ring-offset-surface'
-                )}
-                style={{
-                  height: `${barH}px`,
-                  backgroundColor: isLatest || isPinned ? 'var(--color-brand)' : 'var(--line-border)',
-                  opacity: isPinned || isLatest ? 1 : 0.85,
-                }}
-              />
-            </button>
-          );
-        })}
+      <div ref={scrollRef} className="overflow-x-auto pb-1.5 pt-1 -mx-1 px-1 min-w-0">
+        <div className="flex items-end gap-1.5 h-12 min-w-full w-max">
+          {versions.map((h, i) => {
+            const isLatest = i === versions.length - 1;
+            const isPinned = i === pinnedIdx;
+            const barH = Math.max(16, Math.round((h.healthScore / 100) * 48));
+            return (
+              <button
+                key={h._id || i}
+                onClick={() => setPinnedIdx(i)}
+                aria-label={`Version from ${new Date(h.createdAt).toLocaleDateString()}, score ${h.healthScore}`}
+                aria-pressed={isPinned}
+                className="flex flex-col items-center gap-1 flex-1 min-w-[20px] max-w-[36px] group shrink-0"
+              >
+                <span className={cn('text-[9px] font-bold', isPinned ? 'text-brand' : 'text-faint')}>{h.healthScore}</span>
+                <div
+                  className={cn(
+                    'w-full rounded-t-md transition-all',
+                    isPinned && 'ring-2 ring-brand ring-offset-1 ring-offset-surface'
+                  )}
+                  style={{
+                    height: `${barH}px`,
+                    backgroundColor: isLatest || isPinned ? 'var(--color-brand)' : 'var(--line-border)',
+                    opacity: isPinned || isLatest ? 1 : 0.85,
+                  }}
+                />
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Pinned-version detail — click any bar above to inspect that version */}
