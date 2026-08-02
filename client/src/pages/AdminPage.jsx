@@ -8,14 +8,16 @@
  * 3. Market & Cache Admin Controls: Admin-triggered Adzuna market refresh and TheirStack job cache invalidation.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AppShell } from '@/components/layout/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Icon } from '@/components/ui/icons';
+import { ScoreGauge } from '@/components/charts/ScoreGauge';
 import { useToast } from '@/context/ToastContext';
-import { api, errorMessage } from '@/lib/api';
+import { api, errorMessage, getResumeFileUrl } from '@/lib/api';
 import { cn } from '@/lib/cn';
 
 /* ─── Tab definitions ─── */
@@ -227,6 +229,7 @@ function UsersTab() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [actionLoading, setActionLoading] = useState(null); // userId being acted on
+  const [snapshotUserId, setSnapshotUserId] = useState(null); // user whose Student Snapshot drawer is open
 
   const fetchUsers = useCallback(async (page = 1) => {
     setLoading(true);
@@ -340,6 +343,7 @@ function UsersTab() {
                     user={u}
                     onRoleChange={handleRoleChange}
                     onDelete={handleDelete}
+                    onViewSnapshot={() => setSnapshotUserId(u._id)}
                     loading={actionLoading === u._id}
                   />
                 ))}
@@ -373,12 +377,14 @@ function UsersTab() {
           </Button>
         </div>
       )}
+
+      <UserDetailDrawer userId={snapshotUserId} onClose={() => setSnapshotUserId(null)} />
     </div>
   );
 }
 
 /* ─── Table row ─── */
-function UserRow({ user, onRoleChange, onDelete, loading }) {
+function UserRow({ user, onRoleChange, onDelete, onViewSnapshot, loading }) {
   const u = user;
   const joinDate = new Date(u.createdAt).toLocaleDateString('en-IN', {
     day: 'numeric',
@@ -389,17 +395,21 @@ function UserRow({ user, onRoleChange, onDelete, loading }) {
 
   return (
     <tr className="group border-b border-line transition-colors duration-150 hover:bg-surface-2">
-      {/* User info */}
+      {/* User info — click to open the Student Snapshot drawer */}
       <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-brand">
+        <button
+          onClick={onViewSnapshot}
+          className="flex items-center gap-3 text-left rounded-lg -mx-1 px-1 py-0.5 hover:bg-surface transition-colors"
+          title="View student snapshot"
+        >
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-brand shrink-0">
             {u.name?.charAt(0).toUpperCase()}
           </div>
           <div>
             <p className="font-medium text-ink">{u.name}</p>
             <p className="text-xs text-faint">{u.email}</p>
           </div>
-        </div>
+        </button>
       </td>
 
       {/* Role */}
@@ -469,6 +479,191 @@ function StatusBadge({ active, label }) {
       <span className={cn('h-1.5 w-1.5 rounded-full', active ? 'bg-brand' : 'bg-line')} />
       {label}
     </span>
+  );
+}
+
+const ACTIVITY_DOT_COLOR = {
+  success: 'bg-brand',
+  warning: 'bg-warning',
+  info: 'bg-muted',
+};
+
+/**
+ * "Student Snapshot" — admin-only detail drawer for a single user.
+ * Reuses the same engines the student's own Overview page runs (Path Score,
+ * peer benchmarking) so an admin sees real context, not a bare field dump —
+ * plus their latest resume (view/download via GridFS) and a recent
+ * activity timeline. Backed by GET /api/admin/users/:id.
+ */
+function UserDetailDrawer({ userId, onClose }) {
+  const toast = useToast();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    if (!userId) return;
+    setData(null);
+    setLoading(true);
+    (async () => {
+      try {
+        const { data: res } = await api.get(`/admin/users/${userId}`);
+        setData(res.data);
+      } catch (err) {
+        toast.error(errorMessage(err, 'Failed to load student snapshot'));
+        onClose();
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [userId, onClose]);
+
+  if (!userId) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex justify-end">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-[6px] fix-panel-backdrop" onClick={onClose} />
+
+      {/* Drawer */}
+      <div ref={panelRef} className="relative w-full max-w-[480px] h-full bg-surface border-l border-line flex flex-col fix-panel-drawer">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-line bg-canvas">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand/10 text-sm font-bold text-brand shrink-0">
+              {data?.user?.name?.charAt(0).toUpperCase() || '…'}
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-ink leading-tight truncate">{data?.user?.name || 'Loading…'}</h3>
+              <p className="text-[10px] text-faint mt-0.5 truncate">{data?.user?.email}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-surface-2 text-faint hover:text-muted transition-all duration-200 shrink-0"
+            aria-label="Close panel"
+          >
+            <Icon.X size={18} />
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-ink" />
+            </div>
+          ) : data ? (
+            <div className="fix-panel-content space-y-6">
+              {/* Path Score */}
+              <div className="flex flex-col items-center text-center">
+                <ScoreGauge score={data.pathScore.displayScore} label={data.pathScore.readiness?.label} size={140} />
+                <p className="mt-3 text-xs text-muted max-w-[300px] leading-relaxed">{data.pathScore.readiness?.summary}</p>
+              </div>
+
+              {/* Peer percentile */}
+              {data.peerBenchmark?.available && (
+                <div className="rounded-xl border border-line bg-surface-2 p-4 text-center">
+                  <p className="text-xs text-muted">
+                    Beats <strong className="text-ink">{data.peerBenchmark.betterThanPercent}%</strong> of{' '}
+                    {data.peerBenchmark.dreamRole} peers on PathPilot
+                    {data.peerBenchmark.scope === 'platform' && ' (platform-wide — not enough same-role peers yet)'}
+                  </p>
+                </div>
+              )}
+
+              {/* Resume */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-faint mb-2">Resume</p>
+                {data.resume ? (
+                  <div className="rounded-xl border border-line p-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-ink truncate">{data.resume.originalName || 'Resume'}</p>
+                      <p className="text-xs text-faint">
+                        {data.resume.wordCount} words · Health {data.resume.healthScore}/100
+                        {data.related.resumeCount > 1 && ` · ${data.related.resumeCount} versions`}
+                      </p>
+                    </div>
+                    {data.resume.fileId && (
+                      <div className="flex items-center gap-3 shrink-0">
+                        <a
+                          href={getResumeFileUrl(data.resume.fileId)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-xs font-semibold text-muted hover:text-ink transition-colors"
+                          title="View original file"
+                        >
+                          <Icon.ExternalLink size={13} /> View
+                        </a>
+                        <a
+                          href={getResumeFileUrl(data.resume.fileId, { download: true })}
+                          className="flex items-center gap-1 text-xs font-semibold text-muted hover:text-ink transition-colors"
+                          title="Download original file"
+                        >
+                          <Icon.Download size={13} /> Download
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-faint">No resume uploaded yet.</p>
+                )}
+              </div>
+
+              {/* Growth plan + opportunities */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-line p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-faint">Growth Plan</p>
+                  <p className="mt-1 text-sm font-semibold text-ink truncate">{data.related.growthPlan?.targetRole || '—'}</p>
+                  <p className="text-xs text-faint">
+                    {data.related.growthPlan ? `${data.related.growthPlan.totalTasks} tasks · ${data.related.growthPlan.totalHours}h` : 'None yet'}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-line p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-faint">Opportunities</p>
+                  <p className="mt-1 text-sm font-semibold text-ink">{data.related.opportunityCount}</p>
+                  <p className="text-xs text-faint">in pipeline</p>
+                </div>
+              </div>
+
+              {/* Recent activity */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-faint mb-3">Recent Activity</p>
+                {data.recentActivity.length === 0 ? (
+                  <p className="text-xs text-faint">No activity yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {data.recentActivity.map((n) => (
+                      <div key={n._id} className="flex gap-3">
+                        <span className={cn('mt-1.5 h-1.5 w-1.5 rounded-full shrink-0', ACTIVITY_DOT_COLOR[n.type] || 'bg-muted')} />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-ink">{n.title}</p>
+                          <p className="text-xs text-faint mt-0.5">{n.message}</p>
+                          <p className="text-[10px] text-faint mt-0.5">{new Date(n.createdAt).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 

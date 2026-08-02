@@ -14,9 +14,12 @@ import { User } from '../models/User.js';
 import { Resume } from '../models/Resume.js';
 import { GrowthPlan } from '../models/GrowthPlan.js';
 import { Opportunity } from '../models/Opportunity.js';
+import { Notification } from '../models/Notification.js';
 import { ApiError } from '../utils/ApiError.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { buildPathScore } from '../services/pathScore.service.js';
+import { getPeerBenchmark } from '../services/peerBenchmark.service.js';
 
 /**
  * GET /api/admin/stats
@@ -115,7 +118,12 @@ export const listUsers = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/admin/users/:id
- * Fetches single user record and related document counts.
+ * "Student Snapshot" — full detail view for a single user, admin-only.
+ * Beyond raw profile fields, this reuses the same engines the student's own
+ * Overview page runs (Path Score, peer benchmarking) so an admin sees the
+ * platform through that student's eyes rather than a bare data dump —
+ * plus their latest resume (viewable/downloadable via GridFS, see
+ * resume.controller.js's serveResumeFile) and a recent activity timeline.
  */
 export const getUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id)
@@ -124,15 +132,35 @@ export const getUser = asyncHandler(async (req, res) => {
 
   if (!user) throw ApiError.notFound('User not found');
 
-  const [resumeCount, growthPlan, oppCount] = await Promise.all([
+  const [resumeCount, latestResume, growthPlan, oppCount, recentActivity] = await Promise.all([
     Resume.countDocuments({ user: user._id }),
+    Resume.findOne({ user: user._id })
+      .sort({ createdAt: -1 })
+      .select('fileId fileUrl originalName mimeType healthScore wordCount createdAt')
+      .lean(),
     GrowthPlan.findOne({ user: user._id }).select('targetRole totalTasks totalHours').lean(),
     Opportunity.countDocuments({ user: user._id }),
+    Notification.find({ user: user._id })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .select('title message type createdAt')
+      .lean(),
   ]);
+
+  const pathScore = buildPathScore(user, latestResume);
+  const peerBenchmark = await getPeerBenchmark(user);
 
   sendSuccess(res, {
     data: {
       user,
+      resume: latestResume,
+      pathScore: {
+        displayScore: pathScore.displayScore,
+        readiness: pathScore.readiness,
+        factors: pathScore.factors,
+      },
+      peerBenchmark,
+      recentActivity,
       related: { resumeCount, growthPlan, opportunityCount: oppCount },
     },
   });
