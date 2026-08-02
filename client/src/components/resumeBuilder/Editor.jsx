@@ -67,36 +67,65 @@ export function Editor({ resumeBuilder, setResumeBuilder, onSwitchMode, initiali
   const [insertingKeywords, setInsertingKeywords] = useState(false);
   const [exporting, setExporting] = useState(null);
   const [zoom, setZoom] = useState(0.6);
-  const saveTimer = useRef(null);
 
-  useEffect(() => setDoc(resumeBuilder), [resumeBuilder]);
+  const saveTimer = useRef(null);
+  const docRef = useRef(doc);
+  const isSavingRef = useRef(false);
+
+  // Keep docRef synced with local doc
+  docRef.current = doc;
+
+  // Only sync from props if initial document ID changes (loaded/switched)
+  useEffect(() => {
+    if (resumeBuilder && resumeBuilder._id !== docRef.current?._id) {
+      setDoc(resumeBuilder);
+      docRef.current = resumeBuilder;
+    }
+  }, [resumeBuilder]);
 
   // Debounced autosave — PATCHes the whole doc, server recomputes ATS score.
   const scheduleSave = (nextDoc) => {
     setDoc(nextDoc);
+    docRef.current = nextDoc;
     setDirty(true);
+
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       setSaving(true);
+      isSavingRef.current = true;
       try {
+        const payload = docRef.current;
         const { data } = await api.patch('/resume-builder', {
-          template: nextDoc.template,
-          contact: nextDoc.contact,
-          summary: nextDoc.summary,
-          experience: nextDoc.experience,
-          skills: nextDoc.skills,
-          projects: nextDoc.projects,
-          education: nextDoc.education,
+          template: payload.template,
+          contact: payload.contact,
+          summary: payload.summary,
+          experience: payload.experience,
+          skills: payload.skills,
+          projects: payload.projects,
+          education: payload.education,
         });
-        setResumeBuilder(data.data.resumeBuilder);
-        setDoc(data.data.resumeBuilder);
+        const serverDoc = data.data.resumeBuilder;
+        setResumeBuilder(serverDoc);
+
+        // Update ATS score in local doc without overwriting active user typing
+        setDoc((current) => ({
+          ...current,
+          atsScore: serverDoc?.atsScore ?? current.atsScore,
+        }));
+        if (docRef.current) {
+          docRef.current = {
+            ...docRef.current,
+            atsScore: serverDoc?.atsScore ?? docRef.current.atsScore,
+          };
+        }
         setDirty(false);
       } catch (err) {
         toast.error(errorMessage(err, 'Failed to save'));
       } finally {
         setSaving(false);
+        isSavingRef.current = false;
       }
-    }, 600);
+    }, 800);
   };
 
   const handleBack = () => {
@@ -466,6 +495,28 @@ function SummarySection({ summary, onChange, onGenerate, generating }) {
   );
 }
 
+function AutoResizingTextarea({ value, onChange, className, ...props }) {
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  }, [value]);
+
+  return (
+    <textarea
+      ref={textareaRef}
+      value={value}
+      onChange={onChange}
+      className={className}
+      {...props}
+    />
+  );
+}
+
 /* ── Bullet list (shared by Experience + Projects) ── */
 function BulletList({ bullets, onChange, onRewrite, rewritingId, idPrefix }) {
   const setBullet = (i, value) => onChange(bullets.map((b, bi) => (bi === i ? value : b)));
@@ -478,20 +529,10 @@ function BulletList({ bullets, onChange, onRewrite, rewritingId, idPrefix }) {
         const id = `${idPrefix}-${i}`;
         return (
           <div key={i} className="flex items-start gap-1.5">
-            <textarea
+            <AutoResizingTextarea
               value={b}
-              onChange={(e) => {
-                setBullet(i, e.target.value);
-                e.target.style.height = 'auto';
-                e.target.style.height = `${e.target.scrollHeight}px`;
-              }}
+              onChange={(e) => setBullet(i, e.target.value)}
               rows={1}
-              ref={(el) => {
-                if (el) {
-                  el.style.height = 'auto';
-                  el.style.height = `${el.scrollHeight}px`;
-                }
-              }}
               className="flex-1 min-h-[38px] rounded-xl border border-line bg-surface px-3 py-2 text-xs leading-relaxed text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-colors resize-none overflow-hidden"
             />
             <button
