@@ -531,17 +531,19 @@ function DocumentPanel({ resume, onReplace }) {
   return (
     <div className="card overflow-hidden">
       {/* Paper header */}
-      <div className="bg-surface-2 border-b border-line px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface border border-line text-muted">
+      <div className="bg-surface-2 border-b border-line px-4 py-3.5 sm:px-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface border border-line text-muted">
             <Icon.FileText size={18} />
           </span>
-          <div>
-            <p className="text-sm font-semibold text-ink truncate max-w-[180px]">{resume.originalName || 'Resume'}</p>
-            <p className="text-xs text-faint">{resume.wordCount} words · Score {resume.healthScore}/100</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-ink truncate max-w-[130px] sm:max-w-[180px]" title={resume.originalName || 'Resume'}>
+              {resume.originalName || 'Resume'}
+            </p>
+            <p className="text-xs text-faint truncate">{resume.wordCount} words · Score {resume.healthScore}/100</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           {viewUrl && (
             <a
               href={viewUrl}
@@ -564,9 +566,10 @@ function DocumentPanel({ resume, onReplace }) {
           )}
           <button
             onClick={onReplace}
-            className="text-xs font-semibold text-muted hover:text-ink underline underline-offset-2 transition-colors"
+            className="flex items-center gap-1 text-xs font-semibold text-brand hover:text-brand-soft underline underline-offset-2 transition-colors"
+            title="Replace resume"
           >
-            Replace
+            <Icon.RotateCw size={12} /> Replace
           </button>
         </div>
       </div>
