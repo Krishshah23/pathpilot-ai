@@ -2,10 +2,11 @@
  * routes/resume.routes.js — Resume Management Router
  *
  * ENDPOINTS:
- * - POST /api/resume/analyze   → Upload file (PDF/DOCX) & run full 9-step analysis pipeline
- * - POST /api/resume/reanalyze → Re-analyze latest resume for a updated target role
- * - GET  /api/resume           → Retrieve candidate's latest resume analysis document
- * - GET  /api/resume/history   → Fetch past resume analysis records (health score history)
+ * - POST /api/resume/analyze     → Upload file (PDF/DOCX) & run full 9-step analysis pipeline
+ * - POST /api/resume/reanalyze   → Re-analyze latest resume for a updated target role
+ * - GET  /api/resume             → Retrieve candidate's latest resume analysis document
+ * - GET  /api/resume/history     → Fetch past resume analysis records (health score history)
+ * - GET  /api/resume/file/:fileId → Stream the original PDF/DOCX from GridFS (view/download)
  */
 
 import { Router } from 'express';
@@ -14,6 +15,7 @@ import {
   getLatestResume,
   getResumeHistory,
   reanalyzeForRole,
+  serveResumeFile,
 } from '../controllers/resume.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 import { upload } from '../middleware/upload.middleware.js';
@@ -27,5 +29,6 @@ router.post('/analyze', upload('resume', 'file'), analyzeResume);
 router.post('/reanalyze', reanalyzeForRole);
 router.get('/', getLatestResume);
 router.get('/history', getResumeHistory);
+router.get('/file/:fileId', serveResumeFile);
 
 export default router;

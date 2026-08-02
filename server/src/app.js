@@ -119,7 +119,7 @@ export function createApp() {
       // Check if file exists on disk; if not (e.g. Render free tier ephemeral disk wiped),
       // restore it from the MongoDB base64 backup field.
       if (!fs.existsSync(absPath)) {
-        const resumeDoc = await Resume.findOne({ fileUrl: { $regex: filename } });
+        const resumeDoc = await Resume.findOne({ fileUrl: { $regex: filename } }).select('+fileBase64');
         if (resumeDoc && resumeDoc.fileBase64) {
           try {
             const fileBuffer = Buffer.from(resumeDoc.fileBase64, 'base64');

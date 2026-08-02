@@ -9,7 +9,6 @@
  * ONE DOCUMENT PER USER (upsert), same pattern as GrowthPlan — see ResumeBuilder.js.
  */
 
-import path from 'node:path';
 import { ResumeBuilder } from '../models/ResumeBuilder.js';
 import { Resume } from '../models/Resume.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -121,8 +120,10 @@ export const initResumeBuilder = asyncHandler(async (req, res) => {
     sections = buildSectionsFromParsed(resume, req.user);
   } else {
     if (!req.file) throw ApiError.badRequest('Upload a PDF or Word resume to migrate.');
-    const absPath = path.join(process.cwd(), 'uploads', 'resumes', req.file.filename);
-    const extracted = await extractResumeText(absPath, req.file.originalname);
+    // Parsed once from the in-memory buffer and discarded — this mode only seeds
+    // the builder's initial sections, so there's nothing worth persisting to
+    // GridFS here (unlike resume.controller.js's analyze pipeline).
+    const extracted = await extractResumeText(req.file.buffer, req.file.originalname);
     let parsed = await geminiParseFallback(extracted.text || '');
     if (!parsed) parsed = localParseFallback(extracted.text || '');
     if (!parsed) throw new ApiError(502, 'Could not parse that file. Try a text-based PDF or Word document.');

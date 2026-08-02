@@ -25,7 +25,7 @@ import { Skeleton, SkeletonChips } from '@/components/ui/Skeleton';
 import { FileUpload } from '@/components/ui/FileUpload';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { api, errorMessage } from '@/lib/api';
+import { api, errorMessage, getResumeFileUrl } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { DREAM_ROLES } from '@/config/careerData';
 
@@ -525,6 +525,9 @@ function UploadZone({ file, setFile, analyzing, onAnalyze, onCancel }) {
 
 /* ── Document Panel ── */
 function DocumentPanel({ resume, onReplace }) {
+  const viewUrl = getResumeFileUrl(resume.fileId);
+  const downloadUrl = getResumeFileUrl(resume.fileId, { download: true });
+
   return (
     <div className="card overflow-hidden">
       {/* Paper header */}
@@ -538,12 +541,34 @@ function DocumentPanel({ resume, onReplace }) {
             <p className="text-xs text-faint">{resume.wordCount} words · Score {resume.healthScore}/100</p>
           </div>
         </div>
-        <button
-          onClick={onReplace}
-          className="text-xs font-semibold text-muted hover:text-ink underline underline-offset-2 transition-colors"
-        >
-          Replace
-        </button>
+        <div className="flex items-center gap-3 shrink-0">
+          {viewUrl && (
+            <a
+              href={viewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs font-semibold text-muted hover:text-ink transition-colors"
+              title="View original file"
+            >
+              <Icon.ExternalLink size={13} /> View
+            </a>
+          )}
+          {downloadUrl && (
+            <a
+              href={downloadUrl}
+              className="flex items-center gap-1 text-xs font-semibold text-muted hover:text-ink transition-colors"
+              title="Download original file"
+            >
+              <Icon.Download size={13} /> Download
+            </a>
+          )}
+          <button
+            onClick={onReplace}
+            className="text-xs font-semibold text-muted hover:text-ink underline underline-offset-2 transition-colors"
+          >
+            Replace
+          </button>
+        </div>
       </div>
 
       {/* Health Score */}

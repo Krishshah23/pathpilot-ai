@@ -16,6 +16,7 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { publicUrl } from '../middleware/upload.middleware.js';
+import { uploadBufferToGridFS } from '../config/gridfs.js';
 import { User } from '../models/User.js';
 import { Resume } from '../models/Resume.js';
 import { buildPathScore, collectStudentSkills, recomputePathScoreCache } from '../services/pathScore.service.js';
@@ -109,34 +110,33 @@ export const uploadAvatar = asyncHandler(async (req, res) => {
 
 /**
  * POST /api/profile/resume
- * Updates active resume URL pointer and removes previous file from disk.
+ * Updates active resume URL pointer. The file itself is persisted to MongoDB
+ * GridFS (config/gridfs.js) — never disk, since Render's free-tier disk is
+ * ephemeral. `removeLocalFile` only matters for pre-migration records whose
+ * `resumeUrl` still points at a legacy on-disk path; new GridFS-backed URLs
+ * are simply left alone (each upload creates its own Resume history entry).
  */
 export const uploadResume = asyncHandler(async (req, res) => {
   if (!req.file) throw ApiError.badRequest('No resume uploaded');
 
   removeLocalFile(req.user.profile.resumeUrl);
-  const newUrl = publicUrl('resume', req.file.filename);
+
+  const fileId = await uploadBufferToGridFS(req.file.buffer, req.file.originalname, {
+    userId: req.user._id.toString(),
+    mimeType: req.file.mimetype,
+  });
+  const newUrl = `/api/resume/file/${fileId}`;
+
   req.user.profile.resumeUrl = newUrl;
   await req.user.save();
 
-  let fileBase64 = '';
-  try {
-    const absPath = req.file.path || path.join(process.cwd(), 'uploads', 'resumes', req.file.filename);
-    fileBase64 = fs.readFileSync(absPath).toString('base64');
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to read uploaded resume for base64 backup:', err);
-  }
-
-  if (fileBase64) {
-    await Resume.create({
-      user: req.user._id,
-      fileUrl: newUrl,
-      fileBase64,
-      mimeType: req.file.mimetype || 'application/pdf',
-      originalName: req.file.originalname,
-    });
-  }
+  await Resume.create({
+    user: req.user._id,
+    fileUrl: newUrl,
+    fileId,
+    mimeType: req.file.mimetype || 'application/pdf',
+    originalName: req.file.originalname,
+  });
 
   return sendSuccess(res, {
     message: 'Resume uploaded',

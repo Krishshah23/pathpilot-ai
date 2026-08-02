@@ -7,8 +7,10 @@
  * (.sort({ createdAt: -1 }).limit(1)) but older analyses remain queryable.
  *
  * DATA PIPELINE (how a document is populated):
- * 1. Multer saves the file to disk → req.file.path
- * 2. resumeText.service.js extracts raw text (PDF/DOCX)
+ * 1. Multer buffers the upload in memory (req.file.buffer) — never touches disk,
+ *    which is ephemeral on Render's free tier. The buffer is then persisted to
+ *    MongoDB GridFS (config/gridfs.js) and its id stored in `fileId`.
+ * 2. resumeText.service.js extracts raw text (PDF/DOCX) directly from the buffer
  * 3. Django ml/views.py → parse_resume() adds: skills, education, projects,
  *    experience, certifications, contact, healthScore, healthBreakdown, suggestions
  * 4. resumeRedFlags.js adds: redFlags[]
@@ -92,13 +94,23 @@ const resumeSchema = new Schema(
 
     // ── File metadata ──────────────────────────────────────────────────────────
 
-    // URL path to the saved file (e.g. '/uploads/resumes/64a1-172113-489.pdf')
-    // Used to display a download link and to re-read the file if needed
+    // API route path used to view/download the file (e.g. '/api/resume/file/<gridfsId>').
+    // For records created before the GridFS migration this may still be a legacy
+    // '/uploads/resumes/<filename>' disk path — see app.js's legacy serving route.
     fileUrl: { type: String, required: true },
 
-    // Base64 encoded file content stored directly in MongoDB as a backup
-    // Ensures resume files persist permanently even if Render's ephemeral disk resets
-    fileBase64: { type: String, default: '' },
+    // GridFS file _id (in the 'resumes' bucket — see config/gridfs.js) holding the
+    // actual PDF/DOCX binary. This is the source of truth for new uploads; it survives
+    // Render's ephemeral-disk wipes since it lives in the same MongoDB Atlas cluster.
+    fileId: { type: Schema.Types.ObjectId, default: null },
+
+    // LEGACY: base64-encoded file content stored inline on the document, from before
+    // the GridFS migration. Kept only so old records already carrying this data remain
+    // servable via app.js's legacy disk-restore fallback; never written by new uploads.
+    // select: false — this can be megabytes of raw base64; queries only pull it in
+    // when explicitly requested (.select('+fileBase64')), never as part of the normal
+    // JSON payload sent to the client (see resume.controller.js / migration script).
+    fileBase64: { type: String, default: '', select: false },
 
     // MIME type of the uploaded file
     mimeType: { type: String, default: 'application/pdf' },

@@ -18,7 +18,6 @@
  *    Scans plain text for URL tokens wrapped across line breaks.
  */
 
-import fs from 'node:fs/promises';
 import path from 'node:path';
 import { PDFParse } from 'pdf-parse';
 import pdfjsLib from 'pdfjs-dist/build/pdf.js';
@@ -39,15 +38,16 @@ async function fromDocx(buffer) {
 }
 
 /**
- * Main entry point: Reads a resume file from disk and returns cleaned text + extracted hyperlinks.
+ * Main entry point: extracts cleaned text + hyperlinks from an in-memory resume file.
+ * Takes a Buffer directly (not a disk path) — the upload middleware keeps resume
+ * files in memory only (Render's disk is ephemeral), so this never touches disk.
  *
- * @param {string} absPath - Absolute path to resume file on disk
- * @param {string} [originalName=''] - Original filename for extension detection
+ * @param {Buffer} buffer - Raw file content
+ * @param {string} [originalName=''] - Original filename, used only for extension detection
  * @returns {Promise<{text: string, links: Array<string>}>} Extracted text and array of URLs
  */
-export async function extractResumeText(absPath, originalName = '') {
-  const ext = path.extname(originalName || absPath).toLowerCase();
-  const buffer = await fs.readFile(absPath);
+export async function extractResumeText(buffer, originalName = '') {
+  const ext = path.extname(originalName).toLowerCase();
 
   try {
     if (ext === '.pdf') {

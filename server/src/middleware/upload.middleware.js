@@ -6,17 +6,19 @@
  * type used when browsers submit file inputs. Without Multer, uploaded files are
  * unavailable in req.body or req.file.
  *
- * HOW FILES ARE STORED:
- * Files are saved to disk under uploads/<kind>/ with a unique filename:
- *   uploads/avatars/<userId>-<timestamp>-<random>.jpg
- *   uploads/resumes/<userId>-<timestamp>-<random>.pdf
- *
- * The userId prefix in the filename is used by app.js to enforce access control:
- * only the owner (or an admin) can download their resume via /uploads/resumes/:filename.
+ * HOW FILES ARE STORED (differs by kind — this matters a lot):
+ *   - 'avatar': saved to disk under uploads/avatars/<userId>-<timestamp>-<random>.jpg.
+ *     Small, public, low-stakes if lost on a Render redeploy — not worth the extra
+ *     complexity of cloud storage.
+ *   - 'resume': kept in memory only (multer.memoryStorage()), never touches disk.
+ *     Render's free-tier disk is ephemeral (wiped on every redeploy/restart/spin-down),
+ *     so resume controllers persist req.file.buffer to MongoDB GridFS themselves
+ *     (see config/gridfs.js) — this middleware's job ends at handing back the buffer.
  *
  * HOW FILES ARE SERVED:
  *   - Avatars: publicly accessible at /uploads/avatars/* (set up in app.js)
- *   - Resumes: access-controlled at /uploads/resumes/* (requires auth in app.js)
+ *   - Resumes: access-controlled, streamed from GridFS at /api/resume/file/:fileId
+ *     (see resume.controller.js's serveResumeFile + resume.routes.js)
  *
  * TWO UPLOAD KINDS:
  *   - 'avatar': profile images (JPG, PNG, WebP) up to 2 MB
@@ -27,8 +29,12 @@
  *   router.post('/resume/analyze', protect, upload('resume', 'file'), analyzeResume);
  *   router.post('/profile/avatar', protect, upload('avatar', 'file'), uploadAvatar);
  *
- *   After middleware runs:
+ *   After middleware runs, for 'avatar' (disk storage):
  *   - req.file.path         → absolute disk path to the saved file
+ *   - req.file.filename     → generated on-disk filename
+ *   For 'resume' (memory storage):
+ *   - req.file.buffer       → the raw file content as a Buffer (nothing written to disk)
+ *   Common to both:
  *   - req.file.originalname → original filename from the browser
  *   - req.file.mimetype     → MIME type for further validation
  *   - req.file.size         → file size in bytes
@@ -86,32 +92,37 @@ export function upload(kind, field = 'file') {
   const cfg = KINDS[kind];
   if (!cfg) throw new Error(`Unknown upload kind: ${kind}`);
 
-  // Full path to the destination directory (e.g. 'uploads/resumes')
-  const dest = path.join(UPLOAD_ROOT, cfg.dir);
-
-  // Create the directory now (before any requests come in)
-  ensureDir(dest);
-
   /**
-   * DiskStorage controls WHERE and WHAT NAME files are saved with.
-   * Alternative is MemoryStorage (keeps files in RAM as Buffers) —
-   * we use disk because resumes can be large (up to 5 MB) and we need
-   * to pass the file path to the Django ML service.
+   * Resumes: MemoryStorage — keeps the file in RAM as req.file.buffer, nothing
+   * written to disk. Necessary because Render's free-tier disk is ephemeral;
+   * the buffer is persisted to MongoDB GridFS by the controller instead.
+   *
+   * Avatars: DiskStorage — small, public images where the ephemeral-disk
+   * tradeoff isn't worth the extra complexity of cloud storage.
    */
-  const storage = multer.diskStorage({
-    // destination: called for each upload to determine the save directory
-    destination: (_req, _file, cb) => cb(null, dest),
+  let storage;
+  if (kind === 'resume') {
+    storage = multer.memoryStorage();
+  } else {
+    // Full path to the destination directory (e.g. 'uploads/avatars')
+    const dest = path.join(UPLOAD_ROOT, cfg.dir);
+    ensureDir(dest); // create the directory now (before any requests come in)
 
-    // filename: generates a unique filename to prevent collisions and overwriting
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase(); // e.g. '.pdf'
-      const userId = req.user?._id || 'anon'; // uses authenticated user ID from protect()
-      // timestamp + random ensures uniqueness even for concurrent uploads
-      const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
-      // Final filename: e.g. "64a1f2c3d4e5f6a7b8c9-1721234567890-483920.pdf"
-      cb(null, `${userId}-${unique}${ext}`);
-    },
-  });
+    storage = multer.diskStorage({
+      // destination: called for each upload to determine the save directory
+      destination: (_req, _file, cb) => cb(null, dest),
+
+      // filename: generates a unique filename to prevent collisions and overwriting
+      filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase(); // e.g. '.jpg'
+        const userId = req.user?._id || 'anon'; // uses authenticated user ID from protect()
+        // timestamp + random ensures uniqueness even for concurrent uploads
+        const unique = `${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+        // Final filename: e.g. "64a1f2c3d4e5f6a7b8c9-1721234567890-483920.jpg"
+        cb(null, `${userId}-${unique}${ext}`);
+      },
+    });
+  }
 
   /**
    * Create the Multer upload instance with:
@@ -161,15 +172,13 @@ export function upload(kind, field = 'file') {
 }
 
 /**
- * Generates the public URL path for a stored file.
- * The client uses this URL to display/download the file.
+ * Generates the public URL path for a disk-stored file (avatars only —
+ * resumes use memory storage and are addressed by GridFS id instead;
+ * see resume.controller.js's serveResumeFile for that URL scheme).
  *
- * @param {'avatar'|'resume'} kind      - Upload kind
- * @param {string}            filename  - The generated filename (from multer storage.filename)
- * @returns {string} - e.g. '/uploads/resumes/64a1f2c3...-1721234567890.pdf'
- *
- * NOTE: For resumes, this URL is access-controlled by app.js (requires auth + ownership check).
- * For avatars, this URL is public (served statically in app.js).
+ * @param {'avatar'} kind      - Upload kind
+ * @param {string}   filename  - The generated filename (from multer storage.filename)
+ * @returns {string} - e.g. '/uploads/avatars/64a1f2c3...-1721234567890.jpg'
  */
 export function publicUrl(kind, filename) {
   return `/uploads/${KINDS[kind].dir}/${filename}`;

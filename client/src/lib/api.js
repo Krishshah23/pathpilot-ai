@@ -172,3 +172,27 @@ export function errorMessage(err, fallback = 'Something went wrong') {
 
   return base;
 }
+
+/**
+ * Builds a direct, browser-navigable URL for viewing or downloading a resume
+ * file (opens in a new tab, or set as an <a download> href).
+ *
+ * WHY THE ?token= QUERY PARAM:
+ * Plain navigation — a clicked <a href>, window.open(), or a URL typed into
+ * the address bar — never goes through the `api` Axios instance, so the
+ * Authorization header the request interceptor attaches (see above) is never
+ * sent, and the request would 401. The server's `protect` middleware
+ * (auth.middleware.js) already accepts the access token as a `?token=` query
+ * param specifically for this case, so we build the URL with it here instead.
+ *
+ * @param {string} fileId - the resume's GridFS file id (Resume.fileId)
+ * @param {{ download?: boolean }} [opts] - pass { download: true } for a
+ *   Content-Disposition: attachment response instead of inline viewing
+ * @returns {string|null} full URL, or null if there's no file to link to
+ */
+export function getResumeFileUrl(fileId, { download = false } = {}) {
+  if (!fileId) return null;
+  const params = new URLSearchParams({ token: getAccessToken() || '' });
+  if (download) params.set('download', '1');
+  return `${api.defaults.baseURL}/resume/file/${fileId}?${params.toString()}`;
+}

@@ -2,25 +2,31 @@
  * controllers/resume.controller.js — Resume Processing & Analysis Controller
  *
  * PIPELINE WORKFLOW (9 Steps):
- * 1. File Upload — Multer stores file on disk (`uploads/resumes/`).
- * 2. Text Extraction — Node extracts plain text & hyperlinked annotations (`resumeText.service.js`).
+ * 1. File Upload — Multer buffers the file in memory (`upload.middleware.js`), never disk.
+ * 2. Text Extraction — Node extracts plain text & hyperlinked annotations directly from
+ *    the buffer (`resumeText.service.js`).
  * 3. Structure Parsing — Sends text to Django ML service (`parseResume`).
  *    Fallback Parser: If text length is < 30 words or parsing fails, invokes Gemini fallback (`geminiParseFallback`).
  * 4. Red Flag Detection — Evaluates 5 recruiter red flag heuristics (`resumeRedFlags.js`).
  * 5. Gemini AI Intelligence — Generates role-fit score, missing ATS keywords, and recommendations (`geminiAnalyzeResume`).
- * 6. DB Persistence — Saves new `Resume` document in MongoDB.
+ * 6. DB Persistence — Uploads the buffer to MongoDB GridFS (`config/gridfs.js`, survives
+ *    Render's ephemeral-disk wipes) and saves the new `Resume` document with its file id.
  * 7. Active Pointer Sync — Updates `user.profile.resumeUrl`.
  * 8. Pre-calculated Narrative — Pre-generates Path Score audit explanation narrative (`geminiExplainScore`).
  * 9. Notification Trigger — Emits success notification to the user's drawer.
  */
 
-import path from 'node:path';
 import { Resume } from '../models/Resume.js';
 import { Notification } from '../models/Notification.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
-import { publicUrl } from '../middleware/upload.middleware.js';
+import {
+  uploadBufferToGridFS,
+  downloadGridFSBuffer,
+  findGridFSFile,
+  pipeGridFSFileToResponse,
+} from '../config/gridfs.js';
 import { extractResumeText } from '../services/resumeText.service.js';
 import { aiService } from '../services/ai.service.js';
 import { detectRedFlags } from '../services/resumeRedFlags.js';
@@ -142,11 +148,8 @@ const SIGNIFICANT_SCORE_DELTA = 5;
 export const analyzeResume = asyncHandler(async (req, res) => {
   if (!req.file) throw ApiError.badRequest('No resume uploaded');
 
-  const fileUrl = publicUrl('resume', req.file.filename);
-  const absPath = path.join(process.cwd(), 'uploads', 'resumes', req.file.filename);
-
-  // Step 2: Extract text and hyperlinks
-  const extracted = await extractResumeText(absPath, req.file.originalname);
+  // Step 2: Extract text and hyperlinks directly from the in-memory buffer
+  const extracted = await extractResumeText(req.file.buffer, req.file.originalname);
   const text = extracted.text || '';
   const links = extracted.links || [];
 
@@ -212,21 +215,19 @@ export const analyzeResume = asyncHandler(async (req, res) => {
     skills: parsed.skills || [],
   });
 
-  // Read file buffer as base64 for persistent backup in MongoDB
-  let fileBase64 = '';
-  try {
-    const targetPath = req.file?.path || absPath;
-    fileBase64 = fs.readFileSync(targetPath).toString('base64');
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to encode resume file to base64:', err);
-  }
+  // Step 6a: Persist the file buffer to GridFS — survives Render's ephemeral
+  // disk wipes since it lives in the same MongoDB Atlas cluster as everything else.
+  const fileId = await uploadBufferToGridFS(req.file.buffer, req.file.originalname, {
+    userId: req.user._id.toString(),
+    mimeType: req.file.mimetype,
+  });
+  const fileUrl = `/api/resume/file/${fileId}`;
 
-  // Step 6: Save Resume document
+  // Step 6b: Save Resume document
   const resume = await Resume.create({
     user: req.user._id,
     fileUrl,
-    fileBase64,
+    fileId,
     mimeType: req.file.mimetype || 'application/pdf',
     originalName: req.file.originalname,
     skills: parsed.skills,
@@ -317,6 +318,38 @@ export const analyzeResume = asyncHandler(async (req, res) => {
 });
 
 /**
+ * GET /api/resume/file/:fileId
+ * Streams the original PDF/DOCX from GridFS — used for both "View" (inline,
+ * opens in a new browser tab) and "Download" (?download=1, attachment).
+ *
+ * Ownership is checked against `metadata.userId` stored on the GridFS file at
+ * upload time (admins bypass this check) — no extra Resume-collection query needed.
+ *
+ * Reachable via plain browser navigation (new tab / direct link), which can't
+ * send an Authorization header — `protect` (auth.middleware.js) already falls
+ * back to a `?token=<accessToken>` query param for exactly this case.
+ */
+export const serveResumeFile = asyncHandler(async (req, res) => {
+  const { fileId } = req.params;
+
+  const file = await findGridFSFile(fileId);
+  if (!file) throw ApiError.notFound('Resume file not found');
+
+  const ownerId = file.metadata?.userId;
+  if (req.user.role !== 'admin' && ownerId !== req.user._id.toString()) {
+    throw ApiError.forbidden('You are not authorized to access this file');
+  }
+
+  const disposition = req.query.download ? 'attachment' : 'inline';
+  const filename = (file.filename || 'resume').replace(/"/g, '');
+  res.set('Content-Type', file.metadata?.mimeType || file.contentType || 'application/octet-stream');
+  res.set('Content-Disposition', `${disposition}; filename="${filename}"`);
+  res.set('Content-Length', file.length);
+
+  pipeGridFSFileToResponse(fileId, res);
+});
+
+/**
  * GET /api/resume
  * Returns candidate's most recent active resume analysis.
  */
@@ -344,17 +377,31 @@ export const reanalyzeForRole = asyncHandler(async (req, res) => {
   const { targetRole } = req.body;
   if (!targetRole?.trim()) throw ApiError.badRequest('targetRole is required');
 
-  const resume = await Resume.findOne({ user: req.user._id }).sort({ createdAt: -1 });
+  const resume = await Resume.findOne({ user: req.user._id })
+    .sort({ createdAt: -1 })
+    .select('+fileBase64'); // excluded by default (see Resume.js) — needed for the legacy fallback below
+
   if (!resume) throw new ApiError(404, 'No resume found. Please upload a resume first.');
 
-  const filename = resume.fileUrl.split('/').pop();
-  const absPath = path.join(process.cwd(), 'uploads', 'resumes', filename);
-
+  // Re-extract text from the original file when possible (GridFS for current
+  // uploads, legacy base64 for pre-migration records); fall back to reconstructing
+  // a rough text blob from already-parsed fields if neither is available/fails.
   let resumeText = '';
   try {
-    const extracted = await extractResumeText(absPath, resume.originalName);
-    resumeText = extracted.text || '';
+    let buffer = null;
+    if (resume.fileId) {
+      buffer = await downloadGridFSBuffer(resume.fileId);
+    } else if (resume.fileBase64) {
+      buffer = Buffer.from(resume.fileBase64, 'base64');
+    }
+    if (buffer) {
+      const extracted = await extractResumeText(buffer, resume.originalName);
+      resumeText = extracted.text || '';
+    }
   } catch {
+    // fall through to the reconstruction below
+  }
+  if (!resumeText) {
     resumeText = `Skills: ${(resume.skills || []).join(', ')}. Experience: ${(resume.experience || []).join('. ')}`;
   }
 
