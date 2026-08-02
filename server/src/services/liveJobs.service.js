@@ -106,6 +106,7 @@ function normalizeJob(raw) {
 
   const salaryMin = raw.min_annual_salary ?? raw.salary_min ?? null;
   const salaryMax = raw.max_annual_salary ?? raw.salary_max ?? null;
+  const salaryCurrency = raw.salary_currency ?? raw.currency ?? null;
   const seniority = raw.seniority ?? raw.experience_level ?? null;
 
   const locationFromArray =
@@ -138,6 +139,7 @@ function normalizeJob(raw) {
     location: location || 'Location not specified',
     salaryMin: salaryMin !== null ? Number(salaryMin) : null,
     salaryMax: salaryMax !== null ? Number(salaryMax) : null,
+    salaryCurrency: salaryCurrency ? String(salaryCurrency).toUpperCase() : null,
     seniority: seniority || null,
     postedAt,
     postedAgo: daysAgo(postedAt),

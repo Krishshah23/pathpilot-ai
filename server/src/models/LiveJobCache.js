@@ -75,6 +75,9 @@ const jobSchema = new Schema(
     // null if the listing doesn't disclose salary
     salaryMax: { type: Number, default: null },
 
+    // Salary currency code (e.g. 'INR', 'USD')
+    salaryCurrency: { type: String, default: null },
+
     // Seniority level (e.g. 'Junior', 'Mid', 'Senior', 'Lead')
     // null if not specified in the listing
     seniority: { type: String, default: null },

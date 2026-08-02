@@ -16,6 +16,55 @@ import { MATCH_TIERS } from '@/lib/jobMatch';
 import { JOB_STATUSES } from '@/lib/useSavedJobs';
 import { cn } from '@/lib/cn';
 
+/**
+ * Formats job salary range into readable LPA (INR) or $ (USD/global) string.
+ * Handles raw annual figures (e.g., 600,000 INR -> ₹6 LPA) as well as pre-scaled numbers.
+ * @param {number|null} min - Minimum annual salary
+ * @param {number|null} max - Maximum annual salary
+ * @param {string|null} currency - Salary currency code ('INR', 'USD', etc.)
+ * @returns {string|null} Formatted salary range string or null
+ */
+export function formatSalary(min, max, currency) {
+  if (!min && !max) return null;
+  if ((min != null && min <= 0) && (max != null && max <= 0)) return null;
+
+  const isUSD = currency === 'USD' || currency === '$';
+
+  const parseVal = (val) => {
+    if (val == null || val <= 0) return null;
+    // Raw annual figure >= 10,000 (e.g. 600,000 INR or 90,000 USD)
+    if (val >= 10000) {
+      if (isUSD) return `$${Math.round(val / 1000)}k`;
+      const lakh = +(val / 100000).toFixed(1).replace(/\.0$/, '');
+      return `₹${lakh}`;
+    }
+    // Figure already scaled to LPA (e.g. 6 to 18) or small $k
+    if (isUSD) return `$${val}k`;
+    return `₹${val}`;
+  };
+
+  const minFormatted = parseVal(min);
+  const maxFormatted = parseVal(max);
+  const suffix = isUSD ? ' / yr' : ' LPA';
+
+  if (minFormatted && maxFormatted) {
+    if (minFormatted === maxFormatted) return `${minFormatted}${suffix}`;
+
+    // Strip duplicated currency prefix for clean range format (e.g. ₹6 and ₹8.4 -> ₹6–8.4 LPA)
+    if (minFormatted.startsWith('₹') && maxFormatted.startsWith('₹')) {
+      return `₹${minFormatted.slice(1)}–${maxFormatted.slice(1)}${suffix}`;
+    }
+    if (minFormatted.startsWith('$') && maxFormatted.startsWith('$')) {
+      return `$${minFormatted.slice(1)}–${maxFormatted.slice(1)}${suffix}`;
+    }
+    return `${minFormatted}–${maxFormatted}${suffix}`;
+  }
+
+  if (minFormatted) return `${minFormatted}+${suffix}`;
+  if (maxFormatted) return `Up to ${maxFormatted}${suffix}`;
+  return null;
+}
+
 function MatchBadge({ tier }) {
   const t = MATCH_TIERS[tier] || MATCH_TIERS.explore;
   return (
@@ -37,6 +86,8 @@ export function JobCard({ job, matchTier, saved, onToggleSave, status, onStatusC
       </div>
     );
   }
+
+  const salaryDisplay = formatSalary(job.salaryMin, job.salaryMax, job.salaryCurrency);
 
   return (
     <div className="card p-5">
@@ -70,9 +121,14 @@ export function JobCard({ job, matchTier, saved, onToggleSave, status, onStatusC
             {String(job.seniority).replace('_', ' ')}
           </span>
         )}
-        {job.salaryMin && job.salaryMax && (
+        {salaryDisplay && (
           <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-muted bg-surface-2 border border-line px-2 py-1 rounded-full">
-            <Icon.DollarSign size={10} /> {job.salaryMin}–{job.salaryMax} LPA
+            {salaryDisplay.startsWith('$') ? (
+              <Icon.DollarSign size={10} />
+            ) : (
+              <span className="font-bold text-[10px] leading-none">₹</span>
+            )}
+            {salaryDisplay.replace(/^[₹$]/, '')}
           </span>
         )}
       </div>
