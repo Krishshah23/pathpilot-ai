@@ -191,26 +191,7 @@ npm run dev               # http://localhost:5173
 **Startup order:** Django first → Node second → Client last.
 **Health check:** `GET http://localhost:5000/api/health/ai` — pings Django and returns combined status.
 
-### 4. Seed Demo Users
 
-```bash
-cd server
-npm run seed
-```
-
-Creates three demo accounts:
-
-| Role    | Email                | Password     | State                   |
-| ------- | --------------------- | ------------ | ----------------------- |
-| Admin   | admin@pathpilot.ai   | Admin@1234   | Verified, onboarded     |
-| Student | student@pathpilot.ai | Student@1234 | Verified, onboarded     |
-| Student | new@pathpilot.ai     | NewUser@1234 | Verified, not onboarded |
-
-The seed script is idempotent — re-running it skips existing users.
-
----
-
-## User Roles
 
 `student` · `admin`
 
