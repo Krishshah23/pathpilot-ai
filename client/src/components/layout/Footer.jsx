@@ -34,7 +34,9 @@ export function Footer() {
         <div className="lg:col-span-1">
           <Logo />
           <p className="mt-3 text-xs text-muted leading-relaxed">Your AI career co-pilot.</p>
-          <p className="mt-1 text-[11px] text-faint">© {year} PathPilot AI. Built for engineering students.</p>
+          <p className="mt-1 text-[11px] text-faint">© {year} PathPilot AI. Built by{' '}
+            <a href="https://www.linkedin.com/in/kreesh" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">Krish Shah</a>.
+          </p>
         </div>
 
         {/* Quick links */}
@@ -85,7 +87,9 @@ export function Footer() {
 
       <div className="border-t border-line px-6 sm:px-10 py-4 flex items-center justify-center">
         <p className="text-[11px] text-faint text-center">
-          Built with <span className="text-danger">❤</span> for engineering students
+          Built with <span className="text-danger">❤</span> by{' '}
+          <a href="https://www.linkedin.com/in/kreesh" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline font-medium">Krish Shah</a>
+          {' '}for engineering students
         </p>
       </div>
     </footer>

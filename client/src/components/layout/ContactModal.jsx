@@ -52,8 +52,20 @@ export function ContactModal({ onClose }) {
           </button>
         </div>
 
+        {/* Developer card */}
+        <div className="mx-6 mt-5 rounded-xl border border-brand/20 bg-brand/5 px-4 py-3.5 flex items-center gap-3">
+          <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-brand to-brand/60 flex items-center justify-center text-white font-bold text-sm select-none">
+            KS
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-ink">Krish Shah</p>
+            <p className="text-[11px] text-muted">Developer · PathPilot AI</p>
+            <p className="text-[11px] text-faint mt-0.5">Engineering student building tools for engineering students.</p>
+          </div>
+        </div>
+
         {/* Social pills */}
-        <div className="px-6 mt-5 flex flex-wrap gap-2">
+        <div className="px-6 mt-4 flex flex-wrap gap-2">
           {LINKS.map((l) => {
             const LinkIcon = Icon[l.icon];
             return (
