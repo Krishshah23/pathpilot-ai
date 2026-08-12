@@ -17,9 +17,9 @@ import { Opportunity } from '../models/Opportunity.js';
 import { Notification } from '../models/Notification.js';
 import { ApiError } from '../utils/ApiError.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
-import { asyncHandler } from '../utils/asyncHandler.js';
 import { buildPathScore } from '../services/pathScore.service.js';
 import { getPeerBenchmark } from '../services/peerBenchmark.service.js';
+import { getLiveJobsDiagnosticStats } from '../services/liveJobs.service.js';
 
 /**
  * GET /api/admin/stats
@@ -35,6 +35,7 @@ export const getStats = asyncHandler(async (_req, res) => {
     totalResumes,
     totalGrowthPlans,
     totalOpportunities,
+    liveJobsStats,
   ] = await Promise.all([
     User.countDocuments(),
     User.countDocuments({ role: 'student' }),
@@ -44,6 +45,7 @@ export const getStats = asyncHandler(async (_req, res) => {
     Resume.countDocuments(),
     GrowthPlan.countDocuments(),
     Opportunity.countDocuments(),
+    getLiveJobsDiagnosticStats(),
   ]);
 
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -68,6 +70,7 @@ export const getStats = asyncHandler(async (_req, res) => {
         totalOpportunities,
         recentSignups,
         opportunityStages,
+        theirStack: liveJobsStats,
       },
     },
   });

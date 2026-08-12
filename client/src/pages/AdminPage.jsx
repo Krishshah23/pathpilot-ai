@@ -213,6 +213,101 @@ function OverviewTab({ stats }) {
           </div>
         </Card>
       )}
+
+      {/* TheirStack API Credit Quota & Live Jobs Cache Health */}
+      {stats.theirStack && (
+        <Card>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-line bg-surface-2 text-brand">
+                <Icon.Briefcase size={16} />
+              </span>
+              <div>
+                <h2 className="font-display text-base font-semibold text-ink">
+                  TheirStack API Live Jobs Ledger
+                </h2>
+                <p className="text-xs text-faint">
+                  Monthly quota guard (200 credits max · 8 credits/request) & demand-driven caching
+                </p>
+              </div>
+            </div>
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border',
+                stats.theirStack.isQuotaExhausted
+                  ? 'border-danger/30 bg-danger/10 text-danger'
+                  : stats.theirStack.creditsUsed === 0
+                  ? 'border-brand/30 bg-brand/10 text-brand'
+                  : 'border-line bg-surface-2 text-muted'
+              )}
+            >
+              <span
+                className={cn(
+                  'h-1.5 w-1.5 rounded-full',
+                  stats.theirStack.isQuotaExhausted
+                    ? 'bg-danger'
+                    : stats.theirStack.creditsUsed === 0
+                    ? 'bg-brand'
+                    : 'bg-muted'
+                )}
+              />
+              {stats.theirStack.isQuotaExhausted
+                ? 'Quota Capped (Serving Stale/Fallback)'
+                : stats.theirStack.creditsUsed === 0
+                ? 'Optimal (0 Credits Spent)'
+                : `${stats.theirStack.remainingCredits} Credits Remaining`}
+            </span>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-line bg-surface-2/40 p-4">
+              <p className="text-xs text-faint">Credits Consumed</p>
+              <p className="mt-1 font-serif text-xl font-bold text-ink">
+                {stats.theirStack.creditsUsed}{' '}
+                <span className="text-xs font-normal text-muted">/ {stats.theirStack.monthlyLimit || 200}</span>
+              </p>
+              <div className="mt-2 h-1.5 rounded-full bg-surface-2">
+                <div
+                  className="h-full rounded-full bg-brand"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      ((stats.theirStack.creditsUsed || 0) / (stats.theirStack.monthlyLimit || 200)) * 100
+                    )}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-line bg-surface-2/40 p-4">
+              <p className="text-xs text-faint">Monthly API Calls</p>
+              <p className="mt-1 font-serif text-xl font-bold text-ink">
+                {stats.theirStack.requestsCount || 0}{' '}
+                <span className="text-xs font-normal text-muted">
+                  / {Math.floor((stats.theirStack.monthlyLimit || 200) / 8)} calls
+                </span>
+              </p>
+              <p className="mt-1 text-[11px] text-faint">Month: {stats.theirStack.monthKey}</p>
+            </div>
+
+            <div className="rounded-xl border border-line bg-surface-2/40 p-4">
+              <p className="text-xs text-faint">Cached Roles in DB</p>
+              <p className="mt-1 font-serif text-xl font-bold text-ink">
+                {stats.theirStack.totalCachedRoles || 0}
+              </p>
+              <p className="mt-1 text-[11px] text-faint">Retention TTL: {stats.theirStack.cacheTtlHours || 72}h (3 days)</p>
+            </div>
+
+            <div className="rounded-xl border border-line bg-surface-2/40 p-4">
+              <p className="text-xs text-faint">Demand-Driven Cron</p>
+              <p className="mt-1 font-serif text-xl font-bold text-brand">
+                Protected
+              </p>
+              <p className="mt-1 text-[11px] text-faint">0 calls when no active users</p>
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

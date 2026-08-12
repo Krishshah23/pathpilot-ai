@@ -37,44 +37,72 @@ const scheduledTasks = [];
 
 // ── 1. New live jobs found ────────────────────────────────────────────────
 /**
- * For each tracked role, checks TheirStack (via the existing cached liveJobs
- * service) for job IDs not seen before, and notifies every user targeting
- * that role once if any are found. Runs once per role, not once per user —
- * see JobAlertState.js for why.
+ * Checks TheirStack for genuinely new job IDs and notifies users targeting that role.
+ * DEMAND-DRIVEN CREDIT PROTECTION:
+ * - If 0 active users exist in the system, skips immediately to avoid burning API credits.
+ * - Only queries roles actively targeted by real registered users (not all 12 TRACKED_ROLES).
+ * - LiveJobs service protects monthly credit quotas and serves cached/stale listings when budget is reached.
  */
 export async function runDailyJobAlerts() {
-  for (const role of TRACKED_ROLES) {
-    try {
-      const { jobs } = await getLiveJobs(role);
-      if (!jobs.length) continue;
+  try {
+    const usersWithDreamRole = await User.find({
+      'profile.dreamRole': { $exists: true, $ne: '' },
+    }).select('_id profile.dreamRole');
 
-      let state = await JobAlertState.findOne({ role });
-      const seenIds = new Set(state?.notifiedJobIds || []);
-      const newJobs = jobs.filter((j) => !seenIds.has(String(j.id)));
-
-      if (newJobs.length > 0) {
-        const users = await User.find({ 'profile.dreamRole': { $regex: `^${escapeRegex(role)}$`, $options: 'i' } }).select('_id');
-        for (const u of users) {
-          await notifyOnce(u._id, {
-            title: `${newJobs.length} new job${newJobs.length === 1 ? '' : 's'} found for ${role}`,
-            message: `New live openings for ${role} just came in — check them out before they fill up.`,
-            type: 'info',
-            actionLink: '/talent-analyzer',
-            lookbackDays: 1,
-          });
-        }
-      }
-
-      const updatedIds = [...seenIds, ...newJobs.map((j) => String(j.id))].slice(-MAX_TRACKED_JOB_IDS);
-      await JobAlertState.findOneAndUpdate(
-        { role },
-        { role, notifiedJobIds: updatedIds, lastCheckedAt: new Date() },
-        { upsert: true }
-      );
-    } catch (err) {
+    if (!usersWithDreamRole || usersWithDreamRole.length === 0) {
       // eslint-disable-next-line no-console
-      console.error(`[NotificationCron] Job alert check failed for "${role}":`, err.message);
+      console.log('[NotificationCron] No registered users targeting any dream roles. Skipping daily job alert check to preserve API credits.');
+      return;
     }
+
+    // Extract distinct roles actively targeted by users
+    const activeRoles = [
+      ...new Set(
+        usersWithDreamRole
+          .map((u) => u.profile?.dreamRole?.trim())
+          .filter(Boolean)
+      ),
+    ];
+
+    for (const role of activeRoles) {
+      try {
+        const { jobs } = await getLiveJobs(role, 'IN', 8, { source: 'cron' });
+        if (!jobs || !jobs.length) continue;
+
+        let state = await JobAlertState.findOne({ role });
+        const seenIds = new Set(state?.notifiedJobIds || []);
+        const newJobs = jobs.filter((j) => !seenIds.has(String(j.id)));
+
+        if (newJobs.length > 0) {
+          const targetUsers = usersWithDreamRole.filter(
+            (u) => (u.profile?.dreamRole || '').trim().toLowerCase() === role.toLowerCase()
+          );
+
+          for (const u of targetUsers) {
+            await notifyOnce(u._id, {
+              title: `${newJobs.length} new job${newJobs.length === 1 ? '' : 's'} found for ${role}`,
+              message: `New live openings for ${role} just came in — check them out before they fill up.`,
+              type: 'info',
+              actionLink: '/live-jobs',
+              lookbackDays: 1,
+            });
+          }
+        }
+
+        const updatedIds = [...seenIds, ...newJobs.map((j) => String(j.id))].slice(-MAX_TRACKED_JOB_IDS);
+        await JobAlertState.findOneAndUpdate(
+          { role },
+          { role, notifiedJobIds: updatedIds, lastCheckedAt: new Date() },
+          { upsert: true }
+        );
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error(`[NotificationCron] Job alert check failed for "${role}":`, err.message);
+      }
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[NotificationCron] runDailyJobAlerts outer error:', err.message);
   }
 }
 

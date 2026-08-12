@@ -2,12 +2,17 @@
  * controllers/liveJobs.controller.js — Live Job Openings Controller (TheirStack API)
  *
  * ARCHITECTURAL ROLE:
- * Handles live job opening queries using the two-layer caching pipeline (Memory -> MongoDB TTL -> TheirStack API):
- * 1. `getJobOpenings`: Returns up to 8 live job postings for a role and country code string.
+ * Handles live job opening queries using the multi-tier caching and credit restriction pipeline:
+ * 1. `getJobOpenings`: Returns up to 8 live job postings for a role and country, with quota telemetry.
  * 2. `invalidateCache`: Admin-only endpoint purging both L1 Memory and L2 MongoDB cache layers for a role.
+ * 3. `getCreditStatus`: Admin/diagnostic endpoint returning current monthly TheirStack budget usage.
  */
 
-import { getLiveJobs, invalidateLiveJobsCache } from '../services/liveJobs.service.js';
+import {
+  getLiveJobs,
+  invalidateLiveJobsCache,
+  getLiveJobsDiagnosticStats,
+} from '../services/liveJobs.service.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
@@ -24,7 +29,9 @@ export const getJobOpenings = asyncHandler(async (req, res) => {
     throw ApiError.badRequest('Query parameter "role" is required');
   }
 
-  const result = await getLiveJobs(role, country);
+  const result = await getLiveJobs(role, country, 8, {
+    source: req.user ? 'user_request' : 'public_request',
+  });
 
   return sendSuccess(res, {
     data: {
@@ -35,7 +42,19 @@ export const getJobOpenings = asyncHandler(async (req, res) => {
       cacheLayer: result.cacheLayer,
       fetchedAt: result.fetchedAt,
       count: result.jobs.length,
+      quotaStatus: result.quotaStatus,
     },
+  });
+});
+
+/**
+ * GET /api/live-jobs/quota
+ * Returns current monthly credit consumption and quota limit for TheirStack.
+ */
+export const getCreditStatus = asyncHandler(async (_req, res) => {
+  const stats = await getLiveJobsDiagnosticStats();
+  return sendSuccess(res, {
+    data: { stats },
   });
 });
 

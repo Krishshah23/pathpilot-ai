@@ -44,10 +44,10 @@ import mongoose from 'mongoose';
 
 const { Schema } = mongoose;
 
-// Cache time-to-live in seconds — 6 hours.
-// MongoDB's TTL index uses this to auto-expire documents.
-// The in-memory cache in liveJobs.service.js uses the same value.
-const CACHE_TTL_SECONDS = 6 * 60 * 60; // 6 hours = 21,600 seconds
+// Long-term MongoDB document retention (30 days = 2,592,000 seconds).
+// Memory & fresh validity is controlled via env.theirstack.cacheTtlHours (default 72h).
+// Retaining records for 30 days allows graceful stale-fallback when monthly API credits are capped.
+const MONGO_RETENTION_SECONDS = 30 * 24 * 60 * 60;
 
 /**
  * Schema for one normalized job listing.
@@ -146,9 +146,7 @@ const liveJobCacheSchema = new Schema(
 // Enables efficient upserts: findOneAndUpdate({ role, countryCode }, ..., { upsert: true })
 liveJobCacheSchema.index({ role: 1, countryCode: 1 }, { unique: true });
 
-// MongoDB TTL index — MongoDB's background TTL monitor runs every 60 seconds
-// and deletes documents where fetchedAt + CACHE_TTL_SECONDS < now.
-// This is automatic — no cron job or cleanup logic needed in the application code.
-liveJobCacheSchema.index({ fetchedAt: 1 }, { expireAfterSeconds: CACHE_TTL_SECONDS });
+// MongoDB TTL index — auto-purges ancient records after 30 days.
+liveJobCacheSchema.index({ fetchedAt: 1 }, { expireAfterSeconds: MONGO_RETENTION_SECONDS });
 
 export const LiveJobCache = mongoose.model('LiveJobCache', liveJobCacheSchema);

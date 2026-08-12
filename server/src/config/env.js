@@ -146,11 +146,14 @@ export const env = {
 
   // ── TheirStack Live Jobs API ─────────────────────────────────────────────────
   // Used by liveJobs.service.js to fetch real-time job openings.
-  // Results are cached in MongoDB with a 6-hour TTL to avoid burning API credits.
-  // Free tier: 200 credits/month · 1 credit = 1 job returned.
+  // Results are cached in MongoDB (default 72-hour TTL) and strictly capped to the
+  // free-tier monthly budget (200 credits/month · 8 credits per search call).
   // Register at https://theirstack.com to get a key.
   theirstack: {
     apiKey: process.env.THEIRSTACK_API_KEY || '',
+    monthlyCreditLimit: Number(process.env.THEIRSTACK_MONTHLY_CREDIT_LIMIT) || 200,
+    creditsPerRequest: Number(process.env.THEIRSTACK_CREDITS_PER_REQUEST) || 8,
+    cacheTtlHours: Number(process.env.THEIRSTACK_CACHE_TTL_HOURS) || 72,
   },
 
   // ── Google Gemini AI ─────────────────────────────────────────────────────────
