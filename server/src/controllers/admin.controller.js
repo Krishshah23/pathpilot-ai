@@ -17,6 +17,7 @@ import { Opportunity } from '../models/Opportunity.js';
 import { Notification } from '../models/Notification.js';
 import { ApiError } from '../utils/ApiError.js';
 import { sendSuccess } from '../utils/ApiResponse.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 import { buildPathScore } from '../services/pathScore.service.js';
 import { getPeerBenchmark } from '../services/peerBenchmark.service.js';
 import { getLiveJobsDiagnosticStats } from '../services/liveJobs.service.js';
