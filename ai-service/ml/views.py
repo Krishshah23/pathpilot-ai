@@ -7,6 +7,12 @@ Serves HTTP microservice endpoints consumed exclusively by the Node.js backend.
 SECURITY & INTEGRITY:
 Enforces `require_internal_key` decorator verifying `X-Internal-Key` header against `INTERNAL_API_KEY`.
 
+ERROR HANDLING:
+Endpoints that call into user-input-driven parsing/inference (`parse_resume`, `predict_ml`)
+catch failures and log the real exception server-side via `logger.exception`, but only ever
+return a generic, non-identifying message to the caller — the raw exception text (stack
+internals, file paths, library error strings) never crosses the process boundary.
+
 ENDPOINTS:
 1. `GET /api/ml/health`: Microservice health check returning 200 OK.
 2. `POST /api/ml/predict`: Runs unified 7-model inference pipeline (Resume Score, ATS Pass %,
@@ -16,6 +22,7 @@ ENDPOINTS:
 5. `POST /api/ml/roadmap`: Custom week-by-week learning roadmap builder.
 """
 
+import logging
 from functools import wraps
 
 from django.conf import settings
@@ -29,6 +36,8 @@ from ml.services.career_analysis import (
 )
 from ml.services.growth_planner import build_roadmap as run_roadmap_builder
 from ml.services.resume_parser import parse_resume as run_resume_parser
+
+logger = logging.getLogger(__name__)
 
 
 def require_internal_key(view):
@@ -47,18 +56,21 @@ def require_internal_key(view):
     return wrapper
 
 
-def stub(feature, echo=None):
-    """Uniform 'not implemented yet' payload used by scaffolded endpoints."""
-    return Response(
-        {
-            'success': True,
-            'implemented': False,
-            'feature': feature,
-            'message': f'{feature} endpoint scaffolded — ML model lands in a later phase.',
-            'echo': echo,
-        },
-        status=status.HTTP_200_OK,
-    )
+def _ok(data):
+    """Standard success envelope — every endpoint below returns this shape."""
+    return Response({'success': True, 'data': data})
+
+
+def _error(message, http_status):
+    """Standard error envelope — message must be safe to show a client, never a raw exception."""
+    return Response({'success': False, 'message': message}, status=http_status)
+
+
+def _target_role_and_skills(request):
+    """Shared payload shape for the skill-gap and roadmap endpoints."""
+    target_role = request.data.get('targetRole')
+    current_skills = request.data.get('currentSkills', []) or []
+    return target_role, current_skills
 
 
 @api_view(['GET'])
@@ -74,23 +86,19 @@ def parse_resume(request):
     links = request.data.get('links', []) or []
     try:
         result = run_resume_parser(text, links)
-    except Exception as exc:  # noqa: BLE001 — never let a parse edge-case 500
-        return Response(
-            {'success': False, 'implemented': True, 'message': f'Resume parsing failed: {exc}'},
-            status=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        )
-    return Response({'success': True, 'implemented': True, 'data': result})
+    except Exception:  # noqa: BLE001 — never let a parse edge-case 500
+        logger.exception('Resume parsing failed')
+        return _error('Resume parsing failed. Please try a different file.', status.HTTP_422_UNPROCESSABLE_ENTITY)
+    return _ok(result)
 
 
 @api_view(['POST'])
 @require_internal_key
 def skill_gap(request):
     """Compare current skills vs. required skills for a target role."""
-    result = run_skill_gap(
-        request.data.get('targetRole'),
-        request.data.get('currentSkills', []) or [],
-    )
-    return Response({'success': True, 'implemented': True, 'data': result})
+    target_role, current_skills = _target_role_and_skills(request)
+    result = run_skill_gap(target_role, current_skills)
+    return _ok(result)
 
 
 @api_view(['POST'])
@@ -98,33 +106,32 @@ def skill_gap(request):
 def predict_readiness(request):
     """Random Forest → career-readiness score/class."""
     result = run_readiness_prediction(request.data or {})
-    return Response({'success': True, 'implemented': True, 'data': result})
+    return _ok(result)
 
 
 @api_view(['POST'])
 @require_internal_key
 def recommend_roadmap(request):
     """Deterministic → personalized week-wise learning roadmap."""
-    result = run_roadmap_builder(
-        request.data.get('targetRole'),
-        request.data.get('currentSkills', []) or [],
-    )
-    return Response({'success': True, 'implemented': True, 'data': result})
+    target_role, current_skills = _target_role_and_skills(request)
+    result = run_roadmap_builder(target_role, current_skills)
+    return _ok(result)
 
 
 @api_view(['POST'])
 @require_internal_key
 def predict_ml(request):
-    """Unified ML prediction endpoint — runs all 7 trained models."""
+    """Unified ML prediction endpoint — runs all 7 trained models.
+
+    The predictor/feature-engineering imports are deliberately deferred to call time
+    (not module load) — they pull in joblib/numpy/pandas/shap, which would otherwise
+    load eagerly at Django startup even for requests that never touch this endpoint.
+    """
     from ml.services.predictor import predict_all, models_loaded
     from ml.utils.feature_engineering import extract_resume_features
 
     if not models_loaded():
-        return Response(
-            {'success': False, 'implemented': True,
-             'message': 'ML models not trained yet. Run train_all.py first.'},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
+        return _error('ML models not trained yet. Run train_all.py first.', status.HTTP_503_SERVICE_UNAVAILABLE)
 
     try:
         payload = request.data or {}
@@ -133,10 +140,7 @@ def predict_ml(request):
         target_role = payload.get('targetRole', '') or ''
 
         result = predict_all(features, current_skills, target_role)
-        return Response({'success': True, 'implemented': True, 'data': result})
-    except Exception as exc:
-        return Response(
-            {'success': False, 'implemented': True,
-             'message': f'Prediction failed: {exc}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
+        return _ok(result)
+    except Exception:
+        logger.exception('ML prediction failed')
+        return _error('Prediction failed. Please try again.', status.HTTP_500_INTERNAL_SERVER_ERROR)

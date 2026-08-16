@@ -29,6 +29,7 @@ import {
 } from '../controllers/resumeBuilder.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 import { upload } from '../middleware/upload.middleware.js';
+import { aiActionLimiter } from '../middleware/aiRateLimit.middleware.js';
 
 const router = Router();
 
@@ -38,11 +39,11 @@ router.get('/', getResumeBuilder);
 router.post('/init', upload('resume', 'file'), initResumeBuilder);
 router.patch('/', updateResumeBuilder);
 
-router.post('/ai/rewrite-bullet', rewriteBullet);
-router.post('/ai/generate-summary', generateSummary);
-router.post('/ai/optimize', optimizeResume);
-router.post('/ai/match-jd', matchJobDescription);
-router.post('/ai/insert-keywords', insertKeywords);
+router.post('/ai/rewrite-bullet', aiActionLimiter, rewriteBullet);
+router.post('/ai/generate-summary', aiActionLimiter, generateSummary);
+router.post('/ai/optimize', aiActionLimiter, optimizeResume);
+router.post('/ai/match-jd', aiActionLimiter, matchJobDescription);
+router.post('/ai/insert-keywords', aiActionLimiter, insertKeywords);
 
 router.get('/export/pdf', exportPdf);
 router.get('/export/docx', exportDocx);

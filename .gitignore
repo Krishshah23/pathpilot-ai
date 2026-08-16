@@ -22,6 +22,10 @@ venv/
 # ML artifacts (large / regenerable)
 *.pkl
 *.joblib
+catboost_info/
+**/catboost_info/
+venv_test/
+**/venv_test/
 
 # Uploads
 server/uploads/*

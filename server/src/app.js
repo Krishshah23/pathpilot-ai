@@ -11,6 +11,7 @@
  * MIDDLEWARE ORDER (order matters!):
  * Express processes middleware in the order they are registered with app.use().
  *
+ *   0. Helmet         — Security response headers, set before anything else runs
  *   1. CORS           — Must be first so OPTIONS preflight requests are handled
  *   2. JSON parsing   — Parse request bodies before any route handler runs
  *   3. Cookie parsing — Parse cookies before auth middleware reads the refresh token
@@ -38,6 +39,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+import helmet from 'helmet';
 import { env } from './config/env.js';
 import apiRoutes from './routes/index.js';
 import { notFoundHandler, errorHandler } from './middleware/error.middleware.js';
@@ -55,6 +57,22 @@ import { Resume } from './models/Resume.js';
  */
 export function createApp() {
   const app = express();
+
+  // ── 0. Security Headers (helmet) ────────────────────────────────────────────
+  // Sets X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security, and
+  // a default Content-Security-Policy — the baseline headers a security review
+  // checks for. Must run before everything else, same reasoning as CORS below.
+  //
+  // crossOriginResourcePolicy is relaxed to 'cross-origin': client and server are
+  // deployed on different origins (see lib/api.js in the client), and avatar
+  // images served from /uploads/avatars are deliberately public and meant to be
+  // embeddable cross-origin — helmet's 'same-origin' default would silently
+  // block the browser from loading them.
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    })
+  );
 
   // ── 1. CORS ──────────────────────────────────────────────────────────────────
   // Allow the React client origin to make cross-origin requests.

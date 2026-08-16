@@ -13,6 +13,7 @@ into memory cache (`_cache`) and runs real-time predictions across 7 CatBoost/XG
 7. `explainer`: SHAP TreeExplainer calculating exact feature importance drivers (`topPositive`, `topNegative`).
 """
 
+import json
 import logging
 from pathlib import Path
 from typing import Any
@@ -365,7 +366,6 @@ def get_feature_importance(model_name: str = "resume_score") -> list[dict]:
 
 
 def _get_peer_benchmark_data(role_name: str, score: float) -> dict:
-    import json
     path = BASE_DIR / "models" / "peer_benchmarks.json"
     benchmarks = None
     if path.exists():
@@ -468,7 +468,7 @@ def predict_all(features: dict, current_skills: list, target_role: str) -> dict:
         "resume_score", features, _get_model("resume_score"),
         _get_scaler("resume_score"), _get_features("resume_score")
     )
-    print("SHAP Result:", shap_res)
+    logger.debug("SHAP result for resume_score: %s", shap_res)
 
     if shap_res.get("success"):
         positive = [{"feature": c["feature"], "impact": c["impact"]} for c in shap_res.get("top_positive", [])]

@@ -9,7 +9,8 @@
     "dev": "nodemon src/index.js",
     "seed": "node src/scripts/seed.js",
     "test:gap": "node src/scripts/test_gap_recommendations.js",
-    "migrate:gridfs": "node src/scripts/migrateResumesToGridFS.js"
+    "migrate:gridfs": "node src/scripts/migrateResumesToGridFS.js",
+    "test": "jest"
   },
   "keywords": [
     "pathpilot",
@@ -30,6 +31,7 @@
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
     "firebase-admin": "^14.2.0",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "mammoth": "^1.12.0",
     "mongoose": "^8.9.5",
@@ -42,6 +44,11 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "@babel/core": "^8.0.1",
+    "@babel/preset-env": "^8.0.2",
+    "babel-jest": "^30.4.1",
+    "jest": "^30.4.2",
+    "nodemon": "^3.1.9",
+    "supertest": "^7.2.2"
   }
 }

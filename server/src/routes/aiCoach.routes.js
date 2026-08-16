@@ -22,17 +22,20 @@ import {
   getInterviewAnalytics,
 } from '../controllers/aiCoach.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
+import { aiActionLimiter, interviewLimiter } from '../middleware/aiRateLimit.middleware.js';
 
 const router = Router();
 
 router.use(protect);
 
-router.post('/explain', explainScore);
-router.post('/chat', chat);
+router.post('/explain', aiActionLimiter, explainScore);
+router.post('/chat', aiActionLimiter, chat);
 
 // AI Mock Interview endpoints
-router.post('/interview/question', generateInterviewQuestion);
-router.post('/interview/evaluate', evaluateInterviewAnswer);
+// Only question/evaluate call Gemini — rate-limited. save-session/sessions/analytics
+// are plain DB reads/writes with no external-API cost, so they're left unlimited.
+router.post('/interview/question', interviewLimiter, generateInterviewQuestion);
+router.post('/interview/evaluate', interviewLimiter, evaluateInterviewAnswer);
 router.post('/interview/save-session', saveInterviewSession);
 router.get('/interview/analytics', getInterviewAnalytics);
 router.get('/interview/sessions', getInterviewSessions);

@@ -61,6 +61,27 @@ if (!firebaseEnvResult.success) {
   console.warn('⚠️  Firebase Admin env vars missing/invalid — Google Sign-In will not work.');
 }
 
+// INTERNAL_API_KEY is the only thing gating every Django ML endpoint (see
+// ai-service/ml/views.py's require_internal_key decorator) — it's the boundary that
+// stops the browser or any other external caller from hitting Django directly. Django's
+// own settings.py already refuses to boot with DEBUG=False while its secrets are still
+// the known, source-visible placeholder defaults (see ai-service/config/settings.py).
+// Node had no equivalent: a production deploy that forgot to set INTERNAL_API_KEY would
+// previously fall back to 'dev-internal-key' with nothing but a console.warn — Django's
+// fail-closed check can't catch that, because it only knows about *its own* defaults, not
+// what Node sends. Mirror Django's behavior here: fail loudly at startup instead.
+const DEFAULT_INTERNAL_API_KEY = 'dev-internal-key';
+const resolvedInternalApiKey = process.env.INTERNAL_API_KEY || DEFAULT_INTERNAL_API_KEY;
+
+if (process.env.NODE_ENV === 'production' && resolvedInternalApiKey === DEFAULT_INTERNAL_API_KEY) {
+  throw new Error(
+    'Refusing to start with NODE_ENV=production while INTERNAL_API_KEY is unset or still the ' +
+      "insecure placeholder default ('dev-internal-key'). Set a real random value for it in the " +
+      'environment before deploying — this key is the only thing preventing external callers from ' +
+      'reaching the Django ML service directly.'
+  );
+}
+
 /**
  * The exported `env` object is a typed, organized, defaulted config object.
  * Always import from here — never read process.env directly in controllers/services.
@@ -118,7 +139,8 @@ export const env = {
 
   // Shared secret that must be sent as X-Internal-Key header on every Node→Django call.
   // Django checks this key to reject requests not coming from Node (prevents direct browser access).
-  internalApiKey: process.env.INTERNAL_API_KEY || 'dev-internal-key',
+  // Fails fast at startup above if this is still the default in production.
+  internalApiKey: resolvedInternalApiKey,
 
   // ── Email (Nodemailer) ───────────────────────────────────────────────────────
 

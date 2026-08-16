@@ -110,7 +110,3 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [],
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
 }
-
-# Where trained ML model artifacts (.pkl) are stored.
-MODELS_DIR = BASE_DIR / 'ml' / 'artifacts'
-MODELS_DIR.mkdir(parents=True, exist_ok=True)
