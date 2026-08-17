@@ -10,7 +10,7 @@
 import { Icon } from '@/components/ui/icons';
 
 function scoreColor(score) {
-  if (score >= 75) return 'var(--color-brand)';
+  if (score >= 70) return 'var(--color-brand)';
   if (score >= 50) return 'var(--color-warning)';
   return 'var(--color-danger)';
 }

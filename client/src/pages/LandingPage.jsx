@@ -2,12 +2,14 @@
  * pages/LandingPage.jsx — Marketing Front Door ("/")
  *
  * Reachable by everyone, logged in or not (same pattern most SaaS marketing
- * sites use). Only the nav CTA changes based on auth state. Hero + four
- * alternating feature sections (Resume Strategy, Skill Roadmap, Live Jobs,
- * Interview Prep) each pair real product copy with a small mockup styled
- * after the actual screens, then the shared product Footer.
+ * sites use). Only the nav CTA changes based on auth state. Hero + an
+ * interactive, auto-advancing Product Tour (Resume Strategy, Skill Roadmap,
+ * Live Jobs, Interview Prep — same segmented-tab pattern as OverviewPage's
+ * insight tabs) + a 3-step "how it works" strip + closing CTA + the shared
+ * product Footer.
  */
 
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
@@ -15,12 +17,31 @@ import { Icon } from '@/components/ui/icons';
 import { Logo } from '@/components/ui/Logo';
 import { ScoreGauge } from '@/components/charts/ScoreGauge';
 import { Footer } from '@/components/layout/Footer';
+import { cn } from '@/lib/cn';
 import {
   ScoreBreakdownVisual,
   RoadmapVisual,
   LiveJobsVisual,
   InterviewVisual,
 } from '@/components/landing/LandingVisuals';
+
+const STEPS = [
+  {
+    icon: Icon.Upload,
+    title: 'Add your resume & target role',
+    desc: 'Upload what you have and tell us the role you want — no blank-page setup.',
+  },
+  {
+    icon: Icon.Gauge,
+    title: 'Get your Path Score',
+    desc: 'AI scores your readiness and breaks down exactly what’s holding it back.',
+  },
+  {
+    icon: Icon.Route,
+    title: 'Close the gap',
+    desc: 'Follow the roadmap, apply to matched jobs, and practice with the interview coach.',
+  },
+];
 
 const FEATURES = [
   {
@@ -74,13 +95,20 @@ function LandingNav() {
         <Logo size={34} className="transition-transform duration-300 group-hover:scale-105" />
       </Link>
 
-      <Link
-        to={isAuthenticated ? '/dashboard' : '/login'}
-        className="inline-flex items-center gap-1.5 rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink/85 transition-colors"
-      >
-        {isAuthenticated ? 'Dashboard' : 'Sign in'}
-        <Icon.ArrowRight size={14} />
-      </Link>
+      <div className="flex items-center gap-4">
+        {!isAuthenticated && (
+          <Link to="/login" className="hidden sm:inline text-sm font-semibold text-muted hover:text-ink transition-colors">
+            Sign in
+          </Link>
+        )}
+        <Link
+          to={isAuthenticated ? '/dashboard' : '/register'}
+          className="inline-flex items-center gap-1.5 rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink/85 transition-colors"
+        >
+          {isAuthenticated ? 'Dashboard' : 'Get started'}
+          <Icon.ArrowRight size={14} />
+        </Link>
+      </div>
     </nav>
   );
 }
@@ -160,19 +188,157 @@ function Hero() {
   );
 }
 
-function FeatureSection({ eyebrow, title, desc, visual, reversed, delay }) {
+function HowItWorks() {
   return (
     <section className="border-t border-line">
-      <Reveal className="mx-auto max-w-6xl px-6 py-16" delay={delay}>
-        <div className={`grid gap-12 lg:grid-cols-2 lg:items-center ${reversed ? 'lg:[&>*:first-child]:order-2' : ''}`}>
-          <div>
-            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-brand">{eyebrow}</p>
-            <h2 className="mt-3 font-display text-2xl sm:text-3xl font-medium text-ink leading-tight max-w-md">
-              {title}
+      <Reveal className="mx-auto max-w-6xl px-6 py-16">
+        <p className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-muted text-center">
+          How it works
+        </p>
+        <div className="mt-10 grid gap-8 sm:grid-cols-3">
+          {STEPS.map((s, i) => (
+            <div key={s.title} className="relative">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-xs font-bold text-brand">{String(i + 1).padStart(2, '0')}</span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-surface-2 text-ink">
+                  <s.icon size={17} />
+                </span>
+              </div>
+              <h3 className="mt-4 text-[15px] font-semibold text-ink">{s.title}</h3>
+              <p className="mt-1.5 text-sm text-muted leading-relaxed">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+      </Reveal>
+    </section>
+  );
+}
+
+function ClosingCta() {
+  const { isAuthenticated } = useAuth();
+  if (isAuthenticated) return null;
+
+  return (
+    <section className="mx-auto max-w-6xl px-6 py-16">
+      <Reveal>
+        <div className="relative overflow-hidden rounded-3xl bg-ink px-8 py-14 text-center sm:px-16">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 -z-0 opacity-60"
+            style={{
+              background:
+                'radial-gradient(35% 45% at 15% 10%, rgba(47,211,198,0.18) 0%, transparent 70%), radial-gradient(40% 45% at 85% 90%, rgba(255,107,74,0.12) 0%, transparent 70%)',
+            }}
+          />
+          <div className="relative">
+            <h2 className="font-display text-2xl sm:text-3xl font-medium text-white">
+              Ready to know your Path Score?
             </h2>
-            <p className="mt-4 max-w-md text-muted text-sm leading-relaxed">{desc}</p>
+            <p className="mt-3 mx-auto max-w-md text-sm text-white/70 leading-relaxed">
+              Free to get started, no credit card required — see your gap and your plan in minutes.
+            </p>
+            <Link
+              to="/register"
+              className="mt-7 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-ink hover:bg-white/90 transition-colors"
+            >
+              Get started <Icon.ArrowRight size={15} />
+            </Link>
           </div>
-          <div>{visual}</div>
+        </div>
+      </Reveal>
+    </section>
+  );
+}
+
+const TOUR_DURATION = 5000;
+
+/**
+ * Interactive, auto-advancing product tour — a single segmented-tab module
+ * (same tab/pill pattern as OverviewPage's insight tabs) that swaps between
+ * the 4 real product mockups instead of stacking them as static scroll
+ * sections. Auto-advances on a timer with a visible per-tab progress rail;
+ * any manual click resets the timer and (via prefers-reduced-motion) the
+ * whole auto-advance/progress-rail behavior is skipped for reduced-motion
+ * users.
+ */
+function ProductTour() {
+  const [active, setActive] = useState(0);
+  const reduce = useReducedMotion();
+  const feature = FEATURES[active];
+
+  useEffect(() => {
+    if (reduce) return;
+    const id = setTimeout(() => setActive((a) => (a + 1) % FEATURES.length), TOUR_DURATION);
+    return () => clearTimeout(id);
+  }, [active, reduce]);
+
+  return (
+    <section className="border-t border-line">
+      <Reveal className="mx-auto max-w-6xl px-6 py-16">
+        <p className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-muted text-center">
+          See it in action
+        </p>
+        <h2 className="mt-3 text-center font-display text-2xl sm:text-3xl font-medium text-ink">
+          One system, four moves.
+        </h2>
+
+        <div className="mt-10 card p-2 sm:p-3">
+          <div className="apple-segmented w-full">
+            {FEATURES.map((f, i) => {
+              const isActive = i === active;
+              return (
+                <button
+                  key={f.eyebrow}
+                  onClick={() => setActive(i)}
+                  className={cn(
+                    'btn-press apple-segmented-item relative flex-1 py-2.5 px-2 sm:px-3 text-[11px] sm:text-[13px] font-semibold overflow-hidden',
+                    isActive ? 'text-white' : 'text-faint hover:text-muted'
+                  )}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="tour-tab-indicator"
+                      className="absolute inset-0 rounded-full bg-ink"
+                      transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    />
+                  )}
+                  <span className="relative z-10">{f.eyebrow}</span>
+                  {isActive && !reduce && (
+                    <motion.span
+                      key={active}
+                      className="absolute bottom-1 left-1/2 -translate-x-1/2 h-0.5 rounded-full bg-white/50"
+                      initial={{ width: 0 }}
+                      animate={{ width: '60%' }}
+                      transition={{ duration: TOUR_DURATION / 1000, ease: 'linear' }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid gap-8 lg:grid-cols-2 lg:items-center p-6 sm:p-10 min-h-[280px]">
+            <motion.div
+              key={`text-${active}`}
+              initial={{ opacity: 0, y: reduce ? 0 : 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <h3 className="font-display text-xl sm:text-2xl font-medium text-ink leading-tight max-w-md">
+                {feature.title}
+              </h3>
+              <p className="mt-3 max-w-md text-muted text-sm leading-relaxed">{feature.desc}</p>
+            </motion.div>
+
+            <motion.div
+              key={`visual-${active}`}
+              initial={{ opacity: 0, scale: reduce ? 1 : 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {feature.visual}
+            </motion.div>
+          </div>
         </div>
       </Reveal>
     </section>
@@ -184,10 +350,9 @@ export default function LandingPage() {
     <div className="min-h-screen bg-canvas">
       <LandingNav />
       <Hero />
-
-      {FEATURES.map((f, i) => (
-        <FeatureSection key={f.eyebrow} {...f} reversed={i % 2 === 1} delay={0} />
-      ))}
+      <ProductTour />
+      <HowItWorks />
+      <ClosingCta />
 
       <div className="mx-auto max-w-6xl px-6">
         <Footer />
