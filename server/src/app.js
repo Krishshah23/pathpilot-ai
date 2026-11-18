@@ -49,6 +49,7 @@ import fs from 'node:fs';
 import { protect } from './middleware/auth.middleware.js';
 import { ApiError } from './utils/ApiError.js';
 import { Resume } from './models/Resume.js';
+import { resolveLegacyResumePath } from './utils/legacyResumePath.js';
 
 /**
  * Creates and configures the Express application.
@@ -122,22 +123,16 @@ export function createApp() {
     try {
       const { filename } = req.params;
 
-      // Extract the userId from the filename prefix.
-      // Filename format: "<userId>-<timestamp>-<random>.<ext>"
-      const fileUserId = filename.split('-')[0];
-
-      // Authorization check: only the file's owner or an admin can access it
-      if (req.user.role !== 'admin' && req.user._id.toString() !== fileUserId) {
-        throw ApiError.forbidden('You are not authorized to access this file');
-      }
-
-      // Build the absolute path to the file on disk
-      const absPath = path.resolve(process.cwd(), 'uploads', 'resumes', filename);
+      // Validates the filename against the strict legacy format, enforces
+      // owner-or-admin access, and guarantees the path stays inside
+      // uploads/resumes (blocks encoded "../" traversal).
+      const absPath = resolveLegacyResumePath(filename, req.user);
 
       // Check if file exists on disk; if not (e.g. Render free tier ephemeral disk wiped),
       // restore it from the MongoDB base64 backup field.
       if (!fs.existsSync(absPath)) {
-        const resumeDoc = await Resume.findOne({ fileUrl: { $regex: filename } }).select('+fileBase64');
+        // Exact match only — never build a regex from user input.
+        const resumeDoc = await Resume.findOne({ fileUrl: `/uploads/resumes/${filename}` }).select('+fileBase64');
         if (resumeDoc && resumeDoc.fileBase64) {
           try {
             const fileBuffer = Buffer.from(resumeDoc.fileBase64, 'base64');
